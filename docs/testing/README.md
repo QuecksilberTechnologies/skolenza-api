@@ -1,6 +1,7 @@
 - [Bulk canonical template fields and module permissions — 2026-10-11](bulk/canonical-template-fields/2026-10-11.md)
 # Skolenza scenario test reports
 
+- [Common menu scope, two-level quick actions and login logo ratio — 2026-10-11](navigation/common-menu-scope/2026-10-11.md)
 - [Current remaining gaps](../SKOLENZA_REMAINING_GAPS.md)
 - [Temporary AxionPro email catalogue and SMTP configuration — 2026-10-11](email/temporary-axionpro-catalogue/2026-10-11.md)
 
