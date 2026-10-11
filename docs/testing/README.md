@@ -41,3 +41,4 @@ test run.
 
 - [Angular, API and SQL naming alignment — 2026-10-11](reconstruction/angular-api-sql-naming-alignment/2026-10-11.md)
 - [Render Docker project-path casing — 2026-10-11](deployment/render-docker-path/2026-10-11.md)
+- [Public subscription plan production configuration — 2026-10-11](subscription/public-plan-production-config/2026-10-11.md)
