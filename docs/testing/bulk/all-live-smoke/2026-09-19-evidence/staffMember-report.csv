@@ -1,0 +1,3 @@
+RowNumber,Status,RecordId,Values,Errors,ProposedEmployeeCode,InvitationStatus,InvitationError
+2,Existing,,"{""RoleId"":""72"",""Street"":"""",""Address"":"""",""HouseNo"":"""",""StateId"":"""",""GenderId"":""1"",""IsActive"":""true"",""LandMark"":"""",""LastName"":""Mehta"",""CountryId"":""1"",""FirstName"":""Aarav"",""DistrictId"":"""",""MiddleName"":"""",""ContactName"":"""",""DateOfBirth"":""1994-05-18"",""ContactEmail"":"""",""DepartmentId"":""21"",""EmployeeCode"":"""",""HasPermanent"":""true"",""MobileNumber"":"""",""ContactNumber"":"""",""DesignationId"":""10"",""OfficialEmail"":""aarav.mehta.hybrid@Skolenza.example"",""EmployeeTypeId"":""14"",""AlternateNumber"":"""",""ContactCountryId"":"""",""DateOfOnBoarding"":""2026-09-19""}","","QT/2026/0204",,""
+

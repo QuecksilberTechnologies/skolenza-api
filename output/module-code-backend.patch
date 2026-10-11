@@ -1,0 +1,371 @@
+*** Begin Patch
+*** Update File: C:\AxionProCodeBase\Skolenza\Skolenza\Skolenza.application\Constants\BulkImportConstants.cs
+@@ -20,12 +20,12 @@
+     public const string RoleName = "RoleName";
+     public const string RoleType = "RoleType";
+     public const string TypeName = "TypeName"; 
+-    public const string EmployeeTypeModuleCode = "EMPLOYEE_TYPE";
+-    public const string EmployeeCodeModuleCode = "TENANT_EMPLOYEE_CODE";
+-    public const string EmployeeModuleCode = "EMP_LIST";
+-    public const string PolicyTypeModuleCode = "TENANT_POLICY_TYPES";
+-    public const string PolicyDefinitionModuleCode = "TENANT_POLICY_DEFINITIONS";
+-    public const string PolicyAssignmentModuleCode = "TENANT_POLICY_ASSIGNMENTS";
++    public const string EmployeeTypeModuleCode = "STAFF_EMPLOYMENT_TYPES";
++    public const string EmployeeCodeModuleCode = "INSTITUTION_STAFF_CODE";
++    public const string EmployeeModuleCode = "STAFF_DIRECTORY";
++    public const string PolicyTypeModuleCode = "INSTITUTION_POLICY_TYPES";
++    public const string PolicyDefinitionModuleCode = "INSTITUTION_POLICY_DEFINITIONS";
++    public const string PolicyAssignmentModuleCode = "INSTITUTION_POLICY_ASSIGNMENTS";
+     public const string EmployeeCodeLockPrefix = "employee-code-pattern:";
+     public const string EmployeeLoginLockPrefix = "employee-login:";
+     public const string EmployeeCode = "EmployeeCode";
+*** Update File: C:\AxionProCodeBase\Skolenza\Skolenza\Skolenza.application\Constants\EmployeeOperationalSections.cs
+@@ -5,7 +5,7 @@
+ {
+     public static IReadOnlyList<string> ModuleCodes { get; } = Array.AsReadOnly(new[]
+     {
+-        "EMP_WORK_LOCATIONS", "EMP_DEVICES", "EMP_WORK_ARRANGEMENT",
+-        "EMP_WORK_PATTERN", "EMP_OVERRIDES"
++        "STAFF_CAMPUS_ASSIGNMENTS", "STAFF_DEVICE_ENROLMENTS", "STAFF_WORK_ARRANGEMENTS",
++        "STAFF_WORK_PATTERNS", "STAFF_WORK_MODE_OVERRIDES"
+     });
+ }
+*** Update File: C:\AxionProCodeBase\Skolenza\Skolenza\Skolenza.application\Features\DesignationCmd\DesignationPermissionBehavior.cs
+@@ -30,7 +30,7 @@
+     : IPipelineBehavior<TRequest, TResponse>
+     where TRequest : notnull
+ {
+-    private const string DesignationModuleCode = "DESIGNATION";
++    private const string DesignationModuleCode = "STAFF_DESIGNATIONS";
+ 
+     /// <inheritdoc />
+     public async Task<TResponse> Handle(
+*** Update File: C:\AxionProCodeBase\Skolenza\Skolenza\Skolenza.application\Features\EmployeeCmd\EmployeeTenantPermissionBehavior.cs
+@@ -92,13 +92,13 @@
+         {
+             expectedModuleCode = (TabInfoType)statusTab.Value switch
+             {
+-                TabInfoType.Employee => "EMP_OVERVIEW",
+-                TabInfoType.Bank => "EMP_BANK",
+-                TabInfoType.Contact => "EMP_CONTACT",
+-                TabInfoType.Experience => "EMP_EXPERIENCE",
+-                TabInfoType.Identity => "EMP_IDENTITY",
+-                TabInfoType.Education => "EMP_EDUCATION",
+-                TabInfoType.Dependent => "EMP_DEPENDENTS",
++                TabInfoType.Employee => "STAFF_OVERVIEW",
++                TabInfoType.Bank => "STAFF_BANK_DETAILS",
++                TabInfoType.Contact => "STAFF_CONTACT_DETAILS",
++                TabInfoType.Experience => "STAFF_EXPERIENCE",
++                TabInfoType.Identity => "STAFF_IDENTITY",
++                TabInfoType.Education => "STAFF_QUALIFICATIONS",
++                TabInfoType.Dependent => "STAFF_DEPENDANTS",
+                 _ => null
+             };
+         }
+@@ -218,7 +218,7 @@
+             throw new ValidationErrorException(AppConstants.ErrorMessages.InvalidIdentifier);
+         }
+ 
+-        var requirement = expectedModuleCode == "EMP_WORK_LOCATIONS"
++        var requirement = expectedModuleCode == "STAFF_CAMPUS_ASSIGNMENTS"
+             ? EmployeeDataAccessRequirement.WorkLocation
+             : typeof(TRequest).Name is "GetEmployeeProfileSummaryQuery" or "GetEmployeeImageQuery"
+                 ? EmployeeDataAccessRequirement.DirectoryBasic
+@@ -303,40 +303,40 @@
+         var requestNamespace = typeof(TRequest).Namespace ?? string.Empty;
+ 
+         if (requestNamespace.StartsWith("skolenza.application.Features.EmployeeCmd.BankInfo", StringComparison.Ordinal))
+-            return "EMP_BANK";
++            return "STAFF_BANK_DETAILS";
+         if (requestNamespace.StartsWith("skolenza.application.Features.EmployeeCmd.Contact", StringComparison.Ordinal))
+-            return "EMP_CONTACT";
++            return "STAFF_CONTACT_DETAILS";
+         if (requestNamespace.StartsWith("skolenza.application.Features.EmployeeCmd.DependentInfo", StringComparison.Ordinal))
+-            return "EMP_DEPENDENTS";
++            return "STAFF_DEPENDANTS";
+         if (requestNamespace.StartsWith("skolenza.application.Features.EmployeeCmd.EducationInfo", StringComparison.Ordinal))
+-            return "EMP_EDUCATION";
++            return "STAFF_QUALIFICATIONS";
+         if (requestNamespace.StartsWith("skolenza.application.Features.EmployeeCmd.ExperienceInfo", StringComparison.Ordinal))
+-            return "EMP_EXPERIENCE";
++            return "STAFF_EXPERIENCE";
+         if (requestNamespace.StartsWith("skolenza.application.Features.EmployeeCmd.IdentitiesInfo", StringComparison.Ordinal))
+-            return "EMP_IDENTITY";
++            return "STAFF_IDENTITY";
+         if (requestNamespace.StartsWith("skolenza.application.Features.EmployeeCmd.EmployeeDeviceEnrollment", StringComparison.Ordinal))
+-            return "EMP_DEVICES";
++            return "STAFF_DEVICE_ENROLMENTS";
+         if (requestNamespace.StartsWith("skolenza.application.Features.EmployeeCmd.EmployeeMonitoring", StringComparison.Ordinal))
+-            return "EMP_DEVICES";
++            return "STAFF_DEVICE_ENROLMENTS";
+         if (requestNamespace.StartsWith("skolenza.application.Features.EmployeeCmd.ResetPassword", StringComparison.Ordinal))
+-            return "EMP_LIST";
++            return "STAFF_DIRECTORY";
+         if (requestNamespace.StartsWith("skolenza.application.Features.EmployeeCmd.EmployeeWorkInfo", StringComparison.Ordinal))
+         {
+             var requestName = typeof(TRequest).Name;
+             if (requestName.Contains("EmployeeLocationAssignment", StringComparison.Ordinal))
+-                return "EMP_WORK_LOCATIONS";
++                return "STAFF_CAMPUS_ASSIGNMENTS";
+             if (requestName.Contains("EmployeeWorkArrangement", StringComparison.Ordinal))
+-                return "EMP_WORK_ARRANGEMENT";
++                return "STAFF_WORK_ARRANGEMENTS";
+             if (requestName.Contains("EmployeeWorkPattern", StringComparison.Ordinal))
+-                return "EMP_WORK_PATTERN";
++                return "STAFF_WORK_PATTERNS";
+             if (requestName.Contains("EmployeeWorkModeOverride", StringComparison.Ordinal))
+-                return "EMP_OVERRIDES";
++                return "STAFF_WORK_MODE_OVERRIDES";
+ 
+             return null;
+         }
+         if (requestNamespace.StartsWith("skolenza.application.Features.EmployeeCmd.UpdateStatus", StringComparison.Ordinal) ||
+             requestNamespace.StartsWith("skolenza.application.Features.EmployeeCmd.UpdateVerification", StringComparison.Ordinal))
+-            return "EMP_LIST";
++            return "STAFF_DIRECTORY";
+ 
+         if (!requestNamespace.StartsWith("skolenza.application.Features.EmployeeCmd.EmployeeBase", StringComparison.Ordinal))
+         {
+@@ -352,9 +352,9 @@
+             "GetEmployeeSummaryQuery" or
+             "DeleteEmployeeQuery" or
+             "ActivateAllEmployeeQuery" or
+-            "UpdateSectionBulkCommand" => "EMP_LIST",
+-
+-            "UpdateEmployeeSectionDefaultsCommand" => "EMP_LIST",
++            "UpdateSectionBulkCommand" => "STAFF_DIRECTORY",
++
++            "UpdateEmployeeSectionDefaultsCommand" => "STAFF_DIRECTORY",
+ 
+             "GetBaseEmployeeInfoQuery" or
+             "UpdateEmployeeCommand" or
+@@ -363,7 +363,7 @@
+             "CreateEmployeeImageCommand" or
+             "UpdateProfileImageCommand" or
+             "GetEmployeeProfileSummaryQuery" or
+-            "GetEmployeeProfileStatusQuery" => "EMP_OVERVIEW",
++            "GetEmployeeProfileStatusQuery" => "STAFF_OVERVIEW",
+ 
+             _ => null
+         };
+*** Update File: C:\AxionProCodeBase\Skolenza\Skolenza\Skolenza.application\Features\GenericPolicyCmd\GenericPolicyPermissionBehavior.cs
+@@ -26,7 +26,7 @@
+         }
+         var moduleCode = await commonRequestService.GetModuleCodeAsync(dto.ModuleId);
+         var expectedModuleCode = ExpectedModuleCode(request);
+-        var isPolicyModule = moduleCode != null && (moduleCode.Equals("TENANT_POLICIES", StringComparison.OrdinalIgnoreCase)
++        var isPolicyModule = moduleCode != null && (moduleCode.Equals("INSTITUTION_POLICIES", StringComparison.OrdinalIgnoreCase)
+             || moduleCode.StartsWith("TENANT_POLICY_", StringComparison.OrdinalIgnoreCase));
+         if (!isPolicyModule || expectedModuleCode != null
+             && !moduleCode!.Equals(expectedModuleCode, StringComparison.OrdinalIgnoreCase))
+@@ -48,24 +48,24 @@
+         return request switch
+         {
+             GetPolicyTypesQuery or CreatePolicyTypeCommand or UpdateGenericPolicyTypeCommand
+-                or ChangePolicyTypeStatusCommand => "TENANT_POLICY_TYPES",
++                or ChangePolicyTypeStatusCommand => "INSTITUTION_POLICY_TYPES",
+             GetPoliciesQuery or GetPolicyQuery or GetPolicyVersionQuery or CreatePolicyCommand or UpdatePolicyDraftCommand
+                 or ClonePolicyVersionCommand or ResolveEmployeePoliciesQuery or UploadPolicyDocumentCommand
+-                or GetPolicyDocumentsQuery or DeletePolicyDocumentCommand => "TENANT_POLICY_DEFINITIONS",
++                or GetPolicyDocumentsQuery or DeletePolicyDocumentCommand => "INSTITUTION_POLICY_DEFINITIONS",
+             TransitionPolicyCommand transition when transition.DTO.Action.Trim().Equals("SUBMIT", StringComparison.OrdinalIgnoreCase)
+-                => "TENANT_POLICY_DEFINITIONS",
+-            TransitionPolicyCommand => "TENANT_POLICY_APPROVALS",
++                => "INSTITUTION_POLICY_DEFINITIONS",
++            TransitionPolicyCommand => "INSTITUTION_POLICY_APPROVALS",
+             AssignPolicyCommand or RemovePolicyAssignmentCommand or GetPolicyAssignmentsQuery
+                 or GetPolicyAssignmentCandidatesQuery or ExportPolicyAssignmentsQuery
+-                => "TENANT_POLICY_ASSIGNMENTS",
++                => "INSTITUTION_POLICY_ASSIGNMENTS",
+             CreatePolicyExceptionCommand or ApprovePolicyExceptionCommand or GetPolicyExceptionsQuery
+-                => "TENANT_POLICY_EXCEPTIONS",
++                => "INSTITUTION_POLICY_EXCEPTIONS",
+             AcknowledgePolicyCommand or GetPolicyAcknowledgementsQuery
+-                => "TENANT_POLICY_ACKNOWLEDGEMENTS",
+-            GetPolicyAuditQuery => "TENANT_POLICY_AUDIT",
++                => "INSTITUTION_POLICY_ACKNOWLEDGEMENTS",
++            GetPolicyAuditQuery => "INSTITUTION_POLICY_AUDIT",
+             GetPolicyApprovalStagesQuery or CreatePolicyApprovalStageCommand or UpdatePolicyApprovalStageCommand
+                 or DeletePolicyApprovalStageCommand or GetPolicyApprovalProgressQuery
+-                => "TENANT_POLICY_APPROVALS",
++                => "INSTITUTION_POLICY_APPROVALS",
+             PreviewPolicyBulkImportCommand bulk => BulkModuleCode(bulk.Master),
+             ManagePolicyBulkImportCommand bulk => BulkModuleCode(bulk.Master),
+             _ => null
+@@ -76,9 +76,9 @@
+     {
+         return master switch
+         {
+-            BulkImportMaster.PolicyType => "TENANT_POLICY_TYPES",
+-            BulkImportMaster.PolicyDefinition => "TENANT_POLICY_DEFINITIONS",
+-            BulkImportMaster.PolicyAssignment => "TENANT_POLICY_ASSIGNMENTS",
++            BulkImportMaster.PolicyType => "INSTITUTION_POLICY_TYPES",
++            BulkImportMaster.PolicyDefinition => "INSTITUTION_POLICY_DEFINITIONS",
++            BulkImportMaster.PolicyAssignment => "INSTITUTION_POLICY_ASSIGNMENTS",
+             _ => throw new ValidationErrorException("Unsupported policy import target.")
+         };
+     }
+*** Update File: C:\AxionProCodeBase\Skolenza\Skolenza\Skolenza.application\Features\HolidayCmd\HolidayCrud.cs
+@@ -80,7 +80,7 @@
+         }
+ 
+         var moduleCode = await commonRequestService.GetModuleCodeAsync(dto.ModuleId);
+-        if (!string.Equals(moduleCode, "TENANT_POLICY_HOLIDAY", StringComparison.OrdinalIgnoreCase))
++        if (!string.Equals(moduleCode, "INSTITUTION_POLICY_HOLIDAY", StringComparison.OrdinalIgnoreCase))
+         {
+             throw new ForbiddenAccessException("The selected module is not valid for holidays.");
+         }
+*** Update File: C:\AxionProCodeBase\Skolenza\Skolenza\Skolenza.application\Features\RoleCmd\RolePermissionBehavior.cs
+@@ -30,7 +30,7 @@
+     : IPipelineBehavior<TRequest, TResponse>
+     where TRequest : notnull
+ {
+-    private const string RoleModuleCode = "ROLE";
++    private const string RoleModuleCode = "ACCESS_ROLES";
+ 
+     /// <inheritdoc />
+     public async Task<TResponse> Handle(
+*** Update File: C:\AxionProCodeBase\Skolenza\Skolenza\Skolenza.application\Features\TenantConfigurationCmd\TenantLocationPermissionBehavior.cs
+@@ -112,7 +112,7 @@
+             ? BulkImportConstants.EmployeeCodeModuleCode
+             : userType == LoginUserType.Host
+                 ? "HOST_CAMPUS_LIST"
+-                : "TENANT_LOCATIONS";
++                : "INSTITUTION_CAMPUSES";
+         if (string.Equals(moduleCode, expectedModuleCode, StringComparison.OrdinalIgnoreCase))
+         {
+             return;
+*** Update File: C:\AxionProCodeBase\Skolenza\Skolenza\Skolenza.application\Features\TenantEmailConfigCmd\TenantEmailConfigPermissionBehavior.cs
+@@ -28,7 +28,7 @@
+     where TRequest : notnull
+ {
+     private const string HostTenantEmailConfigModuleCode = "HOST_INSTITUTION_EMAIL_CONFIG";
+-    private const string TenantEmailConfigModuleCode = "TENANT_EMAIL_CONFIG";
++    private const string TenantEmailConfigModuleCode = "INSTITUTION_EMAIL_CONFIG";
+ 
+     public async Task<TResponse> Handle(
+         TRequest request,
+*** Update File: C:\AxionProCodeBase\Skolenza\Skolenza\Skolenza.application\Features\TenantEmailTemplateCmd\TenantEmailTemplatePermissionBehavior.cs
+@@ -18,7 +18,7 @@
+     ICommonRequestService commonRequestService)
+     : IPipelineBehavior<TRequest, TResponse> where TRequest : notnull
+ {
+-    private const string ModuleCode = "TENANT_EMAIL_TEMPLATE";
++    private const string ModuleCode = "INSTITUTION_EMAIL_TEMPLATE";
+ 
+     public async Task<TResponse> Handle(TRequest request, RequestHandlerDelegate<TResponse> next, CancellationToken cancellationToken)
+     {
+*** Update File: C:\AxionProCodeBase\Skolenza\Skolenza\Skolenza.api\Controllers\Employee\EmployeeController.Bulk.cs
+@@ -9,7 +9,7 @@
+ 
+         /// <summary>Sends pending or failed welcome invitations for a completed Employee import.</summary>
+         /// <remarks>
+-        /// Angular integration pending. Requires Add or Import on EMP_LIST. Body: JobId, ModuleId, OperationId,
++        /// Angular integration pending. Requires Add or Import on STAFF_DIRECTORY. Body: JobId, ModuleId, OperationId,
+         /// optional RowNumbers (up to 100). This is an explicit email-sending action; import confirmation sends no emails.
+         /// Sent rows are not resent. Sending or DeliveryUnknown rows require email-log review after interruption.
+         /// Tokens are generated at dispatch time. Account creation is not repeated when invitations are retried.
+*** Update File: C:\AxionProCodeBase\Skolenza\Skolenza\Skolenza.api\Controllers\Employee\EmployeeController.cs
+@@ -33,7 +33,7 @@
+         private readonly ILoggerService _logger;
+ 
+         /// <summary>Sets edit defaults for Work Locations, Devices, Work Arrangement, Work Pattern and Overrides.</summary>
+-        /// <remarks>Requires tenant Admin plus existing EMP_LIST action permission. Applies to current and future employees.</remarks>
++        /// <remarks>Requires tenant Admin plus existing STAFF_DIRECTORY action permission. Applies to current and future employees.</remarks>
+         [Authorize]
+         [HttpPost("section-defaults")]
+         public async Task<IActionResult> UpdateSectionDefaults(
+*** Update File: C:\AxionProCodeBase\Skolenza\Skolenza\Skolenza.api\Controllers\EmployeeType\EmployeeTypeController.cs
+@@ -145,7 +145,7 @@
+         }
+ 
+         #region Tenant master operations
+-        /// <summary>Creates one tenant-owned type. Requires Add on EMPLOYEE_TYPE.</summary>
++        /// <summary>Creates one tenant-owned type. Requires Add on STAFF_EMPLOYMENT_TYPES.</summary>
+         /// <remarks>Angular integration pending. Body: TypeName, Description, Remark, IsActive, ModuleId, OperationId.
+         /// Returns ApiResponse of the created type; ownership/audit IDs are server assigned.</remarks>
+         [Microsoft.AspNetCore.Authorization.Authorize]
+@@ -175,7 +175,7 @@
+ 
+         /// <summary>Updates one tenant-owned EmployeeType.</summary>
+         /// <remarks>
+-        /// Requires Update permission on EMPLOYEE_TYPE. The trusted request context supplies
++        /// Requires Update permission on STAFF_EMPLOYMENT_TYPES. The trusted request context supplies
+         /// the Tenant and audit actor; the body must contain Id, TypeName, ModuleId, and OperationId.
+         /// </remarks>
+         [Microsoft.AspNetCore.Authorization.Authorize]
+@@ -189,7 +189,7 @@
+ 
+         /// <summary>Soft deletes one unused tenant-owned EmployeeType.</summary>
+         /// <remarks>
+-        /// Requires Delete permission on EMPLOYEE_TYPE. Deletion returns 409 Conflict when
++        /// Requires Delete permission on STAFF_EMPLOYMENT_TYPES. Deletion returns 409 Conflict when
+         /// a non-soft-deleted business dependency or any EmployeeTypeBasicMenu mapping exists.
+         /// </remarks>
+         [Microsoft.AspNetCore.Authorization.Authorize]
+*** Update File: C:\AxionProCodeBase\Skolenza\Skolenza\Skolenza.api\Controllers\Holiday\HolidayController.cs
+@@ -37,7 +37,7 @@
+ 
+     /// <summary>Lists active holidays for the current tenant.</summary>
+     /// <remarks>
+-    /// ModuleId must identify TENANT_POLICY_HOLIDAY and OperationId must
++    /// ModuleId must identify INSTITUTION_POLICY_HOLIDAY and OperationId must
+     /// identify View. TenantLocationId and HolidayYear are optional filters.
+     /// Tenant identity comes from the authenticated request, not the query.
+     /// </remarks>
+@@ -48,7 +48,7 @@
+     }
+ 
+     /// <summary>Gets one nondeleted holiday, including inactive, belonging to the current tenant.</summary>
+-    /// <remarks>Requires the View operation for TENANT_POLICY_HOLIDAY.</remarks>
++    /// <remarks>Requires the View operation for INSTITUTION_POLICY_HOLIDAY.</remarks>
+     [HttpGet("{id:long}")]
+     public async Task<IActionResult> GetById(
+         long id,
+@@ -64,7 +64,7 @@
+     #region Write
+ 
+     /// <summary>Creates a holiday for an active location owned by the current tenant.</summary>
+-    /// <remarks>Requires the Add operation for TENANT_POLICY_HOLIDAY.</remarks>
++    /// <remarks>Requires the Add operation for INSTITUTION_POLICY_HOLIDAY.</remarks>
+     [HttpPost]
+     public async Task<IActionResult> Create(
+         [FromBody] SaveHolidayRequestDTO request,
+@@ -74,7 +74,7 @@
+     }
+ 
+     /// <summary>Updates an active holiday belonging to the current tenant.</summary>
+-    /// <remarks>Requires the Update operation for TENANT_POLICY_HOLIDAY.</remarks>
++    /// <remarks>Requires the Update operation for INSTITUTION_POLICY_HOLIDAY.</remarks>
+     [HttpPut("{id:long}")]
+     public async Task<IActionResult> Update(
+         long id,
+@@ -86,7 +86,7 @@
+     }
+ 
+     /// <summary>Soft-deletes an active holiday belonging to the current tenant.</summary>
+-    /// <remarks>Requires the Delete operation for TENANT_POLICY_HOLIDAY.</remarks>
++    /// <remarks>Requires the Delete operation for INSTITUTION_POLICY_HOLIDAY.</remarks>
+     [HttpDelete("{id:long}")]
+     public async Task<IActionResult> Delete(
+         long id,
+*** Update File: C:\AxionProCodeBase\Skolenza\Skolenza\Skolenza.api\Controllers\Tenant\TenantController.cs
+@@ -38,7 +38,7 @@
+ 
+     /// <summary>Previews or confirms insertion of the authenticated tenant's employee-code pattern.</summary>
+     /// <remarks>
+-    /// Not-Used-In-Angular. Requires TENANT_EMPLOYEE_CODE Add permission. Send Confirm=false
++    /// Not-Used-In-Angular. Requires INSTITUTION_STAFF_CODE Add permission. Send Confirm=false
+     /// for a read-only preview, then the same Pattern with Confirm=true and returned PreviewHash.
+     /// Response includes CanCommit, employee current/proposed codes, row errors and Applied.
+     /// An existing active pattern returns conflict; use update instead. Tenant comes from authentication.
+@@ -53,7 +53,7 @@
+ 
+     /// <summary>Previews or confirms a tenant pattern change and recodes existing employees, including the Admin.</summary>
+     /// <remarks>
+-    /// Not-Used-In-Angular. Requires TENANT_EMPLOYEE_CODE Update permission. Preview uses existing
++    /// Not-Used-In-Angular. Requires INSTITUTION_STAFF_CODE Update permission. Preview uses existing
+     /// DateOfOnBoarding values as joining dates and preserves recognized running numbers.
+     /// Confirm=false never writes. Confirm=true requires the returned PreviewHash; changed data
+     /// requires a fresh preview (409). Invalid dates/codes/collisions block the entire operation.
+*** End Patch

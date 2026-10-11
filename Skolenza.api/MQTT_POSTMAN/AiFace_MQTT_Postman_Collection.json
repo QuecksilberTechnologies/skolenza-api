@@ -1,0 +1,1495 @@
+{
+  "info": {
+    "name": "AiFace Device MQTT API",
+    "_postman_id": "aiface-mqtt-collection-v1",
+    "description": "AiFace facial recognition device MQTT/MQTTS communication protocol.\n\n## How to Use\n1. Edit the Collection Variables: set `broker_url` to your MQTT broker address (e.g. `mqtt://192.168.1.100:1883`).\n2. Set `device_sn` to your device serial number.\n3. Open any request folder, click the request, then click **Connect**.\n4. Once connected, click **Send** to publish the command to the device.\n\n## Topic Convention\n- Server publishes commands TO device on: `aiface/<sn>/pub`\n- Device publishes data TO server on: `aiface/<sn>/sub`\n\n## Variables\n- `broker_url` — MQTT broker URL, e.g. `mqtt://192.168.1.100:1883`\n- `device_sn` — Device serial number, e.g. `LF00000001`\n- `enrollid` — Sample user ID used in user management requests",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "broker_url",
+      "value": "mqtt://192.168.1.100:1883",
+      "description": "MQTT Broker URL. Change this to your broker address. Examples:\n  mqtt://192.168.1.100:1883\n  mqtts://192.168.1.100:8883"
+    },
+    {
+      "key": "device_sn",
+      "value": "LF00000001",
+      "description": "Device serial number — must match the SN of the target AiFace device"
+    },
+    {
+      "key": "enrollid",
+      "value": "123",
+      "description": "Sample user / enrollment ID used in user management requests"
+    },
+    {
+      "key": "pub_topic",
+      "value": "aiface/{{device_sn}}/pub",
+      "description": "Topic on which the SERVER publishes commands TO the device"
+    },
+    {
+      "key": "sub_topic",
+      "value": "aiface/{{device_sn}}/sub",
+      "description": "Topic on which the DEVICE publishes data TO the server"
+    }
+  ],
+  "item": [
+    {
+      "name": "4. Device Registration",
+      "description": "Commands related to device registration and re-registration. The device sends reg automatically on MQTT connect.",
+      "item": [
+        {
+          "name": "4.1 reg — Device Registration (Device→Server)",
+          "description": "The device sends this command automatically immediately after the MQTT connection is established.\n\nPublish this to simulate a device registration message.\n\nTopic: aiface/{{device_sn}}/sub\nDirection: Device → Server",
+          "request": {
+            "method": "MQTT",
+            "url": "{{broker_url}}",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cmd\": \"reg\",\n  \"sn\": \"{{device_sn}}\",\n  \"devinfo\": {\n    \"modelname\": \"AiFace\",\n    \"manufacturer\": \"AiFace Inc.\",\n    \"usersize\": 10000,\n    \"facesize\": 10000,\n    \"avatarsize\": 0,\n    \"fpsize\": 10000,\n    \"palmsize\": 10000,\n    \"cardsize\": 10000,\n    \"pwdsize\": 10000,\n    \"logsize\": 300000,\n    \"useduser\": 100,\n    \"usedface\": 50,\n    \"usedavatar\": 0,\n    \"usedfp\": 20,\n    \"usedpalm\": 0,\n    \"usedcard\": 10,\n    \"usedpwd\": 5,\n    \"usedlog\": 1000,\n    \"usednewlog\": 500,\n    \"usedrtlog\": 3,\n    \"netinuse\": 1,\n    \"usb4g\": 0,\n    \"fpalgo\": \"thbio3.0\",\n    \"firmware\": \"1.0.0\",\n    \"time\": \"2025-01-01 08:00:00\",\n    \"intercom\": 0,\n    \"floors\": 0,\n    \"acces_stimes\": 0,\n    \"charid\": 0,\n    \"useosdp\": 0,\n    \"facetemplate\": 0,\n    \"dislanguage\": 0,\n    \"curip\": \"192.168.001.100\",\n    \"ntp\": 1,\n    \"timezone\": \"UTC+8\",\n    \"cpu_temp\": 45,\n    \"bandwidth_up\": \"100Kbps\",\n    \"bandwidth_down\": \"1Mbps\",\n    \"battery\": 100,\n    \"disksize\": 1024.0,\n    \"useddisk\": 512.0,\n    \"mac\": \"AA-BB-CC-DD-EE-FF\"\n  }\n}"
+            },
+            "mqtt": {
+              "topic": "{{sub_topic}}",
+              "qos": "1",
+              "retain": false
+            }
+          }
+        },
+        {
+          "name": "4.2 reg — Server Response (Server→Device)",
+          "description": "Server response to device registration. Publish this to the device command topic.\n\nTopic: aiface/{{device_sn}}/pub\nDirection: Server → Device",
+          "request": {
+            "method": "MQTT",
+            "url": "{{broker_url}}",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ret\": \"reg\",\n  \"tryseconds\": 10,\n  \"result\": true,\n  \"cloudtime\": \"2025-01-01 08:00:00\",\n  \"nosenduser\": false,\n  \"nosendlog\": false,\n  \"nosendimage\": false\n}"
+            },
+            "mqtt": {
+              "topic": "{{pub_topic}}",
+              "qos": "1",
+              "retain": false
+            }
+          }
+        },
+        {
+          "name": "4.3 getreg — Get Device Registration Info (Server→Device)",
+          "description": "Retrieves full device registration and capability information.\n\nTopic: aiface/{{device_sn}}/pub\nDirection: Server → Device",
+          "request": {
+            "method": "MQTT",
+            "url": "{{broker_url}}",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cmd\": \"getreg\",\n  \"sn\": \"{{device_sn}}\"\n}"
+            },
+            "mqtt": {
+              "topic": "{{pub_topic}}",
+              "qos": "1",
+              "retain": false
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. User Management",
+      "description": "Commands for managing users: add, update, delete, query user profiles and biometric data.",
+      "item": [
+        {
+          "name": "5.1 setuserinfo — Set User Info (Server→Device)",
+          "description": "Downloads and sets user profile information including biometrics.\n\nTopic: aiface/{{device_sn}}/pub\nDirection: Server → Device",
+          "request": {
+            "method": "MQTT",
+            "url": "{{broker_url}}",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cmd\": \"setuserinfo\",\n  \"sn\": \"{{device_sn}}\",\n  \"enrollid\": {{enrollid}},\n  \"aliasid\": \"USR001\",\n  \"name\": \"John Doe\",\n  \"birthday\": \"01-15\",\n  \"verifymode\": 255,\n  \"card\": 12345,\n  \"pwd\": 0,\n  \"shiftid\": 0,\n  \"zoneid\": 0,\n  \"groupid\": 0,\n  \"access_times\": 0,\n  \"postid\": 1,\n  \"department\": \"Engineering\",\n  \"enable\": 1,\n  \"starttime\": \"2025-01-01 00:00:00\",\n  \"endtime\": \"2025-12-31 23:59:59\",\n  \"backupnum\": 50,\n  \"admin\": 0,\n  \"userprofile\": \"{}\",\n  \"record\": \"base64_encoded_face_data\"\n}"
+            },
+            "mqtt": {
+              "topic": "{{pub_topic}}",
+              "qos": "1",
+              "retain": false
+            }
+          }
+        },
+        {
+          "name": "5.2 deleteuser — Delete User (Server→Device)",
+          "description": "Deletes a user or specific biometric data.\n\nbackupnum: 12 or 13 = delete entire user, 50 = face photo, 51 = face feature, 10 = password, 11 = card\n\nTopic: aiface/{{device_sn}}/pub\nDirection: Server → Device",
+          "request": {
+            "method": "MQTT",
+            "url": "{{broker_url}}",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cmd\": \"deleteuser\",\n  \"sn\": \"{{device_sn}}\",\n  \"enrollid\": {{enrollid}},\n  \"aliasid\": \"USR001\",\n  \"backupnum\": 12\n}"
+            },
+            "mqtt": {
+              "topic": "{{pub_topic}}",
+              "qos": "1",
+              "retain": false
+            }
+          }
+        },
+        {
+          "name": "5.3 cleanuser — Clear All Users (Server→Device)",
+          "description": "Deletes all users from the device.\n\nTopic: aiface/{{device_sn}}/pub\nDirection: Server → Device",
+          "request": {
+            "method": "MQTT",
+            "url": "{{broker_url}}",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cmd\": \"cleanuser\",\n  \"sn\": \"{{device_sn}}\"\n}"
+            },
+            "mqtt": {
+              "topic": "{{pub_topic}}",
+              "qos": "1",
+              "retain": false
+            }
+          }
+        },
+        {
+          "name": "5.4 setusername — Batch Set User Names (Server→Device)",
+          "description": "Sets names and verify modes for multiple users at once.\n\nTopic: aiface/{{device_sn}}/pub\nDirection: Server → Device",
+          "request": {
+            "method": "MQTT",
+            "url": "{{broker_url}}",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cmd\": \"setusername\",\n  \"sn\": \"{{device_sn}}\",\n  \"count\": 2,\n  \"birthday\": \"06-15\",\n  \"record\": [\n    {\"enrollid\": 100, \"aliasid\": \"U100\", \"name\": \"Alice\", \"verifymode\": 255},\n    {\"enrollid\": 101, \"aliasid\": \"U101\", \"name\": \"Bob\", \"verifymode\": 255}\n  ]\n}"
+            },
+            "mqtt": {
+              "topic": "{{pub_topic}}",
+              "qos": "1",
+              "retain": false
+            }
+          }
+        },
+        {
+          "name": "5.5 getusername — Get User Name (Server→Device)",
+          "description": "Retrieves the name for a specific user.\n\nTopic: aiface/{{device_sn}}/pub\nDirection: Server → Device",
+          "request": {
+            "method": "MQTT",
+            "url": "{{broker_url}}",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cmd\": \"getusername\",\n  \"sn\": \"{{device_sn}}\",\n  \"enrollid\": {{enrollid}},\n  \"aliasid\": \"USR001\"\n}"
+            },
+            "mqtt": {
+              "topic": "{{pub_topic}}",
+              "qos": "1",
+              "retain": false
+            }
+          }
+        },
+        {
+          "name": "5.6 getuserlist — Get User List Paginated (Server→Device)",
+          "description": "Retrieves a paginated list of user IDs. Use stn=1 to reset pagination.\n\nTopic: aiface/{{device_sn}}/pub\nDirection: Server → Device",
+          "request": {
+            "method": "MQTT",
+            "url": "{{broker_url}}",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cmd\": \"getuserlist\",\n  \"sn\": \"{{device_sn}}\",\n  \"stn\": 1\n}"
+            },
+            "mqtt": {
+              "topic": "{{pub_topic}}",
+              "qos": "1",
+              "retain": false
+            }
+          }
+        },
+        {
+          "name": "5.7 getuserids — Get All User IDs (Server→Device)",
+          "description": "Returns all user IDs in a single response (no pagination).\n\nTopic: aiface/{{device_sn}}/pub\nDirection: Server → Device",
+          "request": {
+            "method": "MQTT",
+            "url": "{{broker_url}}",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cmd\": \"getuserids\",\n  \"sn\": \"{{device_sn}}\"\n}"
+            },
+            "mqtt": {
+              "topic": "{{pub_topic}}",
+              "qos": "1",
+              "retain": false
+            }
+          }
+        },
+        {
+          "name": "5.8 getunuserdid — Get Next Available User ID (Server→Device)",
+          "description": "Returns the next available unused user ID.\n\nTopic: aiface/{{device_sn}}/pub\nDirection: Server → Device",
+          "request": {
+            "method": "MQTT",
+            "url": "{{broker_url}}",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cmd\": \"getunuserdid\",\n  \"sn\": \"{{device_sn}}\"\n}"
+            },
+            "mqtt": {
+              "topic": "{{pub_topic}}",
+              "qos": "1",
+              "retain": false
+            }
+          }
+        },
+        {
+          "name": "5.9 checkuserid — Check If User ID Exists (Server→Device)",
+          "description": "Checks if a specific user ID exists on the device.\n\nTopic: aiface/{{device_sn}}/pub\nDirection: Server → Device",
+          "request": {
+            "method": "MQTT",
+            "url": "{{broker_url}}",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cmd\": \"checkuserid\",\n  \"sn\": \"{{device_sn}}\",\n  \"enrollid\": {{enrollid}}\n}"
+            },
+            "mqtt": {
+              "topic": "{{pub_topic}}",
+              "qos": "1",
+              "retain": false
+            }
+          }
+        },
+        {
+          "name": "5.10 getuserinfo — Get User Info (Server→Device)",
+          "description": "Retrieves detailed user profile. Omit backupnum for full profile; include backupnum for raw biometric data.\n\nbackupnum: 50=face photo, 51=face feature, 10=password, 11=card, 0-9=fingerprint\n\nTopic: aiface/{{device_sn}}/pub\nDirection: Server → Device",
+          "request": {
+            "method": "MQTT",
+            "url": "{{broker_url}}",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cmd\": \"getuserinfo\",\n  \"sn\": \"{{device_sn}}\",\n  \"enrollid\": {{enrollid}},\n  \"aliasid\": \"USR001\"\n}"
+            },
+            "mqtt": {
+              "topic": "{{pub_topic}}",
+              "qos": "1",
+              "retain": false
+            }
+          }
+        },
+        {
+          "name": "5.10b getuserinfo — Get Face Photo (Server→Device)",
+          "description": "Retrieves face photo (base64 JPG) for a specific user.\n\nbackupnum=50 returns face photo data.\n\nTopic: aiface/{{device_sn}}/pub\nDirection: Server → Device",
+          "request": {
+            "method": "MQTT",
+            "url": "{{broker_url}}",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cmd\": \"getuserinfo\",\n  \"sn\": \"{{device_sn}}\",\n  \"enrollid\": {{enrollid}},\n  \"aliasid\": \"USR001\",\n  \"backupnum\": 50\n}"
+            },
+            "mqtt": {
+              "topic": "{{pub_topic}}",
+              "qos": "1",
+              "retain": false
+            }
+          }
+        },
+        {
+          "name": "5.11 getallusers — Get All Users Paginated (Server→Device)",
+          "description": "Returns all user data in paginated format. Each user may return multiple records (one per biometric type). Use stn=true to start a new query.\n\nTopic: aiface/{{device_sn}}/pub\nDirection: Server → Device",
+          "request": {
+            "method": "MQTT",
+            "url": "{{broker_url}}",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cmd\": \"getallusers\",\n  \"sn\": \"{{device_sn}}\",\n  \"stn\": true\n}"
+            },
+            "mqtt": {
+              "topic": "{{pub_topic}}",
+              "qos": "1",
+              "retain": false
+            }
+          }
+        },
+        {
+          "name": "5.12 adduser — Start Device-Side Enrollment (Server→Device)",
+          "description": "Initiates user enrollment on the device. Device will capture biometrics locally.\n\nbackupnum: 0-9=fingerprint, 10=password, 11=card, 40/41=palm, 50=face\n\nTopic: aiface/{{device_sn}}/pub\nDirection: Server → Device",
+          "request": {
+            "method": "MQTT",
+            "url": "{{broker_url}}",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cmd\": \"adduser\",\n  \"sn\": \"{{device_sn}}\",\n  \"enrollid\": {{enrollid}},\n  \"aliasid\": \"USR001\",\n  \"backupnum\": 50,\n  \"admin\": 0,\n  \"flag\": 0,\n  \"name\": \"John Doe\"\n}"
+            },
+            "mqtt": {
+              "topic": "{{pub_topic}}",
+              "qos": "1",
+              "retain": false
+            }
+          }
+        },
+        {
+          "name": "5.12b adduser — Cancel Enrollment (Server→Device)",
+          "description": "Cancels the current device-side enrollment process.\n\nTopic: aiface/{{device_sn}}/pub\nDirection: Server → Device",
+          "request": {
+            "method": "MQTT",
+            "url": "{{broker_url}}",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cmd\": \"adduser\",\n  \"sn\": \"{{device_sn}}\",\n  \"cancel\": true\n}"
+            },
+            "mqtt": {
+              "topic": "{{pub_topic}}",
+              "qos": "1",
+              "retain": false
+            }
+          }
+        },
+        {
+          "name": "5.13 checkregstatus — Check Enrollment Status (Server→Device)",
+          "description": "Queries the current enrollment progress on the device.\n\nResponse status: 0=waiting, >=0=success (value=backupnum), <0=failure\n\nTopic: aiface/{{device_sn}}/pub\nDirection: Server → Device",
+          "request": {
+            "method": "MQTT",
+            "url": "{{broker_url}}",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cmd\": \"checkregstatus\",\n  \"sn\": \"{{device_sn}}\"\n}"
+            },
+            "mqtt": {
+              "topic": "{{pub_topic}}",
+              "qos": "1",
+              "retain": false
+            }
+          }
+        },
+        {
+          "name": "5.14 canceladduser — Cancel Enrollment (Server→Device)",
+          "description": "Cancels the current user enrollment process.\n\nTopic: aiface/{{device_sn}}/pub\nDirection: Server → Device",
+          "request": {
+            "method": "MQTT",
+            "url": "{{broker_url}}",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cmd\": \"canceladduser\",\n  \"sn\": \"{{device_sn}}\"\n}"
+            },
+            "mqtt": {
+              "topic": "{{pub_topic}}",
+              "qos": "1",
+              "retain": false
+            }
+          }
+        },
+        {
+          "name": "5.15 enableuser — Enable/Disable User (Server→Device)",
+          "description": "Enables or disables a user. Set enflag=true to enable, false to disable.\n\nTopic: aiface/{{device_sn}}/pub\nDirection: Server → Device",
+          "request": {
+            "method": "MQTT",
+            "url": "{{broker_url}}",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cmd\": \"enableuser\",\n  \"sn\": \"{{device_sn}}\",\n  \"enrollid\": {{enrollid}},\n  \"aliasid\": \"USR001\",\n  \"enflag\": true\n}"
+            },
+            "mqtt": {
+              "topic": "{{pub_topic}}",
+              "qos": "1",
+              "retain": false
+            }
+          }
+        },
+        {
+          "name": "5.16 getuserprofile — Get User Custom Profile (Server→Device)",
+          "description": "Retrieves the custom profile JSON string for a user.\n\nTopic: aiface/{{device_sn}}/pub\nDirection: Server → Device",
+          "request": {
+            "method": "MQTT",
+            "url": "{{broker_url}}",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cmd\": \"getuserprofile\",\n  \"sn\": \"{{device_sn}}\",\n  \"enrollid\": {{enrollid}},\n  \"aliasid\": \"USR001\"\n}"
+            },
+            "mqtt": {
+              "topic": "{{pub_topic}}",
+              "qos": "1",
+              "retain": false
+            }
+          }
+        },
+        {
+          "name": "5.17 setuserprofile — Set User Custom Profile (Server→Device)",
+          "description": "Sets the custom profile JSON string for a user.\n\nTopic: aiface/{{device_sn}}/pub\nDirection: Server → Device",
+          "request": {
+            "method": "MQTT",
+            "url": "{{broker_url}}",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cmd\": \"setuserprofile\",\n  \"sn\": \"{{device_sn}}\",\n  \"enrollid\": {{enrollid}},\n  \"aliasid\": \"USR001\",\n  \"profile\": \"{\\\"key\\\": \\\"value\\\"}\",\n  \"duration\": 5,\n  \"color\": 1\n}"
+            },
+            "mqtt": {
+              "topic": "{{pub_topic}}",
+              "qos": "1",
+              "retain": false
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "6. Log Management",
+      "description": "Commands for retrieving, filtering, and clearing attendance and access logs.",
+      "item": [
+        {
+          "name": "6.1 getnewlog — Get New/Unread Logs (Server→Device)",
+          "description": "Retrieves new (unread) attendance/access log records with pagination.\n\nUse stn=1 to reset pagination. Set logphoto=1 to include user photos.\n\nTopic: aiface/{{device_sn}}/pub\nDirection: Server → Device",
+          "request": {
+            "method": "MQTT",
+            "url": "{{broker_url}}",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cmd\": \"getnewlog\",\n  \"sn\": \"{{device_sn}}\",\n  \"stn\": 1,\n  \"logphoto\": 0\n}"
+            },
+            "mqtt": {
+              "topic": "{{pub_topic}}",
+              "qos": "1",
+              "retain": false
+            }
+          }
+        },
+        {
+          "name": "6.2 getalllog — Get All Logs (Server→Device)",
+          "description": "Retrieves all log records with optional filtering by user and date range.\n\nDate format: YY-MM-DD (e.g. 25-01-01)\n\nTopic: aiface/{{device_sn}}/pub\nDirection: Server → Device",
+          "request": {
+            "method": "MQTT",
+            "url": "{{broker_url}}",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cmd\": \"getalllog\",\n  \"sn\": \"{{device_sn}}\",\n  \"stn\": 1,\n  \"from\": \"25-01-01\",\n  \"to\": \"25-12-31\",\n  \"logphoto\": 0\n}"
+            },
+            "mqtt": {
+              "topic": "{{pub_topic}}",
+              "qos": "1",
+              "retain": false
+            }
+          }
+        },
+        {
+          "name": "6.3 cleanlog — Clear All Logs (Server→Device)",
+          "description": "Deletes all log records from the device.\n\nTopic: aiface/{{device_sn}}/pub\nDirection: Server → Device",
+          "request": {
+            "method": "MQTT",
+            "url": "{{broker_url}}",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cmd\": \"cleanlog\",\n  \"sn\": \"{{device_sn}}\"\n}"
+            },
+            "mqtt": {
+              "topic": "{{pub_topic}}",
+              "qos": "1",
+              "retain": false
+            }
+          }
+        },
+        {
+          "name": "6.4 cleanlogphoto — Clear Log Photos (Server→Device)",
+          "description": "Deletes all photos associated with log records.\n\nTopic: aiface/{{device_sn}}/pub\nDirection: Server → Device",
+          "request": {
+            "method": "MQTT",
+            "url": "{{broker_url}}",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cmd\": \"cleanlogphoto\",\n  \"sn\": \"{{device_sn}}\"\n}"
+            },
+            "mqtt": {
+              "topic": "{{pub_topic}}",
+              "qos": "1",
+              "retain": false
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "7. Device Management",
+      "description": "Commands for reading and setting device parameters, time, system reset, and device state control.",
+      "item": [
+        {
+          "name": "7.1 getdevinfo — Get Device Parameters (Server→Device)",
+          "description": "Reads all system parameters. Returns all DI_FIRST to DI_END parameters as key-value pairs.\n\nTopic: aiface/{{device_sn}}/pub\nDirection: Server → Device",
+          "request": {
+            "method": "MQTT",
+            "url": "{{broker_url}}",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cmd\": \"getdevinfo\",\n  \"sn\": \"{{device_sn}}\"\n}"
+            },
+            "mqtt": {
+              "topic": "{{pub_topic}}",
+              "qos": "1",
+              "retain": false
+            }
+          }
+        },
+        {
+          "name": "7.2 setdevinfo — Set Device Parameters (Server→Device)",
+          "description": "Sets one or more system parameters. Adding DI_SERVERIP/DI_SERVERPORT will trigger connection re-establishment.\n\nTopic: aiface/{{device_sn}}/pub\nDirection: Server → Device",
+          "request": {
+            "method": "MQTT",
+            "url": "{{broker_url}}",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cmd\": \"setdevinfo\",\n  \"sn\": \"{{device_sn}}\",\n  \"nowtime\": 1735689600000,\n  \"DI_SERVERIP\": \"192.168.1.100\",\n  \"DI_SERVERPORT\": 81\n}"
+            },
+            "mqtt": {
+              "topic": "{{pub_topic}}",
+              "qos": "1",
+              "retain": false
+            }
+          }
+        },
+        {
+          "name": "7.3 getdevcap — Get Device Capacity (Server→Device)",
+          "description": "Returns device storage capacity information for all biometric types.\n\nTopic: aiface/{{device_sn}}/pub\nDirection: Server → Device",
+          "request": {
+            "method": "MQTT",
+            "url": "{{broker_url}}",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cmd\": \"getdevcap\",\n  \"sn\": \"{{device_sn}}\"\n}"
+            },
+            "mqtt": {
+              "topic": "{{pub_topic}}",
+              "qos": "1",
+              "retain": false
+            }
+          }
+        },
+        {
+          "name": "7.4 gettime — Get Device Time (Server→Device)",
+          "description": "Gets the current device time.\n\nTopic: aiface/{{device_sn}}/pub\nDirection: Server → Device",
+          "request": {
+            "method": "MQTT",
+            "url": "{{broker_url}}",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cmd\": \"gettime\",\n  \"sn\": \"{{device_sn}}\"\n}"
+            },
+            "mqtt": {
+              "topic": "{{pub_topic}}",
+              "qos": "1",
+              "retain": false
+            }
+          }
+        },
+        {
+          "name": "7.5 settime — Set Device Time (Server→Device)",
+          "description": "Sets the device time. Provide both cloudtime (string) and nowtime (Unix ms timestamp).\n\nTopic: aiface/{{device_sn}}/pub\nDirection: Server → Device",
+          "request": {
+            "method": "MQTT",
+            "url": "{{broker_url}}",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cmd\": \"settime\",\n  \"sn\": \"{{device_sn}}\",\n  \"cloudtime\": \"2025-01-01 08:00:00\",\n  \"nowtime\": 1735689600000\n}"
+            },
+            "mqtt": {
+              "topic": "{{pub_topic}}",
+              "qos": "1",
+              "retain": false
+            }
+          }
+        },
+        {
+          "name": "7.6 initsys — Factory Reset (Server→Device)",
+          "description": "Performs a factory reset: clears all users and logs, restores default settings, backs up WiFi configuration.\n\nWARNING: This will erase all user data!\n\nTopic: aiface/{{device_sn}}/pub\nDirection: Server → Device",
+          "request": {
+            "method": "MQTT",
+            "url": "{{broker_url}}",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cmd\": \"initsys\",\n  \"sn\": \"{{device_sn}}\"\n}"
+            },
+            "mqtt": {
+              "topic": "{{pub_topic}}",
+              "qos": "1",
+              "retain": false
+            }
+          }
+        },
+        {
+          "name": "7.7 initmenu — Reset Menu Settings (Server→Device)",
+          "description": "Restores default menu settings. Preserves language and backs up WiFi configuration.\n\nTopic: aiface/{{device_sn}}/pub\nDirection: Server → Device",
+          "request": {
+            "method": "MQTT",
+            "url": "{{broker_url}}",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cmd\": \"initmenu\",\n  \"sn\": \"{{device_sn}}\"\n}"
+            },
+            "mqtt": {
+              "topic": "{{pub_topic}}",
+              "qos": "1",
+              "retain": false
+            }
+          }
+        },
+        {
+          "name": "7.8 cleandatebase — Clear Database (Server→Device)",
+          "description": "Clears the entire database. Device must be rebooted after this operation.\n\nWARNING: Requires reboot after execution!\n\nTopic: aiface/{{device_sn}}/pub\nDirection: Server → Device",
+          "request": {
+            "method": "MQTT",
+            "url": "{{broker_url}}",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cmd\": \"cleandatebase\",\n  \"sn\": \"{{device_sn}}\"\n}"
+            },
+            "mqtt": {
+              "topic": "{{pub_topic}}",
+              "qos": "1",
+              "retain": false
+            }
+          }
+        },
+        {
+          "name": "7.9 cleanadmin — Clear All Administrators (Server→Device)",
+          "description": "Removes all administrator privileges from the device.\n\nTopic: aiface/{{device_sn}}/pub\nDirection: Server → Device",
+          "request": {
+            "method": "MQTT",
+            "url": "{{broker_url}}",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cmd\": \"cleanadmin\",\n  \"sn\": \"{{device_sn}}\"\n}"
+            },
+            "mqtt": {
+              "topic": "{{pub_topic}}",
+              "qos": "1",
+              "retain": false
+            }
+          }
+        },
+        {
+          "name": "7.10 cleaninactiveuser — Clear Inactive Users (Server→Device)",
+          "description": "Removes users who have not been active (no attendance records).\n\nTopic: aiface/{{device_sn}}/pub\nDirection: Server → Device",
+          "request": {
+            "method": "MQTT",
+            "url": "{{broker_url}}",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cmd\": \"cleaninactiveuser\",\n  \"sn\": \"{{device_sn}}\"\n}"
+            },
+            "mqtt": {
+              "topic": "{{pub_topic}}",
+              "qos": "1",
+              "retain": false
+            }
+          }
+        },
+        {
+          "name": "7.11 reboot — Reboot Device (Server→Device)",
+          "description": "Triggers an immediate device reboot. No response is sent — device restarts immediately.\n\nTopic: aiface/{{device_sn}}/pub\nDirection: Server → Device",
+          "request": {
+            "method": "MQTT",
+            "url": "{{broker_url}}",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cmd\": \"reboot\",\n  \"sn\": \"{{device_sn}}\"\n}"
+            },
+            "mqtt": {
+              "topic": "{{pub_topic}}",
+              "qos": "1",
+              "retain": false
+            }
+          }
+        },
+        {
+          "name": "7.12 disabledevice — Disable Device Recognition (Server→Device)",
+          "description": "Pauses all face, card, fingerprint, and palm detection.\n\nTopic: aiface/{{device_sn}}/pub\nDirection: Server → Device",
+          "request": {
+            "method": "MQTT",
+            "url": "{{broker_url}}",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cmd\": \"disabledevice\",\n  \"sn\": \"{{device_sn}}\"\n}"
+            },
+            "mqtt": {
+              "topic": "{{pub_topic}}",
+              "qos": "1",
+              "retain": false
+            }
+          }
+        },
+        {
+          "name": "7.13 enabledevice — Enable Device Recognition (Server→Device)",
+          "description": "Resumes all face, card, fingerprint, and palm detection.\n\nTopic: aiface/{{device_sn}}/pub\nDirection: Server → Device",
+          "request": {
+            "method": "MQTT",
+            "url": "{{broker_url}}",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cmd\": \"enabledevice\",\n  \"sn\": \"{{device_sn}}\"\n}"
+            },
+            "mqtt": {
+              "topic": "{{pub_topic}}",
+              "qos": "1",
+              "retain": false
+            }
+          }
+        },
+        {
+          "name": "7.14 checklive — Heartbeat Check (Server→Device)",
+          "description": "Server-initiated heartbeat to verify device connectivity. Device responds to confirm it is alive.\n\nTopic: aiface/{{device_sn}}/pub\nDirection: Server → Device",
+          "request": {
+            "method": "MQTT",
+            "url": "{{broker_url}}",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cmd\": \"checklive\",\n  \"sn\": \"{{device_sn}}\"\n}"
+            },
+            "mqtt": {
+              "topic": "{{pub_topic}}",
+              "qos": "1",
+              "retain": false
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "8. Access Control",
+      "description": "Commands for door control, lock configuration, and user access parameters.",
+      "item": [
+        {
+          "name": "8.1 opendoor — Remote Door Open (Server→Device)",
+          "description": "Remotely unlocks the door. Optionally sends user ID via Wiegand and displays a message.\n\nTopic: aiface/{{device_sn}}/pub\nDirection: Server → Device",
+          "request": {
+            "method": "MQTT",
+            "url": "{{broker_url}}",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cmd\": \"opendoor\",\n  \"sn\": \"{{device_sn}}\",\n  \"enrollid\": {{enrollid}},\n  \"floor\": 0,\n  \"msg\": \"Welcome\"\n}"
+            },
+            "mqtt": {
+              "topic": "{{pub_topic}}",
+              "qos": "1",
+              "retain": false
+            }
+          }
+        },
+        {
+          "name": "8.2 lockctrl — Door Lock Control (Server→Device)",
+          "description": "Controls the door lock state directly.\n\nfuc: 1=unlock/open, 2=lock/close\n\nTopic: aiface/{{device_sn}}/pub\nDirection: Server → Device",
+          "request": {
+            "method": "MQTT",
+            "url": "{{broker_url}}",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cmd\": \"lockctrl\",\n  \"sn\": \"{{device_sn}}\",\n  \"fuc\": 1\n}"
+            },
+            "mqtt": {
+              "topic": "{{pub_topic}}",
+              "qos": "1",
+              "retain": false
+            }
+          }
+        },
+        {
+          "name": "8.3 getdoorstatus — Get Door Status (Server→Device)",
+          "description": "Returns the current door sensor status.\n\ndoorstatus in response: 0=closed, 1=open\n\nTopic: aiface/{{device_sn}}/pub\nDirection: Server → Device",
+          "request": {
+            "method": "MQTT",
+            "url": "{{broker_url}}",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cmd\": \"getdoorstatus\",\n  \"sn\": \"{{device_sn}}\"\n}"
+            },
+            "mqtt": {
+              "topic": "{{pub_topic}}",
+              "qos": "1",
+              "retain": false
+            }
+          }
+        },
+        {
+          "name": "8.4 setdevlock — Set Door Access Parameters (Server→Device)",
+          "description": "Configures door access control parameters including timing, zones, and Wiegand settings.\n\nTopic: aiface/{{device_sn}}/pub\nDirection: Server → Device",
+          "request": {
+            "method": "MQTT",
+            "url": "{{broker_url}}",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cmd\": \"setdevlock\",\n  \"sn\": \"{{device_sn}}\",\n  \"opendelay\": 5,\n  \"doorsensor\": 0,\n  \"alarmdelay\": 30,\n  \"InputAlarm\": 0,\n  \"antpass\": 0,\n  \"interlock\": 0,\n  \"mutiopen\": 0,\n  \"tryalarm\": 5,\n  \"access_times\": 0,\n  \"punchtimes\": 0,\n  \"tamper\": 0,\n  \"wgformat\": 0,\n  \"wgoutput\": 0,\n  \"cardformat\": 0,\n  \"wgport\": 0\n}"
+            },
+            "mqtt": {
+              "topic": "{{pub_topic}}",
+              "qos": "1",
+              "retain": false
+            }
+          }
+        },
+        {
+          "name": "8.5 getdevlock — Get Door Access Parameters (Server→Device)",
+          "description": "Reads the current door access control configuration.\n\nTopic: aiface/{{device_sn}}/pub\nDirection: Server → Device",
+          "request": {
+            "method": "MQTT",
+            "url": "{{broker_url}}",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cmd\": \"getdevlock\",\n  \"sn\": \"{{device_sn}}\"\n}"
+            },
+            "mqtt": {
+              "topic": "{{pub_topic}}",
+              "qos": "1",
+              "retain": false
+            }
+          }
+        },
+        {
+          "name": "8.6 getuserlock — Get User Door Access Parameters (Server→Device)",
+          "description": "Reads door access parameters for a specific user.\n\nTopic: aiface/{{device_sn}}/pub\nDirection: Server → Device",
+          "request": {
+            "method": "MQTT",
+            "url": "{{broker_url}}",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cmd\": \"getuserlock\",\n  \"sn\": \"{{device_sn}}\",\n  \"enrollid\": {{enrollid}},\n  \"aliasid\": \"USR001\"\n}"
+            },
+            "mqtt": {
+              "topic": "{{pub_topic}}",
+              "qos": "1",
+              "retain": false
+            }
+          }
+        },
+        {
+          "name": "8.7 setuserlock — Batch Set User Access Parameters (Server→Device)",
+          "description": "Sets door access time zones and restrictions for multiple users at once.\n\nTopic: aiface/{{device_sn}}/pub\nDirection: Server → Device",
+          "request": {
+            "method": "MQTT",
+            "url": "{{broker_url}}",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cmd\": \"setuserlock\",\n  \"sn\": \"{{device_sn}}\",\n  \"count\": 2,\n  \"birthday\": \"06-15\",\n  \"record\": [\n    {\"enrollid\": 100, \"aliasid\": \"U100\", \"verifymode\": 255, \"weekzone\": 0, \"group\": 0, \"access_times\": 0, \"starttime\": \"2025-01-01 00:00:00\", \"endtime\": \"2025-12-31 23:59:59\"},\n    {\"enrollid\": 101, \"aliasid\": \"U101\", \"verifymode\": 255, \"weekzone\": 1, \"group\": 1, \"access_times\": 10, \"starttime\": \"2025-01-01 00:00:00\", \"endtime\": \"2025-12-31 23:59:59\"}\n  ]\n}"
+            },
+            "mqtt": {
+              "topic": "{{pub_topic}}",
+              "qos": "1",
+              "retain": false
+            }
+          }
+        },
+        {
+          "name": "8.8 deleteuserlock — Delete User Access Parameters (Server→Device)",
+          "description": "Removes door access parameters for a specific user.\n\nTopic: aiface/{{device_sn}}/pub\nDirection: Server → Device",
+          "request": {
+            "method": "MQTT",
+            "url": "{{broker_url}}",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cmd\": \"deleteuserlock\",\n  \"sn\": \"{{device_sn}}\",\n  \"enrollid\": {{enrollid}},\n  \"aliasid\": \"USR001\"\n}"
+            },
+            "mqtt": {
+              "topic": "{{pub_topic}}",
+              "qos": "1",
+              "retain": false
+            }
+          }
+        },
+        {
+          "name": "8.9 cleanuserlock — Clear All User Access Parameters (Server→Device)",
+          "description": "Removes door access time zones and restrictions for all users.\n\nTopic: aiface/{{device_sn}}/pub\nDirection: Server → Device",
+          "request": {
+            "method": "MQTT",
+            "url": "{{broker_url}}",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cmd\": \"cleanuserlock\",\n  \"sn\": \"{{device_sn}}\"\n}"
+            },
+            "mqtt": {
+              "topic": "{{pub_topic}}",
+              "qos": "1",
+              "retain": false
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "9. Attendance Management",
+      "description": "Commands for shift schedules, bell times, and holiday configurations.",
+      "item": [
+        {
+          "name": "9.1 getshift — Get Shift Schedule (Server→Device)",
+          "description": "Reads the configured shift/roster schedule. Max 8 shifts, each with up to 3 time sections.\n\nSection type: 0=work, 1=rest, 2=overtime\n\nTopic: aiface/{{device_sn}}/pub\nDirection: Server → Device",
+          "request": {
+            "method": "MQTT",
+            "url": "{{broker_url}}",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cmd\": \"getshift\",\n  \"sn\": \"{{device_sn}}\"\n}"
+            },
+            "mqtt": {
+              "topic": "{{pub_topic}}",
+              "qos": "1",
+              "retain": false
+            }
+          }
+        },
+        {
+          "name": "9.2 setshift — Set Shift Schedule (Server→Device)",
+          "description": "Configures the shift/roster schedule.\n\nTopic: aiface/{{device_sn}}/pub\nDirection: Server → Device",
+          "request": {
+            "method": "MQTT",
+            "url": "{{broker_url}}",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cmd\": \"setshift\",\n  \"sn\": \"{{device_sn}}\",\n  \"shifts\": [\n    {\n      \"name\": \"Day Shift\",\n      \"cutoftime\": \"09:00\",\n      \"sections\": [\n        {\"start\": \"08:00\", \"end\": \"12:00\", \"type\": 0},\n        {\"start\": \"13:00\", \"end\": \"17:00\", \"type\": 1}\n      ]\n    },\n    {\n      \"name\": \"Night Shift\",\n      \"cutoftime\": \"21:00\",\n      \"sections\": [\n        {\"start\": \"20:00\", \"end\": \"23:59\", \"type\": 0},\n        {\"start\": \"00:00\", \"end\": \"06:00\", \"type\": 0}\n      ]\n    }\n  ]\n}"
+            },
+            "mqtt": {
+              "topic": "{{pub_topic}}",
+              "qos": "1",
+              "retain": false
+            }
+          }
+        },
+        {
+          "name": "9.3 getbelltime — Get Bell Schedule (Server→Device)",
+          "description": "Reads configured bell/doorbell time schedules.\n\nflag is a bitmask where each bit = a day of week (127 = all days)\n\nTopic: aiface/{{device_sn}}/pub\nDirection: Server → Device",
+          "request": {
+            "method": "MQTT",
+            "url": "{{broker_url}}",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cmd\": \"getbelltime\",\n  \"sn\": \"{{device_sn}}\"\n}"
+            },
+            "mqtt": {
+              "topic": "{{pub_topic}}",
+              "qos": "1",
+              "retain": false
+            }
+          }
+        },
+        {
+          "name": "9.4 setbelltime — Set Bell Schedule (Server→Device)",
+          "description": "Configures bell/doorbell time schedules.\n\nflag: bitmask for days of week (127=all days, 65=Mon+Sun, etc.)\n\nTopic: aiface/{{device_sn}}/pub\nDirection: Server → Device",
+          "request": {
+            "method": "MQTT",
+            "url": "{{broker_url}}",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cmd\": \"setbelltime\",\n  \"sn\": \"{{device_sn}}\",\n  \"belltimes\": [\n    {\"time\": \"08:00\", \"flag\": 127},\n    {\"time\": \"12:00\", \"flag\": 127},\n    {\"time\": \"18:00\", \"flag\": 65}\n  ]\n}"
+            },
+            "mqtt": {
+              "topic": "{{pub_topic}}",
+              "qos": "1",
+              "retain": false
+            }
+          }
+        },
+        {
+          "name": "9.5 setholiday — Set Holiday Schedule (Server→Device)",
+          "description": "Configures holiday schedules.\n\nDate format: MM-DD\n\nTopic: aiface/{{device_sn}}/pub\nDirection: Server → Device",
+          "request": {
+            "method": "MQTT",
+            "url": "{{broker_url}}",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cmd\": \"setholiday\",\n  \"sn\": \"{{device_sn}}\",\n  \"holidays\": [\n    {\"name\": \"Spring Festival\", \"startday\": \"01-28\", \"endday\": \"02-03\", \"shift\": 0, \"dayzone\": 0},\n    {\"name\": \"National Day\", \"startday\": \"10-01\", \"endday\": \"10-07\", \"shift\": 1, \"dayzone\": 0}\n  ]\n}"
+            },
+            "mqtt": {
+              "topic": "{{pub_topic}}",
+              "qos": "1",
+              "retain": false
+            }
+          }
+        },
+        {
+          "name": "9.6 getholiday — Get Holiday Schedule (Server→Device)",
+          "description": "Reads configured holiday schedule.\n\nTopic: aiface/{{device_sn}}/pub\nDirection: Server → Device",
+          "request": {
+            "method": "MQTT",
+            "url": "{{broker_url}}",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cmd\": \"getholiday\",\n  \"sn\": \"{{device_sn}}\"\n}"
+            },
+            "mqtt": {
+              "topic": "{{pub_topic}}",
+              "qos": "1",
+              "retain": false
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "10. Device Active Reports (Device→Server)",
+      "description": "Commands initiated by the device and sent to the server. The server processes them and sends back a response.\n\nThese are device-to-server messages. Use them to simulate device behavior for testing.",
+      "item": [
+        {
+          "name": "10.1 sendlog — Device Reports Attendance Logs (Device→Server)",
+          "description": "Device proactively sends attendance/access log records to the server.\n\nPublish to sub_topic to simulate device sending logs.\n\nTopic: aiface/{{device_sn}}/sub\nDirection: Device → Server",
+          "request": {
+            "method": "MQTT",
+            "url": "{{broker_url}}",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cmd\": \"sendlog\",\n  \"sn\": \"{{device_sn}}\",\n  \"count\": 1,\n  \"logindex\": 0,\n  \"record\": [\n    {\n      \"enrollid\": {{enrollid}},\n      \"name\": \"John Doe\",\n      \"time\": \"2025-01-01 08:00:00\",\n      \"mode\": 1,\n      \"inout\": 0,\n      \"event\": 0,\n      \"aliasid\": \"USR001\",\n      \"image\": \"\",\n      \"note\": \"\"\n    }\n  ]\n}"
+            },
+            "mqtt": {
+              "topic": "{{sub_topic}}",
+              "qos": "1",
+              "retain": false
+            }
+          }
+        },
+        {
+          "name": "10.2 senduser — Device Reports User Data Change (Device→Server)",
+          "description": "Device proactively sends user enrollment/modification data when biometrics are enrolled on the device.\n\nExample: face photo upload (backupnum=50)\n\nTopic: aiface/{{device_sn}}/sub\nDirection: Device → Server",
+          "request": {
+            "method": "MQTT",
+            "url": "{{broker_url}}",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cmd\": \"senduser\",\n  \"sn\": \"{{device_sn}}\",\n  \"enrollid\": {{enrollid}},\n  \"name\": \"John Doe\",\n  \"backupnum\": 50,\n  \"admin\": 0,\n  \"record\": \"base64_jpg_data\",\n  \"aliasid\": \"USR001\"\n}"
+            },
+            "mqtt": {
+              "topic": "{{sub_topic}}",
+              "qos": "1",
+              "retain": false
+            }
+          }
+        },
+        {
+          "name": "10.3 sendpin — Device Reports PIN Input (Device→Server)",
+          "description": "Device reports when a user enters a PIN code on the device keypad.\n\nTopic: aiface/{{device_sn}}/sub\nDirection: Device → Server",
+          "request": {
+            "method": "MQTT",
+            "url": "{{broker_url}}",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cmd\": \"sendpin\",\n  \"sn\": \"{{device_sn}}\",\n  \"pin\": \"123456\",\n  \"time\": \"2025-01-01 08:00:00\"\n}"
+            },
+            "mqtt": {
+              "topic": "{{sub_topic}}",
+              "qos": "1",
+              "retain": false
+            }
+          }
+        },
+        {
+          "name": "10.4 sendqrcode — Device Reports QR Code Scan (Device→Server)",
+          "description": "Device reports when a user scans a QR code.\n\nTopic: aiface/{{device_sn}}/sub\nDirection: Device → Server",
+          "request": {
+            "method": "MQTT",
+            "url": "{{broker_url}}",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cmd\": \"sendqrcode\",\n  \"sn\": \"{{device_sn}}\",\n  \"record\": \"qrcode_data_string\"\n}"
+            },
+            "mqtt": {
+              "topic": "{{sub_topic}}",
+              "qos": "1",
+              "retain": false
+            }
+          }
+        },
+        {
+          "name": "10.5 sendgps — Device Reports GPS Location (Device→Server)",
+          "description": "Device proactively sends GPS location data (requires USB 4G module).\n\nTopic: aiface/{{device_sn}}/sub\nDirection: Device → Server",
+          "request": {
+            "method": "MQTT",
+            "url": "{{broker_url}}",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cmd\": \"sendgps\",\n  \"sn\": \"{{device_sn}}\",\n  \"satellites\": 8,\n  \"location\": \"22.5431,114.0579\",\n  \"timeStamp\": 1704067200000\n}"
+            },
+            "mqtt": {
+              "topic": "{{sub_topic}}",
+              "qos": "1",
+              "retain": false
+            }
+          }
+        },
+        {
+          "name": "10.6 otacheck — OTA Update Check (Device→Server)",
+          "description": "Device checks if a firmware update is available.\n\nTopic: aiface/{{device_sn}}/sub\nDirection: Device → Server",
+          "request": {
+            "method": "MQTT",
+            "url": "{{broker_url}}",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cmd\": \"otacheck\",\n  \"sn\": \"{{device_sn}}\",\n  \"fwname\": \"ai230_device\",\n  \"version\": \"1.0.0\"\n}"
+            },
+            "mqtt": {
+              "topic": "{{sub_topic}}",
+              "qos": "1",
+              "retain": false
+            }
+          }
+        },
+        {
+          "name": "10.7 otaget — OTA File Download Chunk (Device→Server)",
+          "description": "Device requests a chunk of the OTA firmware file.\n\nTopic: aiface/{{device_sn}}/sub\nDirection: Device → Server",
+          "request": {
+            "method": "MQTT",
+            "url": "{{broker_url}}",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cmd\": \"otaget\",\n  \"sn\": \"{{device_sn}}\",\n  \"filename\": \"update.pkg\",\n  \"index\": 0,\n  \"count\": 102400\n}"
+            },
+            "mqtt": {
+              "topic": "{{sub_topic}}",
+              "qos": "1",
+              "retain": false
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "11. File Management",
+      "description": "Commands for listing, reading, and writing files on the device.",
+      "item": [
+        {
+          "name": "11.1 getdir — List Directory Files (Server→Device)",
+          "description": "Lists files in a specified directory. Path must start with /data/\n\nTopic: aiface/{{device_sn}}/pub\nDirection: Server → Device",
+          "request": {
+            "method": "MQTT",
+            "url": "{{broker_url}}",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cmd\": \"getdir\",\n  \"sn\": \"{{device_sn}}\",\n  \"path\": \"/data/photos\"\n}"
+            },
+            "mqtt": {
+              "topic": "{{pub_topic}}",
+              "qos": "1",
+              "retain": false
+            }
+          }
+        },
+        {
+          "name": "11.2 getfile — Read File (Server→Device)",
+          "description": "Reads the contents of a file and returns it as base64.\n\nTopic: aiface/{{device_sn}}/pub\nDirection: Server → Device",
+          "request": {
+            "method": "MQTT",
+            "url": "{{broker_url}}",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cmd\": \"getfile\",\n  \"sn\": \"{{device_sn}}\",\n  \"path\": \"/data/photos/user123.jpg\"\n}"
+            },
+            "mqtt": {
+              "topic": "{{pub_topic}}",
+              "qos": "1",
+              "retain": false
+            }
+          }
+        },
+        {
+          "name": "11.3 writefile — Write File (Server→Device)",
+          "description": "Writes base64-encoded content to a file on the device.\n\nTopic: aiface/{{device_sn}}/pub\nDirection: Server → Device",
+          "request": {
+            "method": "MQTT",
+            "url": "{{broker_url}}",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cmd\": \"writefile\",\n  \"sn\": \"{{device_sn}}\",\n  \"path\": \"/data/config/settings.json\",\n  \"base64\": \"base64_encoded_json_data\"\n}"
+            },
+            "mqtt": {
+              "topic": "{{pub_topic}}",
+              "qos": "1",
+              "retain": false
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "12. Other Commands",
+      "description": "Firmware upgrade, OTA server configuration, screensaver, voice, keypad, biometric verification, department, company, and questionnaire commands.",
+      "item": [
+        {
+          "name": "12.1 upgrade — Firmware Upgrade via Server (Server→Device)",
+          "description": "Uploads firmware upgrade data to the device in chunks.\n\nThis is a multi-chunk operation. Send chunk by chunk, incrementing the index each time.\n\nTopic: aiface/{{device_sn}}/pub\nDirection: Server → Device",
+          "request": {
+            "method": "MQTT",
+            "url": "{{broker_url}}",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cmd\": \"upgrade\",\n  \"sn\": \"{{device_sn}}\",\n  \"filename\": \"update.pkg\",\n  \"md5\": \"abc123def456\",\n  \"allcount\": 10485760,\n  \"index\": 0,\n  \"count\": 102400,\n  \"record\": \"base64_encoded_chunk_data\"\n}"
+            },
+            "mqtt": {
+              "topic": "{{pub_topic}}",
+              "qos": "1",
+              "retain": false
+            }
+          }
+        },
+        {
+          "name": "12.2 forceota — Force OTA Update (Server→Device)",
+          "description": "Triggers an immediate OTA update check and download.\n\nTopic: aiface/{{device_sn}}/pub\nDirection: Server → Device",
+          "request": {
+            "method": "MQTT",
+            "url": "{{broker_url}}",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cmd\": \"forceota\",\n  \"sn\": \"{{device_sn}}\"\n}"
+            },
+            "mqtt": {
+              "topic": "{{pub_topic}}",
+              "qos": "1",
+              "retain": false
+            }
+          }
+        },
+        {
+          "name": "12.3 setotaserver — Set OTA Server Address (Server→Device)",
+          "description": "Sets the OTA server address.\n\nTopic: aiface/{{device_sn}}/pub\nDirection: Server → Device",
+          "request": {
+            "method": "MQTT",
+            "url": "{{broker_url}}",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cmd\": \"setotaserver\",\n  \"sn\": \"{{device_sn}}\",\n  \"address\": \"https://ota.example.com\"\n}"
+            },
+            "mqtt": {
+              "topic": "{{pub_topic}}",
+              "qos": "1",
+              "retain": false
+            }
+          }
+        },
+        {
+          "name": "12.4 getotaserver — Get OTA Server Address (Server→Device)",
+          "description": "Reads the configured OTA server address.\n\nTopic: aiface/{{device_sn}}/pub\nDirection: Server → Device",
+          "request": {
+            "method": "MQTT",
+            "url": "{{broker_url}}",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cmd\": \"getotaserver\",\n  \"sn\": \"{{device_sn}}\"\n}"
+            },
+            "mqtt": {
+              "topic": "{{pub_topic}}",
+              "qos": "1",
+              "retain": false
+            }
+          }
+        },
+        {
+          "name": "12.5 setscreensaver — Set Screensaver (Server→Device)",
+          "description": "Configures the device screensaver with an image.\n\nSet removeall=true to delete all screensavers. Set remove=true to delete a specific file.\n\nTopic: aiface/{{device_sn}}/pub\nDirection: Server → Device",
+          "request": {
+            "method": "MQTT",
+            "url": "{{broker_url}}",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cmd\": \"setscreensaver\",\n  \"sn\": \"{{device_sn}}\",\n  \"filename\": \"screensaver1.jpg\",\n  \"photo\": \"base64_encoded_image\",\n  \"duration\": 30,\n  \"remove\": false,\n  \"removeall\": false\n}"
+            },
+            "mqtt": {
+              "topic": "{{pub_topic}}",
+              "qos": "1",
+              "retain": false
+            }
+          }
+        },
+        {
+          "name": "12.6 setvoice — Set Custom Voice (Server→Device)",
+          "description": "Uploads and optionally plays a custom WAV voice file.\n\nTopic: aiface/{{device_sn}}/pub\nDirection: Server → Device",
+          "request": {
+            "method": "MQTT",
+            "url": "{{broker_url}}",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cmd\": \"setvoice\",\n  \"sn\": \"{{device_sn}}\",\n  \"index\": 10,\n  \"voice\": \"base64_encoded_wav_data\",\n  \"play\": true,\n  \"repeat_seconds\": 60\n}"
+            },
+            "mqtt": {
+              "topic": "{{pub_topic}}",
+              "qos": "1",
+              "retain": false
+            }
+          }
+        },
+        {
+          "name": "12.7 keypad — Control On-Screen Keypad (Server→Device)",
+          "description": "Activates or deactivates the on-screen numeric keypad.\n\non=true to activate, on=false to deactivate\n\nTopic: aiface/{{device_sn}}/pub\nDirection: Server → Device",
+          "request": {
+            "method": "MQTT",
+            "url": "{{broker_url}}",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cmd\": \"keypad\",\n  \"sn\": \"{{device_sn}}\",\n  \"password\": true,\n  \"keep\": false,\n  \"timeout\": 30,\n  \"on\": true\n}"
+            },
+            "mqtt": {
+              "topic": "{{pub_topic}}",
+              "qos": "1",
+              "retain": false
+            }
+          }
+        },
+        {
+          "name": "12.8 verify — Biometric Verification (Server→Device)",
+          "description": "Performs face or fingerprint verification on the server side.\n\nProvide face (base64 JPG) or finger (hex with compression) for verification.\n\nTopic: aiface/{{device_sn}}/pub\nDirection: Server → Device",
+          "request": {
+            "method": "MQTT",
+            "url": "{{broker_url}}",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cmd\": \"verify\",\n  \"sn\": \"{{device_sn}}\",\n  \"enrollid\": {{enrollid}},\n  \"card\": 12345,\n  \"pwd\": 0,\n  \"name\": \"John Doe\",\n  \"face\": \"base64_face_photo\",\n  \"finger\": \"\",\n  \"finger2\": \"\",\n  \"profile\": \"{}\"\n}"
+            },
+            "mqtt": {
+              "topic": "{{pub_topic}}",
+              "qos": "1",
+              "retain": false
+            }
+          }
+        },
+        {
+          "name": "12.9 setdepartment — Set Department List (Server→Device)",
+          "description": "Sets the department list on the device. Set delete=true to clear all departments.\n\nTopic: aiface/{{device_sn}}/pub\nDirection: Server → Device",
+          "request": {
+            "method": "MQTT",
+            "url": "{{broker_url}}",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cmd\": \"setdepartment\",\n  \"sn\": \"{{device_sn}}\",\n  \"delete\": false,\n  \"name\": [\"Engineering\", \"Sales\", \"HR\", \"Finance\", \"Operations\"]\n}"
+            },
+            "mqtt": {
+              "topic": "{{pub_topic}}",
+              "qos": "1",
+              "retain": false
+            }
+          }
+        },
+        {
+          "name": "12.10 getdepartment — Get Department List (Server→Device)",
+          "description": "Reads the configured department list.\n\nTopic: aiface/{{device_sn}}/pub\nDirection: Server → Device",
+          "request": {
+            "method": "MQTT",
+            "url": "{{broker_url}}",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cmd\": \"getdepartment\",\n  \"sn\": \"{{device_sn}}\"\n}"
+            },
+            "mqtt": {
+              "topic": "{{pub_topic}}",
+              "qos": "1",
+              "retain": false
+            }
+          }
+        },
+        {
+          "name": "12.11 setcompanyname — Set Company Name (Server→Device)",
+          "description": "Sets the company name displayed on the device.\n\nTopic: aiface/{{device_sn}}/pub\nDirection: Server → Device",
+          "request": {
+            "method": "MQTT",
+            "url": "{{broker_url}}",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cmd\": \"setcompanyname\",\n  \"sn\": \"{{device_sn}}\",\n  \"name\": \"Acme Corporation\"\n}"
+            },
+            "mqtt": {
+              "topic": "{{pub_topic}}",
+              "qos": "1",
+              "retain": false
+            }
+          }
+        },
+        {
+          "name": "12.12 getcompanyname — Get Company Name (Server→Device)",
+          "description": "Reads the configured company name.\n\nTopic: aiface/{{device_sn}}/pub\nDirection: Server → Device",
+          "request": {
+            "method": "MQTT",
+            "url": "{{broker_url}}",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cmd\": \"getcompanyname\",\n  \"sn\": \"{{device_sn}}\"\n}"
+            },
+            "mqtt": {
+              "topic": "{{pub_topic}}",
+              "qos": "1",
+              "retain": false
+            }
+          }
+        },
+        {
+          "name": "12.13 setquestionnaire — Set Questionnaire (Server→Device)",
+          "description": "Configures a questionnaire/survey displayed to users after verification.\n\nSchedule format: HH:MM-HH:MM*N (N = repeat interval in minutes)\n\nTopic: aiface/{{device_sn}}/pub\nDirection: Server → Device",
+          "request": {
+            "method": "MQTT",
+            "url": "{{broker_url}}",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cmd\": \"setquestionnaire\",\n  \"sn\": \"{{device_sn}}\",\n  \"title\": \"Health Declaration\",\n  \"voice\": \"health.wav\",\n  \"errmsg\": \"Please complete the survey\",\n  \"radio\": true,\n  \"optionflag\": 0,\n  \"items\": [\"Option A\", \"Option B\", \"Option C\"],\n  \"schedules\": [\"08:00-18:00*1\"],\n  \"usequestion\": true,\n  \"useschedule\": false,\n  \"card\": 0,\n  \"switch_card\": 0,\n  \"enrollid\": 0,\n  \"open\": false\n}"
+            },
+            "mqtt": {
+              "topic": "{{pub_topic}}",
+              "qos": "1",
+              "retain": false
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

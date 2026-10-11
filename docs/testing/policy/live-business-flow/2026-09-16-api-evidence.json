@@ -1,0 +1,441 @@
+{
+  "environment": {
+    "apiBaseUrl": "https://skolenza-api.onrender.com",
+    "tenantId": 8,
+    "roleId": 22,
+    "actorEmployeeId": 4,
+    "capturedAtLocal": "2026-09-16T20:18:36+05:30",
+    "authentication": "Runtime authentication credential omitted"
+  },
+  "insertedData": [
+    {
+      "entity": "PolicyType",
+      "table": "skolenza.PolicyType",
+      "id": 8,
+      "code": "QA20260916201153",
+      "retained": true
+    },
+    {
+      "entity": "Policy",
+      "table": "skolenza.Policy",
+      "id": 3,
+      "code": "LIVEPOL20260916201836",
+      "retained": true
+    },
+    {
+      "entity": "PolicyVersion",
+      "table": "skolenza.PolicyVersion",
+      "id": 3,
+      "versionNumber": 1,
+      "status": "Published",
+      "isCurrent": true,
+      "retained": true
+    },
+    {
+      "entity": "PolicyVersion",
+      "table": "skolenza.PolicyVersion",
+      "id": 4,
+      "versionNumber": 2,
+      "status": "Approved",
+      "isCurrent": false,
+      "retained": true
+    },
+    {
+      "entity": "PolicyAssignment",
+      "table": "skolenza.PolicyAssignment",
+      "id": 1,
+      "employeeId": 4,
+      "source": "Manual",
+      "retained": true
+    },
+    {
+      "entity": "PolicyAssignment",
+      "table": "skolenza.PolicyAssignment",
+      "id": 2,
+      "employeeId": 6,
+      "source": "Bulk",
+      "retained": true
+    },
+    {
+      "entity": "PolicyException",
+      "table": "skolenza.PolicyException",
+      "id": 1,
+      "employeeId": 4,
+      "status": "Approved",
+      "retained": true
+    },
+    {
+      "entity": "PolicyAcknowledgement",
+      "table": "skolenza.PolicyAcknowledgement",
+      "id": 1,
+      "employeeId": 4,
+      "status": "Acknowledged",
+      "retained": true
+    },
+    {
+      "entity": "PolicyAcknowledgement",
+      "table": "skolenza.PolicyAcknowledgement",
+      "id": 2,
+      "employeeId": 6,
+      "status": "Assigned",
+      "retained": true
+    }
+  ],
+  "calls": [
+    {
+      "case": "P01",
+      "method": "GET",
+      "endpoint": "/api/Navigation/my-menu",
+      "input": {
+        "headers": {
+          "Authorization": "Bearer <redacted>"
+        }
+      },
+      "response": {
+        "isSucceeded": true,
+        "policyModuleCount": 8
+      }
+    },
+    {
+      "case": "P02",
+      "method": "POST",
+      "endpoint": "/api/TenantPolicy/types",
+      "input": {
+        "moduleId": 109,
+        "operationId": 1,
+        "policyTypeCode": "QA20260916201153",
+        "policyName": "QA Policy 20260916201153",
+        "policyCategoryId": 5,
+        "defaultCurrencyCode": "INR"
+      },
+      "response": {
+        "isSucceeded": true,
+        "data": {
+          "id": 8,
+          "code": "QA20260916201153"
+        }
+      }
+    },
+    {
+      "case": "P02",
+      "method": "PUT",
+      "endpoint": "/api/TenantPolicy/types/8",
+      "input": {
+        "moduleId": 109,
+        "operationId": 2,
+        "policyTypeCode": "QA20260916201153",
+        "policyName": "QA Policy Updated 20260916201153",
+        "policyCategoryId": 5,
+        "defaultCurrencyCode": "USD",
+        "isActive": true
+      },
+      "response": {
+        "isSucceeded": true,
+        "data": {
+          "id": 8,
+          "name": "QA Policy Updated 20260916201153",
+          "currencyCode": "USD"
+        }
+      }
+    },
+    {
+      "case": "P03",
+      "method": "POST",
+      "endpoint": "/api/TenantPolicy",
+      "input": {
+        "moduleId": 110,
+        "operationId": 1,
+        "policyTypeId": 6,
+        "policyCode": "LIVEPOL20260916201836",
+        "policyName": "Live Flex Policy 20260916201836",
+        "effectiveFrom": "2026-09-16",
+        "rules": [
+          {
+            "policyRuleTypeId": 3,
+            "ruleName": "Hybrid attendance",
+            "ruleOrder": 1,
+            "ruleConfiguration": "{\"annualDays\":12,\"allowWeb\":true,\"allowMobile\":true,\"allowDevice\":true}"
+          }
+        ],
+        "applicability": [
+          {
+            "applicabilityMode": 1,
+            "countryId": 1,
+            "employeeTypeId": 7,
+            "priority": 500,
+            "effectiveFrom": "2026-09-16"
+          }
+        ]
+      },
+      "response": {
+        "isSucceeded": true,
+        "data": {
+          "id": 3,
+          "versionId": 3,
+          "versionNumber": 1,
+          "status": "Draft"
+        }
+      }
+    },
+    {
+      "case": "P05",
+      "method": "POST",
+      "endpoint": "/api/TenantPolicy/versions/3/transition",
+      "input": {
+        "moduleId": 110,
+        "operationId": 29,
+        "action": "SUBMIT",
+        "comments": "QA"
+      },
+      "response": {
+        "isSucceeded": true,
+        "data": {
+          "id": 3,
+          "versionId": 3,
+          "status": "Under Review"
+        }
+      }
+    },
+    {
+      "case": "P05",
+      "method": "POST",
+      "endpoint": "/api/TenantPolicy/versions/3/transition",
+      "input": {
+        "moduleId": 113,
+        "operationId": 5,
+        "action": "APPROVE",
+        "comments": "QA"
+      },
+      "response": {
+        "isSucceeded": true,
+        "data": {
+          "id": 3,
+          "versionId": 3,
+          "status": "Under Review"
+        },
+        "note": "first of two mandatory stages completed"
+      }
+    },
+    {
+      "case": "P06",
+      "method": "POST",
+      "endpoint": "/api/TenantPolicy/versions/3/transition",
+      "input": {
+        "moduleId": 113,
+        "operationId": 31,
+        "action": "PUBLISH",
+        "comments": "Live publish"
+      },
+      "response": {
+        "isSucceeded": true,
+        "data": {
+          "id": 3,
+          "versionId": 3,
+          "status": "Published"
+        }
+      }
+    },
+    {
+      "case": "P07",
+      "method": "POST",
+      "endpoint": "/api/TenantPolicy/assignments",
+      "input": {
+        "moduleId": 111,
+        "operationId": 11,
+        "policyVersionId": 3,
+        "employeeIds": [
+          4
+        ],
+        "effectiveFrom": "2026-09-16",
+        "isMandatory": true
+      },
+      "response": {
+        "isSucceeded": true,
+        "data": {
+          "inserted": 1,
+          "existing": 0
+        }
+      }
+    },
+    {
+      "case": "P08",
+      "method": "GET",
+      "endpoint": "/api/TenantPolicy/resolve",
+      "input": {
+        "moduleId": 110,
+        "operationId": 4,
+        "employeeId": 4,
+        "effectiveDate": "2026-09-16"
+      },
+      "response": {
+        "isSucceeded": true,
+        "data": [
+          {
+            "policyId": 3,
+            "policyVersionId": 3,
+            "policyCode": "LIVEPOL20260916201836",
+            "resolutionSource": "MANUAL_ASSIGNMENT"
+          }
+        ]
+      }
+    },
+    {
+      "case": "P09",
+      "method": "POST",
+      "endpoint": "/api/TenantPolicy/exceptions",
+      "input": {
+        "moduleId": 112,
+        "operationId": 1,
+        "policyVersionId": 3,
+        "employeeId": 4,
+        "exceptionType": 1,
+        "overrideConfiguration": "{\"allowWebAttendance\":true,\"daysPerWeek\":3}",
+        "reason": "Hybrid accommodation",
+        "effectiveFrom": "2026-09-17",
+        "effectiveTo": "2026-10-16"
+      },
+      "response": {
+        "isSucceeded": true,
+        "data": 1
+      }
+    },
+    {
+      "case": "P10",
+      "method": "POST",
+      "endpoint": "/api/TenantPolicy/acknowledgements",
+      "input": {
+        "moduleId": 114,
+        "operationId": 33,
+        "policyVersionId": 3,
+        "evidenceJson": "{\"channel\":\"WEB\",\"scenario\":\"live-e2e\"}"
+      },
+      "response": {
+        "isSucceeded": true,
+        "data": true
+      }
+    },
+    {
+      "case": "P12",
+      "method": "POST",
+      "endpoint": "/api/TenantPolicy/3/versions/clone",
+      "input": {
+        "moduleId": 110,
+        "operationId": 1,
+        "sourceVersionId": 3,
+        "effectiveFrom": "2027-01-01",
+        "changeSummary": "QA clone"
+      },
+      "response": {
+        "isSucceeded": true,
+        "data": {
+          "id": 3,
+          "versionId": 4,
+          "versionNumber": 2,
+          "status": "Draft"
+        }
+      }
+    },
+    {
+      "case": "P13",
+      "method": "POST",
+      "endpoint": "/api/TenantPolicy/versions/4/transition",
+      "input": {
+        "moduleId": 113,
+        "operationId": 6,
+        "action": "REJECT",
+        "comments": "Changes requested"
+      },
+      "response": {
+        "isSucceeded": true,
+        "data": {
+          "versionId": 4,
+          "status": "Rejected"
+        }
+      }
+    },
+    {
+      "case": "P14",
+      "method": "POST",
+      "endpoint": "/api/TenantPolicy/bulk/assignments/preview",
+      "input": {
+        "contentType": "multipart/form-data",
+        "moduleId": 111,
+        "operationId": 13,
+        "columnMappingJson": "{}",
+        "fileRow": {
+          "PolicyCode": "LIVEPOL20260916201836",
+          "VersionNumber": 1,
+          "EmployeeCode": "QT/2026/0145",
+          "EffectiveFrom": "2026-09-16",
+          "EffectiveTo": "",
+          "IsMandatory": true
+        }
+      },
+      "response": {
+        "isSucceeded": true,
+        "data": {
+          "master": 14,
+          "isValid": true,
+          "readyCount": 1
+        }
+      }
+    },
+    {
+      "case": "P14",
+      "method": "POST",
+      "endpoint": "/api/TenantPolicy/bulk/assignments/confirm",
+      "input": {
+        "moduleId": 111,
+        "operationId": 13,
+        "jobId": "<redacted-guid>"
+      },
+      "response": {
+        "isSucceeded": true,
+        "data": {
+          "status": 2,
+          "statusName": "Queued"
+        }
+      }
+    },
+    {
+      "case": "P14",
+      "method": "GET",
+      "endpoint": "/api/TenantPolicy/bulk/assignments/jobs/<jobId>",
+      "input": {
+        "moduleId": 111,
+        "operationId": 4
+      },
+      "response": {
+        "isSucceeded": true,
+        "data": {
+          "status": 4,
+          "createdCount": 1,
+          "failedCount": 0
+        }
+      }
+    },
+    {
+      "case": "P16",
+      "method": "POST",
+      "endpoint": "/api/TenantPolicy/documents",
+      "input": {
+        "contentType": "multipart/form-data",
+        "moduleId": 110,
+        "operationId": 15,
+        "policyVersionId": 4,
+        "policyDocumentTypeId": 1,
+        "documentTitle": "Live cloned policy document",
+        "languageCode": "en",
+        "isEmployeeVisible": true,
+        "file": "valid PDF; content omitted"
+      },
+      "response": {
+        "httpStatus": 500,
+        "isSucceeded": false,
+        "errorCode": "INTERNAL_SERVER_ERROR",
+        "metadataInserted": false,
+        "rootCause": "Amazon S3: AWS Access Key Id does not exist; no PolicyDocument row inserted"
+      }
+    }
+  ]
+}

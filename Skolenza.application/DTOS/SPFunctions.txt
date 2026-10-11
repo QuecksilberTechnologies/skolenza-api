@@ -1,0 +1,1062 @@
+CREATE OR REPLACE FUNCTION skolenza."AllStaffMemberCountData"(
+    p_institutionid INT
+)
+RETURNS TABLE(
+    "TotalCount" BIGINT,
+    "ActiveCount" BIGINT,
+    "InActiveCount" BIGINT,
+    "OnLeaveCount" INT
+)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    RETURN QUERY
+    SELECT
+        COUNT(*) AS "TotalCount",
+
+        COALESCE(SUM(
+            CASE 
+                WHEN "IsActive" = true THEN 1 
+                ELSE 0 
+            END
+        ),0) AS "ActiveCount",
+
+        COALESCE(SUM(
+            CASE 
+                WHEN "IsActive" = false THEN 1 
+                ELSE 0 
+            END
+        ),0) AS "InActiveCount",
+
+        10 AS "OnLeaveCount"
+
+    FROM skolenza."StaffMember"
+    WHERE COALESCE("IsSoftDeleted", false) = false
+      AND "InstitutionId" = p_institutionid;
+END;
+$$;
+
+
+
+
+CREATE OR REPLACE FUNCTION skolenza."CheckPermission"(
+    p_roleid varchar,
+    p_projectchildmoduledetailid int,
+    p_operationid int,
+    p_hasaccess boolean,
+    p_isactive boolean
+)
+RETURNS TABLE("HasAccess" boolean)
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    Result boolean := false;
+BEGIN
+
+    -- Check permission for any role
+    IF EXISTS (
+        SELECT 1
+        FROM skolenza."RoleModuleAndPermission"
+        WHERE "RoleId" IN (
+            SELECT unnest(string_to_array(p_roleid, ','))::int
+        )
+        AND "ProjectChildModuleDetailId" = p_projectchildmoduledetailid
+        AND "OperationId" = p_operationid
+        AND "HasAccess" = p_hasaccess
+        AND "IsActive" = p_isactive
+    ) THEN
+        Result := true;
+    END IF;
+
+    RETURN QUERY SELECT Result;
+
+EXCEPTION
+    WHEN OTHERS THEN
+        RETURN QUERY SELECT false;
+
+END;
+$$;
+
+
+CREATE OR REPLACE FUNCTION skolenza."GetActiveRoleModuleOperations"(
+    p_institutionid INT,
+    p_roleids TEXT
+)
+RETURNS TABLE(
+    "RoleId" INT,
+    "InstitutionId" INT,
+    "ModuleId" INT,
+    "ModuleName" TEXT,
+    "URLPath" TEXT,
+    "DisplayName" TEXT,
+    "ImageIconWeb" TEXT,
+    "ImageIconMobile" TEXT,
+    "ParentModuleId" INT,
+    "SubModuleName" TEXT,
+    "MainModuleId" INT,
+    "MainModuleName" TEXT,
+    "OperationId" INT,
+    "OperationName" TEXT,
+    "DataViewStructureId" INT,
+    "DisplayOn" TEXT
+)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+
+RETURN QUERY
+
+WITH "RoleIdTable" AS (
+    SELECT CAST(value AS INT) AS "RoleId"
+    FROM unnest(string_to_array(p_roleids, ',')) AS value
+    WHERE value ~ '^[0-9]+$'
+)
+
+SELECT
+    rep."RoleId",
+    COALESCE(tem."InstitutionId", p_institutionid) AS "InstitutionId",
+
+    m."Id" AS "ModuleId",
+    m."ModuleName",
+    COALESCE(m."URLPath",'') AS "URLPath",
+    m."DisplayName",
+    m."ImageIconWeb",
+    m."ImageIconMobile",
+    m."ParentModuleId",
+
+    COALESCE(sm."ModuleName",'') AS "SubModuleName",
+    COALESCE(mm."Id",0) AS "MainModuleId",
+    COALESCE(mm."ModuleName",'') AS "MainModuleName",
+
+    rep."OperationId",
+    op."OperationName",
+
+    mom."DataViewStructureId",
+    COALESCE(dvs."DisplayOn",'') AS "DisplayOn"
+
+FROM skolenza."RoleModuleAndPermission" rep
+
+INNER JOIN "RoleIdTable" rid
+    ON rid."RoleId" = rep."RoleId"
+
+INNER JOIN skolenza."InstitutionEnabledModule" tem
+    ON tem."InstitutionId" = p_institutionid
+    AND tem."ModuleId" = rep."ModuleId"
+    AND tem."IsEnabled" = true
+
+INNER JOIN skolenza."InstitutionEnabledOperation" teo
+    ON teo."InstitutionId" = p_institutionid
+    AND teo."ModuleId" = rep."ModuleId"
+    AND teo."OperationId" = rep."OperationId"
+    AND teo."IsEnabled" = true
+    AND COALESCE(teo."IsOperationUsed", false) = true
+
+LEFT JOIN skolenza."Module" m
+    ON m."Id" = rep."ModuleId"
+
+LEFT JOIN skolenza."Module" sm
+    ON sm."Id" = m."ParentModuleId"
+
+LEFT JOIN skolenza."Module" mm
+    ON mm."Id" = sm."ParentModuleId"
+
+LEFT JOIN skolenza."Operation" op
+    ON op."Id" = rep."OperationId"
+
+LEFT JOIN skolenza."ModuleOperationMapping" mom
+    ON mom."ModuleId" = rep."ModuleId"
+    AND mom."OperationId" = rep."OperationId"
+
+LEFT JOIN skolenza."DataViewStructure" dvs
+    ON dvs."Id" = mom."DataViewStructureId"
+
+WHERE rep."IsActive" = true
+  AND (rep."IsSoftDeleted" = false OR rep."IsSoftDeleted" IS NULL)
+  AND rep."HasAccess" = true
+
+ORDER BY
+    COALESCE(mm."Id",0),
+    COALESCE(sm."Id",0),
+    m."Id",
+    rep."OperationId";
+
+END;
+$$;
+
+
+
+
+
+
+
+CREATE OR REPLACE FUNCTION skolenza."GetDetailsForPermission"(
+    p_institutionid BIGINT
+)
+RETURNS TABLE(
+    "ParentModuleId" INT,
+    "ModuleId" INT,
+    "ModuleName" TEXT,
+    "IsLeafNode" BOOLEAN,
+    "IsEnabled" BOOLEAN,
+    "OperationId" INT,
+    "OperationName" TEXT,
+    "IsOperationUsed" BOOLEAN,
+    "Level" INT,
+    "BreadCrum" TEXT
+)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+
+RETURN QUERY
+
+WITH RECURSIVE
+
+-- Step 1
+"LeafModules" AS (
+    SELECT DISTINCT "ModuleId"
+    FROM skolenza."InstitutionEnabledOperation"
+    WHERE "InstitutionId" = p_institutionid
+),
+
+-- Step 2
+"AllModules" AS (
+    SELECT DISTINCT "ModuleId"
+    FROM skolenza."InstitutionEnabledModule"
+    WHERE "InstitutionId" = p_institutionid
+
+    UNION
+
+    SELECT "ModuleId"
+    FROM "LeafModules"
+),
+
+-- Step 3 Recursive Hierarchy
+"ModuleHierarchy" AS (
+
+    SELECT
+        m."Id" AS "ModuleId",
+        m."ParentModuleId",
+        0 AS "Level",
+        CAST(m."ModuleName" AS TEXT) AS "BreadCrum"
+    FROM skolenza."Module" m
+    INNER JOIN "AllModules" am ON m."Id" = am."ModuleId"
+    WHERE m."ParentModuleId" IS NULL
+
+    UNION ALL
+
+    SELECT
+        child."Id",
+        child."ParentModuleId",
+        parent."Level" + 1,
+        parent."BreadCrum" || ' > ' || child."ModuleName"
+    FROM skolenza."Module" child
+    INNER JOIN "ModuleHierarchy" parent
+        ON child."ParentModuleId" = parent."ModuleId"
+)
+
+SELECT
+    mh."ParentModuleId",
+    mh."ModuleId",
+    m."ModuleName",
+    m."IsLeafNode",
+    tem."IsEnabled",
+    teo."OperationId",
+    o."OperationName",
+    teo."IsOperationUsed",
+    mh."Level",
+    mh."BreadCrum"
+
+FROM "ModuleHierarchy" mh
+
+LEFT JOIN skolenza."Module" m
+    ON mh."ModuleId" = m."Id"
+
+LEFT JOIN skolenza."InstitutionEnabledModule" tem
+    ON mh."ModuleId" = tem."ModuleId"
+    AND tem."InstitutionId" = p_institutionid
+
+LEFT JOIN skolenza."InstitutionEnabledOperation" teo
+    ON mh."ModuleId" = teo."ModuleId"
+    AND teo."InstitutionId" = p_institutionid
+
+LEFT JOIN skolenza."Operation" o
+    ON teo."OperationId" = o."Id"
+
+ORDER BY mh."BreadCrum", teo."OperationId";
+
+END;
+$$;
+
+
+
+CREATE OR REPLACE FUNCTION skolenza."GetStaffMemberCodePatternByInstitution"(
+    p_institutionid BIGINT
+)
+RETURNS TABLE(
+    "Id" BIGINT,
+    "InstitutionId" BIGINT,
+    "Prefix" TEXT,
+    "IncludeYear" BOOLEAN,
+    "IncludeMonth" BOOLEAN,
+    "IncludeDepartment" BOOLEAN,
+    "Separator" TEXT,
+    "RunningNumberLength" INT,
+    "LastUsedNumber" BIGINT,
+    "IsActive" BOOLEAN,
+    "AddedById" BIGINT,
+    "AddedDateTime" TIMESTAMP,
+    "UpdatedById" BIGINT,
+    "UpdatedDateTime" TIMESTAMP
+)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+
+RETURN QUERY
+SELECT
+    ECP."Id",
+    ECP."InstitutionId",
+    ECP."Prefix",
+    ECP."IncludeYear",
+    ECP."IncludeMonth",
+    ECP."IncludeDepartment",
+    ECP."Separator",
+    ECP."RunningNumberLength",
+    ECP."LastUsedNumber",
+    ECP."IsActive",
+    ECP."AddedById",
+    ECP."AddedDateTime",
+    ECP."UpdatedById",
+    ECP."UpdatedDateTime"
+FROM skolenza."StaffMemberCodePattern" ECP
+WHERE ECP."InstitutionId" = p_institutionid
+  AND ECP."IsActive" = true
+ORDER BY ECP."Id" DESC
+LIMIT 1;
+
+END;
+$$;
+
+
+
+
+
+CREATE OR REPLACE FUNCTION skolenza."GetSubscribedModuleByInstitutionId"(
+    p_institutionid BIGINT
+)
+RETURNS TABLE(
+    "ModuleId" INT,
+    "ModuleName" TEXT,
+    "DisplayName" TEXT
+)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+
+RETURN QUERY
+SELECT 
+    m."Id" AS "ModuleId",
+    m."ModuleName",
+    m."DisplayName"
+FROM skolenza."InstitutionEnabledModule" tem
+INNER JOIN skolenza."Module" m 
+    ON tem."ModuleId" = m."Id"
+WHERE tem."InstitutionId" = p_institutionid
+  AND tem."IsEnabled" = true
+  AND m."ParentModuleId" IS NULL;
+
+END;
+$$;
+
+
+
+CREATE OR REPLACE FUNCTION skolenza."GetInstitutionModuleHierarchyWithOps_MinRoot"(
+    p_institutionid BIGINT
+)
+RETURNS TABLE(
+    "ParentModuleId" BIGINT,
+    "ModuleId" BIGINT,
+    "ModuleName" TEXT,
+    "IsLeafNode" BOOLEAN,
+    "OperationId" INT,
+    "Operations" TEXT,
+    "IsOperationUsed" BOOLEAN,
+    "Level" INT,
+    "FullPath" TEXT
+)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+
+RETURN QUERY
+
+WITH RECURSIVE
+
+-- 1) Smallest root
+"Root" AS (
+    SELECT tem."ModuleId"
+    FROM skolenza."InstitutionEnabledModule" tem
+    WHERE tem."InstitutionId" = p_institutionid
+      AND tem."ParentModuleId" IS NULL
+    ORDER BY tem."ModuleId" ASC
+    LIMIT 1
+),
+
+-- 2) Recursive hierarchy
+"ModuleHierarchy" AS (
+
+    -- Base (root)
+    SELECT
+        tem."ParentModuleId",
+        tem."ModuleId",
+        m."ModuleName",
+        tem."IsLeafNode",
+        CAST(m."ModuleName" AS TEXT) AS "FullPath",
+        0 AS "Level"
+    FROM skolenza."InstitutionEnabledModule" tem
+    JOIN "Root" r ON r."ModuleId" = tem."ModuleId"
+    JOIN skolenza."Module" m ON m."Id" = tem."ModuleId"
+    WHERE tem."InstitutionId" = p_institutionid
+
+    UNION ALL
+
+    -- Children
+    SELECT
+        child."ParentModuleId",
+        child."ModuleId",
+        m."ModuleName",
+        child."IsLeafNode",
+        h."FullPath" || ' > ' || m."ModuleName",
+        h."Level" + 1
+    FROM skolenza."InstitutionEnabledModule" child
+    JOIN skolenza."Module" m ON m."Id" = child."ModuleId"
+    JOIN "ModuleHierarchy" h ON h."ModuleId" = child."ParentModuleId"
+    WHERE child."InstitutionId" = p_institutionid
+)
+
+-- 3) Leaf modules operations
+SELECT
+    mh."ParentModuleId",
+    mh."ModuleId",
+    mh."ModuleName",
+    mh."IsLeafNode",
+    teo."OperationId",
+    op."OperationName" AS "Operations",
+    teo."IsOperationUsed",
+    mh."Level",
+    CASE
+        WHEN mh."IsLeafNode" = true AND teo."OperationId" IS NOT NULL
+            THEN mh."FullPath" || '/' || op."OperationName"
+        ELSE mh."FullPath"
+    END AS "FullPath"
+
+FROM "ModuleHierarchy" mh
+
+LEFT JOIN skolenza."InstitutionEnabledOperation" teo
+    ON teo."InstitutionId" = p_institutionid
+   AND teo."ModuleId" = mh."ModuleId"
+
+LEFT JOIN skolenza."Operation" op
+    ON op."Id" = teo."OperationId"
+
+ORDER BY mh."FullPath", op."OperationName";
+
+END;
+$$;
+
+
+CREATE OR REPLACE FUNCTION skolenza."InstitutionModuleOperationConfigurationData"(
+    p_institutionid BIGINT
+)
+RETURNS TABLE(
+    "ParentModuleId" INT,
+    "ModuleId" INT,
+    "ModuleName" TEXT,
+    "IsLeafNode" BOOLEAN,
+    "IsEnabled" BOOLEAN,
+    "OperationId" INT,
+    "OperationName" TEXT,
+    "IsOperationUsed" BOOLEAN,
+    "Level" INT,
+    "BreadCrum" TEXT
+)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+
+RETURN QUERY
+
+WITH RECURSIVE
+
+-- Step 1
+"LeafModules" AS (
+    SELECT DISTINCT "ModuleId"
+    FROM skolenza."InstitutionEnabledOperation"
+    WHERE "InstitutionId" = p_institutionid
+),
+
+-- Step 2
+"AllModules" AS (
+    SELECT DISTINCT "ModuleId"
+    FROM skolenza."InstitutionEnabledModule"
+    WHERE "InstitutionId" = p_institutionid
+
+    UNION
+
+    SELECT "ModuleId"
+    FROM "LeafModules"
+),
+
+-- Step 3 Recursive hierarchy
+"ModuleHierarchy" AS (
+
+    SELECT
+        m."Id" AS "ModuleId",
+        m."ParentModuleId",
+        0 AS "Level",
+        CAST(m."ModuleName" AS TEXT) AS "BreadCrum"
+    FROM skolenza."Module" m
+    INNER JOIN "AllModules" am ON m."Id" = am."ModuleId"
+    WHERE m."ParentModuleId" IS NULL
+
+    UNION ALL
+
+    SELECT
+        child."Id",
+        child."ParentModuleId",
+        parent."Level" + 1,
+        parent."BreadCrum" || ' > ' || child."ModuleName"
+    FROM skolenza."Module" child
+    INNER JOIN "ModuleHierarchy" parent
+        ON child."ParentModuleId" = parent."ModuleId"
+)
+
+SELECT
+    mh."ParentModuleId",
+    mh."ModuleId",
+    m."ModuleName",
+    m."IsLeafNode",
+    tem."IsEnabled",
+    teo."OperationId",
+    o."OperationName",
+    teo."IsOperationUsed",
+    mh."Level",
+    mh."BreadCrum"
+
+FROM "ModuleHierarchy" mh
+
+LEFT JOIN skolenza."Module" m
+    ON mh."ModuleId" = m."Id"
+
+LEFT JOIN skolenza."InstitutionEnabledModule" tem
+    ON mh."ModuleId" = tem."ModuleId"
+   AND tem."InstitutionId" = p_institutionid
+
+LEFT JOIN skolenza."InstitutionEnabledOperation" teo
+    ON mh."ModuleId" = teo."ModuleId"
+   AND teo."InstitutionId" = p_institutionid
+
+LEFT JOIN skolenza."Operation" o
+    ON teo."OperationId" = o."Id"
+
+ORDER BY mh."BreadCrum", teo."OperationId";
+
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION skolenza."InsertOrUpdateRefreshToken"(
+    p_loginid TEXT,
+    p_token TEXT,
+    p_expirydate TIMESTAMP,
+    p_createdbyip TEXT
+)
+RETURNS TABLE(
+    "Status" INT,
+    "ErrorMessage" TEXT
+)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+
+    BEGIN
+        -- Check if RefreshToken exists
+        IF EXISTS (
+            SELECT 1
+            FROM skolenza."RefreshToken"
+            WHERE "LoginId" = p_loginid
+        ) THEN
+
+            -- Update existing token
+            UPDATE skolenza."RefreshToken"
+            SET
+                "Token" = p_token,
+                "ExpiryDate" = p_expirydate,
+                "CreatedAt" = CURRENT_TIMESTAMP,
+                "CreatedByIp" = p_createdbyip,
+                "IsRevoked" = false
+            WHERE "LoginId" = p_loginid;
+
+        ELSE
+
+            -- Insert new token
+            INSERT INTO skolenza."RefreshToken"
+            (
+                "LoginId",
+                "Token",
+                "ExpiryDate",
+                "CreatedAt",
+                "CreatedByIp",
+                "IsRevoked"
+            )
+            VALUES
+            (
+                "LoginId",
+                "Token",
+                "ExpiryDate",
+                CURRENT_TIMESTAMP,
+                "CreatedByIp",
+                false
+            );
+
+        END IF;
+
+        -- success
+        RETURN QUERY SELECT 1, NULL::TEXT;
+
+    EXCEPTION WHEN OTHERS THEN
+
+        -- log error
+        INSERT INTO skolenza."ErrorLogs"
+        (
+            "ErrorMessage",
+            "ErrorDateTime",
+            "ProcedureName"
+        )
+        VALUES
+        (
+            SQLERRM,
+            CURRENT_TIMESTAMP,
+            'Skolenza.InsertOrUpdateRefreshToken'
+        );
+
+        RETURN QUERY SELECT 0, SQLERRM;
+
+    END;
+
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION skolenza."SyncNewOperationsForExistingModules"()
+RETURNS TABLE(
+    "OperationsInserted" INT,
+    "StatusMessage" TEXT
+)
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    OperationsInserted INT := 0;
+BEGIN
+
+    -- Insert missing operations
+    INSERT INTO skolenza."InstitutionEnabledOperation"
+    (
+        "InstitutionId",
+        "ModuleId",
+        "OperationId",
+        "IsEnabled",
+        "AddedById",
+        "AddedDateTime"
+    )
+    SELECT
+        TEM."InstitutionId",
+        MOM."ModuleId",
+        MOM."OperationId",
+        false,
+        TEM."InstitutionId",
+        CURRENT_TIMESTAMP
+    FROM skolenza."InstitutionEnabledModule" TEM
+    INNER JOIN skolenza."ModuleOperationMapping" MOM
+        ON TEM."ModuleId" = MOM."ModuleId"
+       AND MOM."IsActive" = true
+    INNER JOIN skolenza."Operation" OP
+        ON OP."Id" = MOM."OperationId"
+       AND OP."IsActive" = true
+    WHERE NOT EXISTS (
+        SELECT 1
+        FROM skolenza."InstitutionEnabledOperation" TEO
+        WHERE TEO."InstitutionId" = TEM."InstitutionId"
+          AND TEO."ModuleId" = MOM."ModuleId"
+          AND TEO."OperationId" = MOM."OperationId"
+    );
+
+    -- get number of rows inserted
+    GET DIAGNOSTICS OperationsInserted = ROW_COUNT;
+
+    RETURN QUERY
+    SELECT
+        OperationsInserted,
+        CASE
+            WHEN OperationsInserted = 0
+                THEN 'No new operations inserted (already up-to-date)'
+            ELSE 'New operations added for existing modules across institutions successfully'
+        END;
+
+END;
+$$;
+
+
+
+CREATE OR REPLACE FUNCTION skolenza."SyncInstitutionModulesAndOperations"()
+RETURNS VOID
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    InstitutionId BIGINT;
+    PlanId INT;
+    ModulesInserted INT;
+    OperationsInserted INT;
+BEGIN
+
+FOR InstitutionId IN
+    SELECT TS."InstitutionId"
+    FROM skolenza."InstitutionSubscription" TS
+    WHERE TS."IsActive" = true
+      AND (TS."SubscriptionEndDate" IS NULL 
+           OR TS."SubscriptionEndDate"::date >= CURRENT_DATE)
+LOOP
+
+    SELECT TS."SubscriptionPlanId"
+    INTO PlanId
+    FROM skolenza."InstitutionSubscription" TS
+    WHERE TS."InstitutionId" = InstitutionId
+      AND TS."IsActive" = true
+    LIMIT 1;
+
+    IF PlanId IS NOT NULL THEN
+
+        ModulesInserted := 0;
+        OperationsInserted := 0;
+
+        CREATE TEMP TABLE tmp_new_modules(
+            "ModuleId" BIGINT
+        ) ON COMMIT DROP;
+
+        -- Step 1 Insert missing modules and capture inserted ids
+        WITH ins AS (
+            INSERT INTO skolenza."InstitutionEnabledModule"
+            (
+                "InstitutionId",
+                "ModuleId",
+                "ParentModuleId",
+                "IsLeafNode",
+                "IsEnabled",
+                "AddedById",
+                "AddedDateTime"
+            )
+            SELECT
+                InstitutionId,
+                PMM."ModuleId",
+                M."ParentModuleId",
+                M."IsLeafNode",
+                false,
+                InstitutionId,
+                CURRENT_TIMESTAMP
+            FROM skolenza."PlanModuleMapping" PMM
+            INNER JOIN skolenza."Module" M
+                ON M."Id" = PMM."ModuleId"
+            WHERE PMM."SubscriptionPlanId" = PlanId
+              AND PMM."IsActive" = true
+              AND NOT EXISTS (
+                    SELECT 1
+                    FROM skolenza."InstitutionEnabledModule" TEM
+                    WHERE TEM."InstitutionId" = InstitutionId
+                      AND TEM."ModuleId" = PMM."ModuleId"
+              )
+            RETURNING "ModuleId"
+        )
+        INSERT INTO tmp_new_modules("ModuleId")
+        SELECT "ModuleId" FROM ins;
+
+        -- ModulesInserted will reflect how many rows were inserted into tmp_new_modules
+        GET DIAGNOSTICS ModulesInserted = ROW_COUNT;
+
+        -- Step 3 Sync operations
+        INSERT INTO skolenza."InstitutionEnabledOperation"
+        (
+            "InstitutionId",
+            "ModuleId",
+            "OperationId",
+            "IsEnabled",
+            "AddedById",
+            "AddedDateTime"
+        )
+        SELECT
+            InstitutionId,
+            MOM."ModuleId",
+            MOM."OperationId",
+            false,
+            InstitutionId,
+            CURRENT_TIMESTAMP
+        FROM tmp_new_modules NM
+        INNER JOIN skolenza."ModuleOperationMapping" MOM
+            ON MOM."ModuleId" = NM."ModuleId"
+           AND MOM."IsActive" = true
+        INNER JOIN skolenza."Operation" OP
+            ON OP."Id" = MOM."OperationId"
+           AND OP."IsActive" = true
+        ON CONFLICT DO NOTHING;
+
+        GET DIAGNOSTICS OperationsInserted = ROW_COUNT;
+
+        RAISE NOTICE 'InstitutionId: %, Modules: %, Operations: %',
+                     InstitutionId, ModulesInserted, OperationsInserted;
+
+    END IF;
+
+END LOOP;
+
+RAISE NOTICE 'All active institutions synced successfully.';
+
+END;
+$$;
+
+
+
+
+CREATE OR REPLACE FUNCTION skolenza."UpdateLoginCredential"(
+    p_loginid TEXT,
+    p_latitude TEXT,
+    p_longitude TEXT,
+    p_logindevice INT,
+    p_ipaddresslocal TEXT,
+    p_ipaddresspublic TEXT,
+    p_macaddress TEXT
+)
+RETURNS TABLE(
+    "Status" INT,
+    "ErrorMessage" TEXT
+)
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    RowsAffected INT;
+BEGIN
+    BEGIN
+
+        UPDATE skolenza."LoginCredential"
+        SET
+            "Latitude" = p_latitude,
+            "Longitude" = p_longitude,
+            "LoginDevice" = p_logindevice,
+            "IpAddressLocal" = p_ipaddresslocal,
+            "IpAddressPublic" = p_ipaddresspublic,
+            "MacAddress" = p_macaddress
+        WHERE "LoginId" = p_loginid;
+
+        GET DIAGNOSTICS RowsAffected = ROW_COUNT;
+
+        IF RowsAffected > 0 THEN
+            RETURN QUERY SELECT 1, NULL::TEXT;
+        ELSE
+            RETURN QUERY
+            SELECT
+                0,
+                'No matching record found for the provided LoginId.';
+        END IF;
+
+    EXCEPTION
+        WHEN OTHERS THEN
+
+            INSERT INTO skolenza."ErrorLog"
+            (
+                "ErrorMessage",
+                "ErrorDateTime", p_loginid)
+            VALUES
+            (
+                SQLERRM,
+                CURRENT_TIMESTAMP, p_loginid);
+
+            RETURN QUERY SELECT -1, SQLERRM;
+
+    END;
+
+END;
+$$;
+
+
+
+CREATE OR REPLACE FUNCTION skolenza."UpdateInstitutionEnabledOperationFromModuleOperation"(
+    p_institutionid BIGINT
+)
+RETURNS INT
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    RowCount INT := 0;
+BEGIN
+
+    IF "InstitutionId" IS NULL THEN
+        RETURN -1;
+    END IF;
+
+    BEGIN
+
+        INSERT INTO skolenza."InstitutionEnabledOperation"
+        (
+            "InstitutionId",
+            "ModuleId",
+            "OperationId",
+            "IsEnabled",
+            "AddedById",
+            "AddedDateTime"
+        )
+        SELECT
+            "InstitutionId",
+            mom."ModuleId",
+            mom."OperationId",
+            false,
+            "InstitutionId",
+            CURRENT_TIMESTAMP
+        FROM skolenza."ModuleOperationMapping" mom
+        WHERE mom."IsActive" = true
+          AND EXISTS (
+              SELECT 1
+              FROM skolenza."InstitutionEnabledOperation" teo
+              WHERE teo."InstitutionId" = p_institutionid
+                AND teo."ModuleId" = mom."ModuleId"
+          )
+          AND NOT EXISTS (
+              SELECT 1
+              FROM skolenza."InstitutionEnabledOperation" teo2
+              WHERE teo2."InstitutionId" = p_institutionid
+                AND teo2."ModuleId" = mom."ModuleId"
+                AND teo2."OperationId" = mom."OperationId"
+          );
+
+        GET DIAGNOSTICS RowCount = ROW_COUNT;
+
+        RETURN RowCount;
+
+    EXCEPTION
+        WHEN OTHERS THEN
+            RETURN -1;
+    END;
+
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION skolenza."ValidateActiveUserCredentialOnly"(
+    p_LoginId TEXT
+)
+RETURNS INT
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_UserId INT;
+BEGIN
+
+    BEGIN
+        -- Check if active login exists
+        SELECT "Id"
+        INTO v_UserId
+        FROM skolenza."LoginCredential"
+        WHERE "LoginId" = p_LoginId
+          AND "IsActive" = true
+          AND "IsSoftDeleted" = false
+        LIMIT 1;
+
+        IF v_UserId IS NOT NULL THEN
+            RETURN v_UserId;  -- return LoginCredential Id
+        ELSE
+            RETURN 0;  -- user not found
+        END IF;
+
+    EXCEPTION
+        WHEN OTHERS THEN
+
+            INSERT INTO skolenza."ErrorLog"
+            (
+                "ErrorMessage",
+                "ErrorDateTime"
+            )
+            VALUES
+            (
+                SQLERRM,
+                CURRENT_TIMESTAMP
+            );
+
+            RETURN -1;  -- error case
+
+    END;
+
+END;
+$$;
+
+ 
+
+CREATE OR REPLACE FUNCTION skolenza."ValidateActiveUserLoginOnly"(
+    p_LoginId TEXT
+)
+RETURNS INT
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_StaffMemberId INT;
+BEGIN
+
+    BEGIN
+
+        -- Check active login
+        SELECT "StaffMemberId"
+        INTO v_StaffMemberId
+        FROM skolenza."LoginCredential"
+        WHERE "LoginId" = p_LoginId
+          AND "IsActive" = true
+          AND "IsSoftDeleted" = false
+        LIMIT 1;
+
+        IF v_StaffMemberId IS NOT NULL THEN
+            RETURN v_StaffMemberId;   -- Return StaffMemberId
+        ELSE
+            RETURN 0;              -- User not found
+        END IF;
+
+    EXCEPTION
+        WHEN OTHERS THEN
+
+            INSERT INTO skolenza."ErrorLog"
+            (
+                "ErrorMessage",
+                "ErrorDateTime"
+            )
+            VALUES
+            (
+                SQLERRM,
+                CURRENT_TIMESTAMP
+            );
+
+            RETURN -1;   -- Error case
+
+    END;
+
+END;
+$$;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

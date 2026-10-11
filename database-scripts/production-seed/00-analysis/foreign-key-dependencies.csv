@@ -1,0 +1,279 @@
+Constraint,ChildTable,ChildColumn,ParentTable,ParentColumn,DeleteRule,UpdateRule
+FK_AssetAssignment_Asset,AssetAssignment,AssetId,Asset,Id,NO ACTION,NO ACTION
+FK_AssetImage_Asset,AssetImage,AssetId,Asset,Id,NO ACTION,NO ACTION
+FK_AssetType_AssetCategory,AssetType,AssetCategoryId,AssetCategory,Id,NO ACTION,NO ACTION
+FK_AssetAssignment_Request,AssetAssignment,RequestId,AssetRequest,Id,NO ACTION,NO ACTION
+FK_Asset_AssetStatus,Asset,AssetStatusId,AssetStatus,Id,NO ACTION,NO ACTION
+FK_Asset_AssetType,Asset,AssetTypeId,AssetType,Id,NO ACTION,NO ACTION
+FK_EmployeeAttendancePunch_AttendanceDeviceType,EmployeeAttendancePunch,AttendanceDeviceTypeId,AttendanceDeviceType,Id,RESTRICT,NO ACTION
+FK_AttendanceDeviceType,EmployeeDailyAttendance,AttendanceDeviceTypeId,AttendanceDeviceType,Id,NO ACTION,NO ACTION
+FK_UserAttendanceSetting_AttendanceDeviceType,UserAttendanceSetting,AttendanceDeviceTypeId,AttendanceDeviceType,Id,NO ACTION,NO ACTION
+FK_EmployeeWorkArrangement_AttendancePolicy,EmployeeWorkArrangement,AttendancePolicyId,AttendancePolicy,Id,RESTRICT,NO ACTION
+BillingInvoiceLine_BillingInvoiceId_fkey,BillingInvoiceLine,BillingInvoiceId,BillingInvoice,Id,RESTRICT,NO ACTION
+BillingInvoice_BillingOrderId_fkey,BillingInvoice,BillingOrderId,BillingOrder,Id,RESTRICT,NO ACTION
+PaymentAttempt_BillingOrderId_fkey,PaymentAttempt,BillingOrderId,BillingOrder,Id,RESTRICT,NO ACTION
+PaymentTransaction_BillingOrderId_fkey,PaymentTransaction,BillingOrderId,BillingOrder,Id,RESTRICT,NO ACTION
+FK_Category_Parent,Category,ParentID,Category,Id,NO ACTION,NO ACTION
+FK_EmployeeCategorySkill_Category,EmployeeCategorySkill,CategoryId,Category,Id,CASCADE,NO ACTION
+FK_Client_ClientType,Client,ClientTypeId,ClientType,Id,NO ACTION,NO ACTION
+FK_Tender_ClientId,Tender,ClientId,ClientType,Id,NO ACTION,NO ACTION
+FK_ComplianceRule_ComplianceType,ComplianceRule,ComplianceTypeId,ComplianceTypeMaster,Id,NO ACTION,NO ACTION
+FK_SalaryComponent_Compliance,SalaryComponentMaster,ComplianceTypeId,ComplianceTypeMaster,Id,NO ACTION,NO ACTION
+FK_ComplianceRule_Country,ComplianceRule,CountryId,Country,Id,NO ACTION,NO ACTION
+FK_Country,CountryIdentityRule,CountryId,Country,Id,NO ACTION,NO ACTION
+FK_CountryStatutoryRule_Country,CountryStatutoryRule,CountryId,Country,Id,NO ACTION,NO ACTION
+FK_Employee_Country,Employee,CountryId,Country,Id,NO ACTION,NO ACTION
+FK_EmployeeTaxProfile_Country,EmployeeTaxProfile,CountryId,Country,Id,NO ACTION,NO ACTION
+FK_PolicyApplicability_Country,PolicyApplicability,CountryId,Country,Id,RESTRICT,NO ACTION
+FK_SalaryComponent_Country,SalaryComponentMaster,CountryId,Country,Id,NO ACTION,NO ACTION
+FK__State__CountryId__6B0FDBE9,State,CountryId,Country,Id,NO ACTION,NO ACTION
+FK_StatutoryType_Country,StatutoryType,CountryId,Country,Id,NO ACTION,NO ACTION
+FK_TaxRegime_Country,TaxRegimeMaster,CountryId,Country,Id,NO ACTION,NO ACTION
+FK_TaxRule_Country,TaxRule,CountryId,Country,Id,NO ACTION,NO ACTION
+FK_TaxSlab_Country,TaxSlab,CountryId,Country,Id,NO ACTION,NO ACTION
+FK_TaxSystem_Country,TaxSystemMaster,CountryId,Country,Id,NO ACTION,NO ACTION
+FK_TenantLocation_Country,TenantLocation,CountryId,Country,Id,RESTRICT,NO ACTION
+FK_ModuleOperationMapping_DataViewStructure,ModuleOperationMapping,DataViewStructureId,DataViewStructure,Id,NO ACTION,NO ACTION
+FK_Designation_Department,Designation,DepartmentId,Department,Id,NO ACTION,NO ACTION
+FK_EmployeeManagerMapping_Department,EmployeeManagerMapping,DepartmentId,Department,Id,NO ACTION,NO ACTION
+FK_Policy_OwnerDepartment,Policy,OwnerDepartmentId,Department,Id,RESTRICT,NO ACTION
+FK_PolicyApplicability_Department,PolicyApplicability,DepartmentId,Department,Id,RESTRICT,NO ACTION
+FK_Employee_Designation,Employee,DesignationId,Designation,Id,SET NULL,NO ACTION
+FK_EmployeeManagerMapping_Designation,EmployeeManagerMapping,DesignationId,Designation,Id,NO ACTION,NO ACTION
+FK_PolicyApplicability_Designation,PolicyApplicability,DesignationId,Designation,Id,RESTRICT,NO ACTION
+FK_DeviceCommandResponse_DeviceCommand,DeviceCommandResponse,DeviceCommandId,DeviceCommand,Id,RESTRICT,NO ACTION
+FK_DeviceInitialProvisioning_DeviceMaster,DeviceInitialProvisioning,DeviceMasterId,DeviceMaster,Id,RESTRICT,NO ACTION
+FK_TenantDevice_DeviceMaster,TenantDevice,DeviceMasterId,DeviceMaster,Id,RESTRICT,NO ACTION
+FK_Locality_District,Locality,DistrictId,District,Id,RESTRICT,NO ACTION
+FK_PolicyApplicability_District,PolicyApplicability,DistrictId,District,Id,RESTRICT,NO ACTION
+FK_TenantLocation_District,TenantLocation,DistrictId,District,Id,RESTRICT,NO ACTION
+FK__EmailQueu__Templ__44B528D7,EmailQueue,TemplateId,EmailTemplate,Id,NO ACTION,NO ACTION
+FK_EmployeeAttendancePunch_Employee,EmployeeAttendancePunch,EmployeeId,Employee,Id,NO ACTION,NO ACTION
+FK_EmployeeBank_Employee,EmployeeBankDetail,EmployeeId,Employee,Id,NO ACTION,NO ACTION
+FK_EmployeeCategorySkill_Employee,EmployeeCategorySkill,EmployeeId,Employee,Id,CASCADE,NO ACTION
+FK_EmployeeContact_Employee,EmployeeContact,EmployeeId,Employee,Id,CASCADE,NO ACTION
+FK_Employee,EmployeeDailyAttendance,EmployeeId,Employee,Id,NO ACTION,NO ACTION
+FK_EmployeeDependents_Employee,EmployeeDependent,EmployeeId,Employee,Id,NO ACTION,NO ACTION
+FK_EmployeeDeviceEnrollment_Employee,EmployeeDeviceEnrollment,EmployeeId,Employee,Id,RESTRICT,NO ACTION
+FK_EmployeeExperience_Employee,EmployeeExperience,EmployeeId,Employee,Id,RESTRICT,NO ACTION
+FK_EmployeeIdentity_Employee,EmployeeIdentity,EmployeeId,Employee,Id,NO ACTION,NO ACTION
+FK_EmployeeImages_Employee,EmployeeImage,EmployeeId,Employee,Id,CASCADE,NO ACTION
+FK__EmployeeL__Emplo__73D00A73,EmployeeLeavePolicyMapping,EmployeeId,Employee,Id,NO ACTION,NO ACTION
+FK_EmployeeLocationAssignment_Employee,EmployeeLocationAssignment,EmployeeId,Employee,Id,RESTRICT,NO ACTION
+FK_EmployeeManagerMapping_Employee,EmployeeManagerMapping,EmployeeId,Employee,Id,NO ACTION,NO ACTION
+FK_EmployeeManagerMapping_Manager,EmployeeManagerMapping,ManagerId,Employee,Id,NO ACTION,NO ACTION
+FK_EmployeePersonalDetail_Employee,EmployeePersonalDetail,EmployeeId,Employee,Id,NO ACTION,NO ACTION
+FK_EmployeePolicyEnrollment_Employee,EmployeePolicyEnrollment,EmployeeId,Employee,Id,NO ACTION,NO ACTION
+FK_EmployeeSalary_Employee,EmployeeSalary,EmployeeId,Employee,Id,NO ACTION,NO ACTION
+FK_EmployeeTaxProfile_Employee,EmployeeTaxProfile,EmployeeId,Employee,Id,NO ACTION,NO ACTION
+FK_EmployeeWorkArrangement_Employee,EmployeeWorkArrangement,EmployeeId,Employee,Id,RESTRICT,NO ACTION
+FK_WorkModeOverride_Employee,EmployeeWorkModeOverrideRequest,EmployeeId,Employee,Id,RESTRICT,NO ACTION
+FK_EmployeeStatusHistory_Employee,EmployeesChangedTypeHistory,EmployeeId,Employee,Id,NO ACTION,NO ACTION
+FK__LeaveRequ__Emplo__05EEBAAE,LeaveRequest,EmployeeId,Employee,Id,NO ACTION,NO ACTION
+FK_LoginCredential_Employee,LoginCredential,EmployeeId,Employee,Id,NO ACTION,NO ACTION
+FK_PayrollEmployee_Employee,PayrollEmployee,EmployeeId,Employee,Id,NO ACTION,NO ACTION
+FK_PolicyAcknowledgement_Employee,PolicyAcknowledgement,EmployeeId,Employee,Id,RESTRICT,NO ACTION
+FK_PolicyApplicability_Employee,PolicyApplicability,EmployeeId,Employee,Id,RESTRICT,NO ACTION
+FK_PolicyAssignment_Employee,PolicyAssignment,EmployeeId,Employee,Id,RESTRICT,NO ACTION
+FK_PolicyException_Employee,PolicyException,EmployeeId,Employee,Id,RESTRICT,NO ACTION
+FK_ThreadMessage_Employee,ThreadMessage,AddedById,Employee,Id,SET NULL,NO ACTION
+FK_Ticket_ApprovedBy,Ticket,ApprovedByUserId,Employee,Id,NO ACTION,NO ACTION
+FK_Ticket_AssignedUser,Ticket,AssignedToUserId,Employee,Id,NO ACTION,NO ACTION
+FK_Ticket_RecommendedBy,Ticket,RecommendedByUserId,Employee,Id,NO ACTION,NO ACTION
+FK_Ticket_RequestedBy,Ticket,RequestedByUserId,Employee,Id,NO ACTION,NO ACTION
+FK_Ticket_RequestedFor,Ticket,RequestedForUserId,Employee,Id,NO ACTION,NO ACTION
+FK_TicketAttachment_User,TicketAttachment,UploadedByUserId,Employee,Id,SET NULL,NO ACTION
+FK_TicketHistory_User,TicketHistory,DoneByUserId,Employee,Id,NO ACTION,NO ACTION
+FK_UserAttendanceSetting_Employee,UserAttendanceSetting,EmployeeId,Employee,Id,CASCADE,NO ACTION
+FK_Role_Employee,UserRole,EmployeeId,Employee,Id,NO ACTION,NO ACTION
+FK_EPD_Dependent,EmployeePolicyDependentMapping,DependentId,EmployeeDependent,Id,NO ACTION,NO ACTION
+FK_EmployeeExperienceDocument_Experience,EmployeeExperienceDocument,EmployeeExperienceId,EmployeeExperience,Id,CASCADE,NO ACTION
+FK_EmployeeLeaveBalance_EmployeeLeavePolicyMapping,EmployeeLeaveBalance,EmployeeLeavePolicyMappingId,EmployeeLeavePolicyMapping,Id,NO ACTION,NO ACTION
+FK_EPD_Enrollment,EmployeePolicyDependentMapping,EmployeePolicyEnrollmentId,EmployeePolicyEnrollment,Id,NO ACTION,NO ACTION
+FK_Employee_EmployeeType,Employee,EmployeeTypeId,EmployeeType,Id,NO ACTION,NO ACTION
+FK_EmployeeTypeBasicMenu_EmployeeType,EmployeeTypeBasicMenu,EmployeeTypeId,EmployeeType,Id,CASCADE,NO ACTION
+FK_EmployeeStatusHistory_NewEmployeeType,EmployeesChangedTypeHistory,NewEmployeeTypeId,EmployeeType,Id,NO ACTION,NO ACTION
+FK_EmployeeStatusHistory_OldEmployeeType,EmployeesChangedTypeHistory,OldEmployeeTypeId,EmployeeType,Id,NO ACTION,NO ACTION
+FK_PolicyApplicability_EmployeeType,PolicyApplicability,EmployeeTypeId,EmployeeType,Id,RESTRICT,NO ACTION
+FK_EmployeeAttendancePunch_Arrangement,EmployeeAttendancePunch,EmployeeWorkArrangementId,EmployeeWorkArrangement,Id,NO ACTION,NO ACTION
+FK_WorkModeOverride_WorkArrangement,EmployeeWorkModeOverrideRequest,EmployeeWorkArrangementId,EmployeeWorkArrangement,Id,RESTRICT,NO ACTION
+FK_EmployeeWorkPattern_WorkArrangement,EmployeeWorkPattern,EmployeeWorkArrangementId,EmployeeWorkArrangement,Id,RESTRICT,NO ACTION
+FK_EmployeeWorkDocument_WorkHistory,EmployeeWorkDocument,EmployeeWorkHistoryId,EmployeeWorkHistory,Id,NO ACTION,NO ACTION
+FK_EmployeeWorkHistory_Profile,EmployeeWorkHistory,EmployeeWorkProfileId,EmployeeWorkProfile,Id,NO ACTION,NO ACTION
+FK_Employee_Gender,Employee,GenderId,Gender,Id,NO ACTION,NO ACTION
+FK_PolicyApplicability_Gender,PolicyApplicability,GenderId,Gender,Id,RESTRICT,NO ACTION
+FK_Gender_Tenant,Tenant,GenderId,Gender,Id,NO ACTION,NO ACTION
+FK_HRMP_HostRole,HostRoleModuleAndPermission,HostRoleId,HostRole,Id,NO ACTION,NO ACTION
+FK_HostUser_HostRole,HostUser,HostRoleId,HostRole,Id,NO ACTION,NO ACTION
+FK_RefreshToken_HostUser,RefreshToken,HostUserId,HostUser,Id,RESTRICT,NO ACTION
+FK_IdentityDocument_Category,IdentityCategoryDocument,IdentityCategoryId,IdentityCategory,Id,NO ACTION,NO ACTION
+FK_Country_Document,CountryIdentityRule,IdentityCategoryDocumentId,IdentityCategoryDocument,Id,NO ACTION,NO ACTION
+FK_EmployeeIdentity_Document,EmployeeIdentity,IdentityCategoryDocumentId,IdentityCategoryDocument,Id,NO ACTION,NO ACTION
+FK__LeaveRequ__Leave__06E2DEE7,LeaveRequest,LeaveTypeId,LeaveType,Id,NO ACTION,NO ACTION
+FK_PolicyApplicability_Locality,PolicyApplicability,LocalityId,Locality,Id,RESTRICT,NO ACTION
+FK_TenantLocation_City,TenantLocation,CityId,Locality,Id,RESTRICT,NO ACTION
+FK_Locality_LocalityType,Locality,LocalityTypeId,LocalityType,Id,RESTRICT,NO ACTION
+FK_RefreshToken_LoginCredential,RefreshToken,LoginCredentialId,LoginCredential,Id,RESTRICT,NO ACTION
+FK_HRMP_Module,HostRoleModuleAndPermission,ModuleId,Module,Id,NO ACTION,NO ACTION
+FK_Module_ParentModule,Module,ParentModuleId,Module,Id,NO ACTION,NO ACTION
+FK_ModuleOperationMapping_Module,ModuleOperationMapping,ModuleId,Module,Id,NO ACTION,NO ACTION
+FK_PlanModuleMapping_Module,PlanModuleMapping,ModuleId,Module,Id,NO ACTION,NO ACTION
+FK_RoleModulePermission_Module,RoleModuleAndPermission,ModuleId,Module,Id,NO ACTION,NO ACTION
+FK_TenantEnabledModules_Module,TenantEnabledModule,ModuleId,Module,Id,NO ACTION,NO ACTION
+FK_TenantEnabledOperations_Module,TenantEnabledOperation,ModuleId,Module,Id,NO ACTION,NO ACTION
+FK_HRMP_Operation,HostRoleModuleAndPermission,OperationId,Operation,Id,NO ACTION,NO ACTION
+FK_ModuleOperation_Operation,ModuleOperationMapping,OperationId,Operation,Id,NO ACTION,NO ACTION
+FK_RoleModulePermission_Operation,RoleModuleAndPermission,OperationId,Operation,Id,NO ACTION,NO ACTION
+FK_TenantEnabledOperations_Operation,TenantEnabledOperation,OperationId,Operation,Id,NO ACTION,NO ACTION
+FK_ModuleOperationMapping_PageTypeEnum,ModuleOperationMapping,PageTypeId,PageTypeEnum,Id,NO ACTION,NO ACTION
+BillingOrder_PaymentGatewayId_fkey,BillingOrder,PaymentGatewayId,PaymentGateway,Id,RESTRICT,NO ACTION
+HostBillingConfiguration_PaymentGatewayId_fkey,HostBillingConfiguration,PaymentGatewayId,PaymentGateway,Id,RESTRICT,NO ACTION
+PaymentWebhookEvent_PaymentGatewayId_fkey,PaymentWebhookEvent,PaymentGatewayId,PaymentGateway,Id,RESTRICT,NO ACTION
+TenantBillingSubscription_PaymentGatewayId_fkey,TenantBillingSubscription,PaymentGatewayId,PaymentGateway,Id,RESTRICT,NO ACTION
+BillingRefund_PaymentTransactionId_fkey,BillingRefund,PaymentTransactionId,PaymentTransaction,Id,RESTRICT,NO ACTION
+FK_PayrollDetail_Employee,PayrollEmployeeDetail,PayrollEmployeeId,PayrollEmployee,Id,NO ACTION,NO ACTION
+FK_PayrollEmployee_Run,PayrollEmployee,PayrollRunId,PayrollRun,Id,NO ACTION,NO ACTION
+FK_PolicyChangeAudit_Policy,PolicyChangeAudit,PolicyId,Policy,Id,RESTRICT,NO ACTION
+FK_PolicyVersion_Policy,PolicyVersion,PolicyId,Policy,Id,CASCADE,NO ACTION
+FK_PolicyAssignment_Applicability,PolicyAssignment,SourceApplicabilityId,PolicyApplicability,Id,SET NULL,NO ACTION
+FK_PolicyApprovalHistory_Stage,PolicyApprovalHistory,PolicyApprovalStageId,PolicyApprovalStage,Id,RESTRICT,NO ACTION
+FK_PolicyApprovalStage_Category,PolicyApprovalStage,PolicyCategoryId,PolicyCategory,Id,RESTRICT,NO ACTION
+FK_PolicyType_Category,PolicyType,PolicyCategoryId,PolicyCategory,Id,RESTRICT,NO ACTION
+FK_PolicyDocument_Type,PolicyDocument,PolicyDocumentTypeId,PolicyDocumentType,Id,RESTRICT,NO ACTION
+FK_PolicyRule_Type,PolicyRule,PolicyRuleTypeId,PolicyRuleType,Id,RESTRICT,NO ACTION
+FK_PolicyException_Status,PolicyException,ApprovalStatusId,PolicyStatus,Id,RESTRICT,NO ACTION
+FK_PolicyVersion_Status,PolicyVersion,PolicyStatusId,PolicyStatus,Id,RESTRICT,NO ACTION
+FK_Policy_Type,Policy,PolicyTypeId,PolicyType,Id,RESTRICT,NO ACTION
+FK_AttendancePolicyVersionConfiguration_PolicyVersion,AttendancePolicyVersionConfiguration,PolicyVersionId,PolicyVersion,Id,CASCADE,NO ACTION
+FK_EmployeeAttendancePunch_PolicyVersion,EmployeeAttendancePunch,PolicyVersionId,PolicyVersion,Id,NO ACTION,NO ACTION
+FK_EmployeeWorkArrangement_PolicyVersion,EmployeeWorkArrangement,PolicyVersionId,PolicyVersion,Id,RESTRICT,NO ACTION
+FK_PolicyAcknowledgement_Version,PolicyAcknowledgement,PolicyVersionId,PolicyVersion,Id,RESTRICT,NO ACTION
+FK_PolicyApplicability_Version,PolicyApplicability,PolicyVersionId,PolicyVersion,Id,CASCADE,NO ACTION
+FK_PolicyApprovalHistory_Version,PolicyApprovalHistory,PolicyVersionId,PolicyVersion,Id,RESTRICT,NO ACTION
+FK_PolicyAssignment_Version,PolicyAssignment,PolicyVersionId,PolicyVersion,Id,RESTRICT,NO ACTION
+FK_PolicyChangeAudit_Version,PolicyChangeAudit,PolicyVersionId,PolicyVersion,Id,RESTRICT,NO ACTION
+FK_PolicyDocument_Version,PolicyDocument,PolicyVersionId,PolicyVersion,Id,CASCADE,NO ACTION
+FK_PolicyException_Version,PolicyException,PolicyVersionId,PolicyVersion,Id,RESTRICT,NO ACTION
+FK_PolicyRule_Version,PolicyRule,PolicyVersionId,PolicyVersion,Id,CASCADE,NO ACTION
+FK_EmployeeManagerMapping_ReportingType,EmployeeManagerMapping,ReportingTypeId,ReportingType,Id,NO ACTION,NO ACTION
+FK_PolicyApprovalStage_Role,PolicyApprovalStage,ApproverRoleId,Role,Id,RESTRICT,NO ACTION
+FK_RoleModulePermission_Role,RoleModuleAndPermission,RoleId,Role,Id,NO ACTION,NO ACTION
+FK_Ticket_AssignedRole,Ticket,AssignedToRoleId,Role,Id,NO ACTION,NO ACTION
+FK_TicketType_ApprovalRole,TicketType,ApprovalRoleId,Role,Id,SET NULL,NO ACTION
+FK_TicketType_ResponsibleRole,TicketType,ResponsibleRoleId,Role,Id,NO ACTION,NO ACTION
+FK_UserRole_Role,UserRole,RoleId,Role,Id,NO ACTION,NO ACTION
+FK_PayrollDetail_Component,PayrollEmployeeDetail,ComponentId,SalaryComponentMaster,Id,NO ACTION,NO ACTION
+FK_SalaryComponent_Dependency,SalaryComponentMaster,DependsOnComponentId,SalaryComponentMaster,Id,NO ACTION,NO ACTION
+FK_StructureDetail_Component,SalaryStructureDetail,ComponentId,SalaryComponentMaster,Id,NO ACTION,NO ACTION
+FK_StructureDetail_Dependency,SalaryStructureDetail,DependsOnComponentId,SalaryComponentMaster,Id,NO ACTION,NO ACTION
+FK_EmployeeSalary_Structure,EmployeeSalary,SalaryStructureId,SalaryStructure,Id,NO ACTION,NO ACTION
+FK_StructureDetail_Structure,SalaryStructureDetail,SalaryStructureId,SalaryStructure,Id,NO ACTION,NO ACTION
+FK_ComplianceRule_State,ComplianceRule,StateId,State,Id,NO ACTION,NO ACTION
+FK_District_State,District,StateId,State,Id,CASCADE,CASCADE
+FK_EmployeeTaxProfile_State,EmployeeTaxProfile,StateId,State,Id,NO ACTION,NO ACTION
+FK__City__StateId__6EE06CCD,Locality,StateId,State,Id,NO ACTION,NO ACTION
+FK_PolicyApplicability_State,PolicyApplicability,StateId,State,Id,RESTRICT,NO ACTION
+FK_SalaryComponent_State,SalaryComponentMaster,StateId,State,Id,NO ACTION,NO ACTION
+FK_TaxSlab_State,TaxSlab,StateId,State,Id,NO ACTION,NO ACTION
+FK_CountryStatutoryRule_Statutory,CountryStatutoryRule,StatutoryTypeId,StatutoryType,Id,NO ACTION,NO ACTION
+FK_EmployeeStatutoryAccount_Statutory,EmployeeStatutoryAccount,StatutoryTypeId,StatutoryType,Id,NO ACTION,NO ACTION
+FK_PMM_SubscriptionPlan,PlanModuleMapping,SubscriptionPlanId,SubscriptionPlan,Id,NO ACTION,NO ACTION
+SubscriptionPlanPrice_SubscriptionPlanId_fkey,SubscriptionPlanPrice,SubscriptionPlanId,SubscriptionPlan,Id,RESTRICT,NO ACTION
+FK_TenantSubscription_Plan,TenantSubscription,SubscriptionPlanId,SubscriptionPlan,Id,NO ACTION,NO ACTION
+BillingOrder_SubscriptionPlanPriceId_fkey,BillingOrder,SubscriptionPlanPriceId,SubscriptionPlanPrice,Id,RESTRICT,NO ACTION
+BillingSubscriptionChange_FromSubscriptionPlanPriceId_fkey,BillingSubscriptionChange,FromSubscriptionPlanPriceId,SubscriptionPlanPrice,Id,RESTRICT,NO ACTION
+BillingSubscriptionChange_ToSubscriptionPlanPriceId_fkey,BillingSubscriptionChange,ToSubscriptionPlanPriceId,SubscriptionPlanPrice,Id,RESTRICT,NO ACTION
+TenantBillingSubscription_SubscriptionPlanPriceId_fkey,TenantBillingSubscription,SubscriptionPlanPriceId,SubscriptionPlanPrice,Id,RESTRICT,NO ACTION
+FK_EmployeeTaxProfile_Regime,EmployeeTaxProfile,RegimeId,TaxRegimeMaster,Id,NO ACTION,NO ACTION
+FK_TaxSlab_Regime,TaxSlab,RegimeId,TaxRegimeMaster,Id,NO ACTION,NO ACTION
+FK_TaxRegime_TaxSystem,TaxRegimeMaster,TaxSystemId,TaxSystemMaster,Id,NO ACTION,NO ACTION
+FK_AssetCategory_Tenant,AssetCategory,TenantId,Tenant,Id,NO ACTION,NO ACTION
+FK_AttendancePolicy_Tenant,AttendancePolicy,TenantId,Tenant,Id,RESTRICT,NO ACTION
+FK_AttendancePolicyVersionConfiguration_Tenant,AttendancePolicyVersionConfiguration,TenantId,Tenant,Id,CASCADE,NO ACTION
+BillingInvoice_TenantId_fkey,BillingInvoice,TenantId,Tenant,Id,RESTRICT,NO ACTION
+BillingOrder_TenantId_fkey,BillingOrder,TenantId,Tenant,Id,RESTRICT,NO ACTION
+FK_ComplianceRule_Tenant,ComplianceRule,TenantId,Tenant,Id,NO ACTION,NO ACTION
+FK_DayCombination_Tenant,DayCombination,TenantId,Tenant,Id,NO ACTION,NO ACTION
+FK_Department_Tenant,Department,TenantId,Tenant,Id,NO ACTION,NO ACTION
+FK_Designation_Tenant,Designation,TenantId,Tenant,Id,NO ACTION,NO ACTION
+FK_DeviceCommand_Tenant,DeviceCommand,TenantId,Tenant,Id,RESTRICT,NO ACTION
+FK_DeviceCommandResponse_Tenant,DeviceCommandResponse,TenantId,Tenant,Id,RESTRICT,NO ACTION
+FK_DeviceMessageLog_Tenant,DeviceMessageLog,TenantId,Tenant,Id,RESTRICT,NO ACTION
+FK_Employee_Tenant,Employee,TenantId,Tenant,Id,CASCADE,CASCADE
+FK_EmployeeAttendancePunch_Tenant,EmployeeAttendancePunch,TenantId,Tenant,Id,NO ACTION,NO ACTION
+FK_EmployeeCodePattern_Tenant,EmployeeCodePattern,TenantId,Tenant,Id,NO ACTION,NO ACTION
+FK_EmployeeDeviceEnrollment_Tenant,EmployeeDeviceEnrollment,TenantId,Tenant,Id,RESTRICT,NO ACTION
+FK_EmployeeLeaveBalance_Tenant,EmployeeLeaveBalance,TenantId,Tenant,Id,CASCADE,NO ACTION
+FK__EmployeeL__Tenan__72DBE63A,EmployeeLeavePolicyMapping,TenantId,Tenant,Id,NO ACTION,NO ACTION
+FK_EmployeeLocationAssignment_Tenant,EmployeeLocationAssignment,TenantId,Tenant,Id,RESTRICT,NO ACTION
+FK_EmployeeManagerMapping_Tenant,EmployeeManagerMapping,TenantId,Tenant,Id,NO ACTION,NO ACTION
+EmployeeType_TenantId_fkey,EmployeeType,TenantId,Tenant,Id,NO ACTION,NO ACTION
+FK_EmployeeWorkArrangement_Tenant,EmployeeWorkArrangement,TenantId,Tenant,Id,RESTRICT,NO ACTION
+FK_WorkModeOverride_Tenant,EmployeeWorkModeOverrideRequest,TenantId,Tenant,Id,RESTRICT,NO ACTION
+FK_EmployeeWorkPattern_Tenant,EmployeeWorkPattern,TenantId,Tenant,Id,RESTRICT,NO ACTION
+FK_Holiday_Tenant,Holiday,TenantId,Tenant,Id,NO ACTION,NO ACTION
+FK__LeaveRequ__Tenan__04FA9675,LeaveRequest,TenantId,Tenant,Id,NO ACTION,NO ACTION
+FK_LeaveType_TenantId,LeaveType,TenantId,Tenant,Id,NO ACTION,NO ACTION
+FK_PayrollRun_Tenant,PayrollRun,TenantId,Tenant,Id,NO ACTION,NO ACTION
+FK_Policy_Tenant,Policy,TenantId,Tenant,Id,RESTRICT,NO ACTION
+FK_PolicyAcknowledgement_Tenant,PolicyAcknowledgement,TenantId,Tenant,Id,RESTRICT,NO ACTION
+FK_PolicyApplicability_Tenant,PolicyApplicability,TenantId,Tenant,Id,RESTRICT,NO ACTION
+FK_PolicyApprovalHistory_Tenant,PolicyApprovalHistory,TenantId,Tenant,Id,RESTRICT,NO ACTION
+FK_PolicyApprovalStage_Tenant,PolicyApprovalStage,TenantId,Tenant,Id,RESTRICT,NO ACTION
+FK_PolicyAssignment_Tenant,PolicyAssignment,TenantId,Tenant,Id,RESTRICT,NO ACTION
+FK_PolicyChangeAudit_Tenant,PolicyChangeAudit,TenantId,Tenant,Id,RESTRICT,NO ACTION
+FK_PolicyDocument_Tenant,PolicyDocument,TenantId,Tenant,Id,RESTRICT,NO ACTION
+FK_PolicyException_Tenant,PolicyException,TenantId,Tenant,Id,RESTRICT,NO ACTION
+FK_PolicyRule_Tenant,PolicyRule,TenantId,Tenant,Id,RESTRICT,NO ACTION
+FK_PolicyType_Tenant,PolicyType,TenantId,Tenant,Id,RESTRICT,NO ACTION
+FK_PolicyVersion_Tenant,PolicyVersion,TenantId,Tenant,Id,RESTRICT,NO ACTION
+FK_RequestType_Tenant,RequestType,TenantId,Tenant,Id,NO ACTION,NO ACTION
+FK_SalaryComponent_Tenant,SalaryComponentMaster,TenantId,Tenant,Id,NO ACTION,NO ACTION
+FK_SalaryStructure_Tenant,SalaryStructure,TenantId,Tenant,Id,NO ACTION,NO ACTION
+FK_TaxRule_Tenant,TaxRule,TenantId,Tenant,Id,NO ACTION,NO ACTION
+FK_TaxSlab_Tenant,TaxSlab,TenantId,Tenant,Id,NO ACTION,NO ACTION
+TenantBillingProfile_TenantId_fkey,TenantBillingProfile,TenantId,Tenant,Id,RESTRICT,NO ACTION
+TenantBillingSubscription_TenantId_fkey,TenantBillingSubscription,TenantId,Tenant,Id,RESTRICT,NO ACTION
+FK_TenantCardMaster_Tenant,TenantCardMaster,TenantId,Tenant,Id,RESTRICT,NO ACTION
+FK_TenantDevice_Tenant,TenantDevice,TenantId,Tenant,Id,RESTRICT,NO ACTION
+FK_TenantEmailConfig_Tenant,TenantEmailConfig,TenantId,Tenant,Id,CASCADE,CASCADE
+FK_TenantEmailTemplate_Tenant,TenantEmailTemplate,TenantId,Tenant,Id,CASCADE,NO ACTION
+FK_TenantEnabledModules_Tenant,TenantEnabledModule,TenantId,Tenant,Id,NO ACTION,NO ACTION
+FK_TenantEnabledOperations_Tenant,TenantEnabledOperation,TenantId,Tenant,Id,NO ACTION,NO ACTION
+FK_TenantLocation_Tenant,TenantLocation,TenantId,Tenant,Id,RESTRICT,NO ACTION
+FK_TenantProfile_Tenant,TenantProfile,TenantId,Tenant,Id,CASCADE,NO ACTION
+FK_TenantSubscription_Tenant,TenantSubscription,TenantId,Tenant,Id,NO ACTION,NO ACTION
+FK_Ticket_Tenant,Ticket,TenantId,Tenant,Id,NO ACTION,NO ACTION
+FK_TicketClassification_Tenant,TicketClassification,TenantId,Tenant,Id,NO ACTION,NO ACTION
+FK_TicketHeader_TenantId,TicketHeader,TenantId,Tenant,Id,NO ACTION,CASCADE
+FK_TicketType_Tenant,TicketType,TenantId,Tenant,Id,NO ACTION,NO ACTION
+BillingOrder_TenantBillingSubscriptionId_fkey,BillingOrder,TenantBillingSubscriptionId,TenantBillingSubscription,Id,RESTRICT,NO ACTION
+BillingSubscriptionChange_TenantBillingSubscriptionId_fkey,BillingSubscriptionChange,TenantBillingSubscriptionId,TenantBillingSubscription,Id,RESTRICT,NO ACTION
+FK_DeviceCommand_TenantDevice,DeviceCommand,TenantDeviceId,TenantDevice,Id,RESTRICT,NO ACTION
+FK_DeviceCommandResponse_TenantDevice,DeviceCommandResponse,TenantDeviceId,TenantDevice,Id,RESTRICT,NO ACTION
+FK_DeviceCredential_TenantDevice,DeviceCredential,TenantDeviceId,TenantDevice,Id,RESTRICT,NO ACTION
+FK_DeviceMessageLog_TenantDevice,DeviceMessageLog,TenantDeviceId,TenantDevice,Id,RESTRICT,NO ACTION
+FK_TenantDeviceConfiguration_TenantDevice,TenantDeviceConfiguration,TenantDeviceId,TenantDevice,Id,CASCADE,NO ACTION
+FK_Tenant_TenantIndustry,Tenant,TenantIndustryId,TenantIndustry,Id,NO ACTION,NO ACTION
+FK_DeviceCommand_TenantLocation,DeviceCommand,TenantLocationId,TenantLocation,Id,RESTRICT,NO ACTION
+FK_EmployeeAttendancePunch_Location,EmployeeAttendancePunch,TenantLocationId,TenantLocation,Id,NO ACTION,NO ACTION
+FK_EmployeeLocationAssignment_TenantLocation,EmployeeLocationAssignment,TenantLocationId,TenantLocation,Id,RESTRICT,NO ACTION
+FK_EmployeeWorkArrangement_PrimaryLocation,EmployeeWorkArrangement,PrimaryTenantLocationId,TenantLocation,Id,RESTRICT,NO ACTION
+FK_WorkModeOverride_TenantLocation,EmployeeWorkModeOverrideRequest,TenantLocationId,TenantLocation,Id,RESTRICT,NO ACTION
+FK_EmployeeWorkPattern_TenantLocation,EmployeeWorkPattern,TenantLocationId,TenantLocation,Id,RESTRICT,NO ACTION
+FK_Holiday_TenantLocation,Holiday,TenantLocationId,TenantLocation,Id,RESTRICT,NO ACTION
+FK_PolicyApplicability_TenantLocation,PolicyApplicability,TenantLocationId,TenantLocation,Id,RESTRICT,NO ACTION
+FK_TenantDevice_TenantLocation,TenantDevice,TenantLocationId,TenantLocation,Id,RESTRICT,NO ACTION
+FK_TenantDevice_TenantLocation,TenantDevice,TenantId,TenantLocation,Id,RESTRICT,NO ACTION
+FK_TenantDevice_TenantLocation,TenantDevice,TenantLocationId,TenantLocation,TenantId,RESTRICT,NO ACTION
+FK_TenantDevice_TenantLocation,TenantDevice,TenantId,TenantLocation,TenantId,RESTRICT,NO ACTION
+TenantBillingSubscription_TenantSubscriptionId_fkey,TenantBillingSubscription,TenantSubscriptionId,TenantSubscription,Id,RESTRICT,NO ACTION
+FK__Tender__TenderSt__3EDC53F0,Tender,TenderStatusId,TenderStatus,Id,NO ACTION,NO ACTION
+FK_TicketHistory_Ticket,TicketHistory,TicketId,Ticket,Id,NO ACTION,NO ACTION
+FK_Ticket_Classification,Ticket,TicketClassificationId,TicketClassification,Id,NO ACTION,NO ACTION
+FK_TicketHeaderType_TicketClassification,TicketHeader,TicketClassificationId,TicketClassification,Id,NO ACTION,NO ACTION
+FK_Ticket_Header,Ticket,TicketHeaderId,TicketHeader,Id,NO ACTION,NO ACTION
+FK_TicketType_Header,TicketType,TicketHeaderId,TicketHeader,Id,NO ACTION,NO ACTION
+FK_ThreadMessage_Thread,ThreadMessage,ThreadId,TicketThread,Id,CASCADE,NO ACTION
+FK_Ticket_TicketType,Ticket,TicketTypeId,TicketType,Id,NO ACTION,NO ACTION
+FK_EmployeeWorkDocument_DocumentType,EmployeeWorkDocument,WorkDocumentTypeId,WorkDocumentType,Id,NO ACTION,NO ACTION

@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Skolenza Policy Flow Simulator</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header><div><span class="eyebrow">Skolenza · LIVE CONTRACT SAMPLE</span><h1>Tenant Policy Flow Simulator</h1><p>UI option → API request → database tables → response, ek hi screen par.</p></div><div class="status" id="status">Review mode</div></header>
+  <main>
+    <section class="panel connection">
+      <div class="section-title"><div><h2>1. Live connection</h2><p>Token memory mein rahega; localStorage/export mein kabhi save nahi hoga.</p></div><button id="connectBtn" class="primary">Connect & load DDL</button></div>
+      <div class="grid four">
+        <label>API base URL<input id="apiBase" value="https://Skolenza-api.onrender.com"></label>
+        <label>Bearer token<input id="token" type="password" placeholder="Paste runtime token"></label>
+        <label>User employee ID<input id="userEmployeeId" placeholder="Current user employee ID"></label>
+        <label>Today<input id="today" type="date"></label>
+      </div>
+      <div id="sourceCards" class="source-cards"></div>
+    </section>
+
+    <nav id="tabs"></nav>
+
+    <section class="panel tabpage active" data-tab="builder">
+      <div class="section-title"><div><h2>2. Policy Definition Builder</h2><p>All IDs dropdown/API se; manual fallback isliye hai ki failed DDL source clearly test ho sake.</p></div><div class="actions"><button data-sample="travel">Load travel sample</button><button data-sample="leave">Load leave sample</button><button id="saveDraft">Save local</button><button id="exportDraft">Export JSON</button><label class="file-btn">Import JSON<input id="importDraft" type="file" accept="application/json"></label></div></div>
+      <div class="grid three">
+        <label>Policy type<select id="policyTypeId"><option value="">Load live types</option></select></label>
+        <label>Policy code<input id="policyCode" placeholder="IN-DOMESTIC-TRAVEL"></label>
+        <label>Policy name<input id="policyName" placeholder="India Domestic Travel Policy"></label>
+        <label>Owner department<select id="ownerDepartmentId"><option value="">Not an applicability target</option></select></label>
+        <label>Currency<input id="currency" value="INR"></label>
+        <label>Effective from<input id="effectiveFrom" type="date"></label>
+        <label>Effective to<input id="effectiveTo" type="date"></label>
+        <label class="span2">Summary<textarea id="summary" rows="2"></textarea></label>
+      </div>
+      <div class="subhead"><h3>Rules</h3><button id="addRule">+ Add rule</button></div><div id="rules"></div>
+      <div class="subhead"><h3>Applicability</h3><button id="addApplicability">+ Add row</button></div><div id="applicability"></div>
+      <label>Change summary<input id="changeSummary" value="Initial version"></label>
+      <div class="footer-actions"><button id="previewCreate" class="primary">Review Create Policy API</button></div>
+    </section>
+
+    <section class="panel tabpage" data-tab="operations">
+      <div class="section-title"><div><h2>3. Complete operation catalogue</h2><p>37 Tenant Policy endpoints. IDs/placeholders aur body editable hain; button pe request/table popup khulega.</p></div><input id="operationSearch" placeholder="Search endpoint, table or action"></div>
+      <div id="operationGrid" class="operation-grid"></div>
+    </section>
+
+    <section class="panel tabpage" data-tab="dataflow">
+      <h2>4. Table data flow</h2><div id="tableFlow" class="flow"></div>
+      <h3>Lifecycle</h3><div class="timeline"><span>Draft</span><b>SUBMIT</b><span>Under Review</span><b>APPROVE</b><span>Approved</span><b>PUBLISH</b><span>Published</span><b>ARCHIVE</b><span>Archived</span></div>
+      <p class="note">Rejected version ko correct karke SUBMIT kiya ja sakta hai. Published/Archived immutable hain; revision ke liye clone endpoint use hota hai.</p>
+    </section>
+
+    <section class="panel tabpage" data-tab="local">
+      <h2>5. Local data & evidence</h2><p>Saved snapshots browser localStorage mein hain. Token kabhi persist nahi hota.</p><div class="actions"><button id="refreshLocal">Refresh list</button><button id="clearLocal" class="danger">Clear local snapshots</button></div><div id="localList"></div>
+      <h3>Last API response</h3><pre id="lastResponse">No API executed in this browser session.</pre>
+    </section>
+  </main>
+
+  <div id="dataLists"></div>
+  <dialog id="requestDialog"><form method="dialog"><button class="close" aria-label="Close">×</button><h2 id="dialogTitle"></h2><div id="dialogMeta"></div><h3>Request (editable before execution)</h3><textarea id="dialogRequest" rows="16"></textarea><h3>Database impact</h3><div id="dialogTables"></div><h3>What happens</h3><p id="dialogDescription"></p><div class="dialog-actions"><button id="copyRequest" type="button">Copy request</button><button id="executeRequest" type="button" class="danger">Execute live API</button><button value="cancel">Close</button></div></form></dialog>
+  <template id="ruleTemplate"><article class="rule-row"><div class="grid three"><label>Rule type<select class="ruleType"></select></label><label>Rule name<input class="ruleName"></label><label>Order<input class="ruleOrder" type="number" min="1"></label></div><label>Configuration JSON<textarea class="ruleJson" rows="7"></textarea></label><div class="row-help"></div><button class="remove danger">Remove rule</button></article></template>
+  <template id="appTemplate"><article class="app-row"><div class="grid four"><label>Mode<select class="appMode"><option value="1">Include</option><option value="2">Exclude</option></select></label><label>Priority<input class="priority" type="number" value="100"></label><label>From<input class="appFrom" type="date"></label><label>To<input class="appTo" type="date"></label></div><div class="grid four dimensions"></div><button class="remove danger">Remove row</button></article></template>
+  <script src="policy-constants.js"></script><script src="policy-simulator.js"></script>
+</body></html>

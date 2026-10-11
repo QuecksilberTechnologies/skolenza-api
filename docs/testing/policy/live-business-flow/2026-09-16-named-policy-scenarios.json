@@ -1,0 +1,924 @@
+{
+  "capturedAt": "2026-09-16T20:53:40.8621191+05:30",
+  "environment": "https://skolenza-api.onrender.com",
+  "moduleId": 110,
+  "operationId": 1,
+  "policyType": {
+    "name": null,
+    "id": 6
+  },
+  "ruleType": {
+    "name": "Accrual",
+    "id": 3
+  },
+  "scenarios": [
+    {
+      "scenario": "LEAVE",
+      "policyName": "India Maharashtra Annual Leave Policy",
+      "policyCode": "LEAVE_20260916205328",
+      "request": {
+        "moduleId": 110,
+        "policyTypeId": 6,
+        "effectiveFrom": "2026-09-16",
+        "ownerDepartmentId": 4,
+        "operationId": 1,
+        "rules": [
+          {
+            "ruleConfiguration": "{\"carryForwardDays\":5,\"sandwichRuleEnabled\":true,\"stateCode\":\"MH\",\"annualEntitlementDays\":18,\"countryCode\":\"IN\"}",
+            "ruleOrder": 1,
+            "ruleName": "India Maharashtra Annual Leave Policy",
+            "policyRuleTypeId": 3
+          }
+        ],
+        "defaultCurrencyCode": "INR",
+        "policyCode": "LEAVE_20260916205328",
+        "applicability": [
+          {
+            "effectiveFrom": "2026-09-16",
+            "minimumServiceDays": 0,
+            "employeeTypeId": 7,
+            "countryId": 1,
+            "priority": 500,
+            "applicabilityMode": 1
+          }
+        ],
+        "policyName": "India Maharashtra Annual Leave Policy",
+        "summary": "Annual leave for permanent employees working in Maharashtra",
+        "changeSummary": "Named production acceptance scenario"
+      },
+      "createResponse": {
+        "isSucceeded": true,
+        "message": "Policy draft created successfully.",
+        "data": {
+          "id": 4,
+          "code": "LEAVE_20260916205328",
+          "name": "India Maharashtra Annual Leave Policy",
+          "summary": "Annual leave for permanent employees working in Maharashtra",
+          "policyTypeId": 6,
+          "ownerDepartmentId": 4,
+          "defaultCurrencyCode": "INR",
+          "versionId": 5,
+          "versionNumber": 1,
+          "statusId": 1,
+          "status": "Draft",
+          "effectiveFrom": "2026-09-16",
+          "effectiveTo": null,
+          "changeSummary": "Named production acceptance scenario",
+          "rules": [
+            {
+              "id": 5,
+              "ruleTypeId": 3,
+              "name": "India Maharashtra Annual Leave Policy",
+              "order": 1,
+              "configuration": "{\"stateCode\": \"MH\", \"countryCode\": \"IN\", \"carryForwardDays\": 5, \"sandwichRuleEnabled\": true, \"annualEntitlementDays\": 18}"
+            }
+          ],
+          "applicability": [
+            {
+              "id": 5,
+              "mode": 1,
+              "priority": 500,
+              "countryId": 1,
+              "stateId": null,
+              "districtId": null,
+              "localityId": null,
+              "tenantLocationId": null,
+              "employeeTypeId": 7,
+              "departmentId": null,
+              "designationId": null,
+              "employeeId": null,
+              "genderId": null,
+              "workArrangementType": null,
+              "employmentStatus": null,
+              "minimumServiceDays": 0,
+              "effectiveFrom": "2026-09-16",
+              "effectiveTo": null
+            }
+          ]
+        },
+        "errors": []
+      },
+      "readBackResponse": {
+        "isSucceeded": true,
+        "message": "Policy retrieved successfully.",
+        "data": {
+          "id": 4,
+          "code": "LEAVE_20260916205328",
+          "name": "India Maharashtra Annual Leave Policy",
+          "summary": "Annual leave for permanent employees working in Maharashtra",
+          "policyTypeId": 6,
+          "ownerDepartmentId": 4,
+          "defaultCurrencyCode": "INR",
+          "versionId": 5,
+          "versionNumber": 1,
+          "statusId": 1,
+          "status": "Draft",
+          "effectiveFrom": "2026-09-16",
+          "effectiveTo": null,
+          "changeSummary": "Named production acceptance scenario",
+          "rules": [
+            {
+              "id": 5,
+              "ruleTypeId": 3,
+              "name": "India Maharashtra Annual Leave Policy",
+              "order": 1,
+              "configuration": "{\"stateCode\": \"MH\", \"countryCode\": \"IN\", \"carryForwardDays\": 5, \"sandwichRuleEnabled\": true, \"annualEntitlementDays\": 18}"
+            }
+          ],
+          "applicability": [
+            {
+              "id": 5,
+              "mode": 1,
+              "priority": 500,
+              "countryId": 1,
+              "stateId": null,
+              "districtId": null,
+              "localityId": null,
+              "tenantLocationId": null,
+              "employeeTypeId": 7,
+              "departmentId": null,
+              "designationId": null,
+              "employeeId": null,
+              "genderId": null,
+              "workArrangementType": null,
+              "employmentStatus": null,
+              "minimumServiceDays": 0,
+              "effectiveFrom": "2026-09-16",
+              "effectiveTo": null
+            }
+          ]
+        },
+        "errors": []
+      },
+      "inserted": {
+        "table": "skolenza.Policy",
+        "id": 4,
+        "versionTable": "skolenza.PolicyVersion",
+        "status": "Draft",
+        "versionId": 5
+      },
+      "updateRequest": {
+        "rules": [
+          {
+            "policyRuleTypeId": 2,
+            "ruleName": "Annual leave entitlement",
+            "ruleConfiguration": "{\"annualEntitlementDays\":18,\"unit\":\"DAY\"}",
+            "ruleOrder": 1
+          },
+          {
+            "policyRuleTypeId": 4,
+            "ruleName": "Annual leave carry forward",
+            "ruleConfiguration": "{\"carryForwardDays\":5,\"expiryMonths\":3}",
+            "ruleOrder": 2
+          },
+          {
+            "policyRuleTypeId": 5,
+            "ruleName": "Maharashtra sandwich rule",
+            "ruleConfiguration": "{\"enabled\":true,\"includeWeeklyOff\":true,\"includePublicHoliday\":true}",
+            "ruleOrder": 3
+          }
+        ],
+        "effectiveFrom": "2026-09-16",
+        "changeSummary": "Corrected business-specific rule taxonomy",
+        "applicability": [
+          {
+            "employeeTypeId": 7,
+            "effectiveFrom": "2026-09-16",
+            "applicabilityMode": 1,
+            "countryId": 1,
+            "minimumServiceDays": 0,
+            "priority": 500
+          }
+        ],
+        "summary": "Annual leave for permanent employees working in Maharashtra",
+        "operationId": 2,
+        "ownerDepartmentId": 4,
+        "defaultCurrencyCode": "INR",
+        "policyName": "India Maharashtra Annual Leave Policy",
+        "moduleId": 110,
+        "policyTypeId": 6,
+        "policyCode": "LEAVE_20260916205328"
+      },
+      "updateResponse": {
+        "isSucceeded": true,
+        "message": "Policy draft updated successfully.",
+        "data": {
+          "id": 4,
+          "code": "LEAVE_20260916205328",
+          "name": "India Maharashtra Annual Leave Policy",
+          "summary": "Annual leave for permanent employees working in Maharashtra",
+          "policyTypeId": 6,
+          "ownerDepartmentId": 4,
+          "defaultCurrencyCode": "INR",
+          "versionId": 5,
+          "versionNumber": 1,
+          "statusId": 1,
+          "status": "Draft",
+          "effectiveFrom": "2026-09-16",
+          "effectiveTo": null,
+          "changeSummary": "Corrected business-specific rule taxonomy",
+          "rules": [
+            {
+              "id": 8,
+              "ruleTypeId": 2,
+              "name": "Annual leave entitlement",
+              "order": 1,
+              "configuration": "{\"unit\": \"DAY\", \"annualEntitlementDays\": 18}"
+            },
+            {
+              "id": 9,
+              "ruleTypeId": 4,
+              "name": "Annual leave carry forward",
+              "order": 2,
+              "configuration": "{\"expiryMonths\": 3, \"carryForwardDays\": 5}"
+            },
+            {
+              "id": 10,
+              "ruleTypeId": 5,
+              "name": "Maharashtra sandwich rule",
+              "order": 3,
+              "configuration": "{\"enabled\": true, \"includeWeeklyOff\": true, \"includePublicHoliday\": true}"
+            }
+          ],
+          "applicability": [
+            {
+              "id": 8,
+              "mode": 1,
+              "priority": 500,
+              "countryId": 1,
+              "stateId": null,
+              "districtId": null,
+              "localityId": null,
+              "tenantLocationId": null,
+              "employeeTypeId": 7,
+              "departmentId": null,
+              "designationId": null,
+              "employeeId": null,
+              "genderId": null,
+              "workArrangementType": null,
+              "employmentStatus": null,
+              "minimumServiceDays": 0,
+              "effectiveFrom": "2026-09-16",
+              "effectiveTo": null
+            }
+          ]
+        },
+        "errors": []
+      },
+      "correctedReadBackResponse": {
+        "isSucceeded": true,
+        "message": "Policy retrieved successfully.",
+        "data": {
+          "id": 4,
+          "code": "LEAVE_20260916205328",
+          "name": "India Maharashtra Annual Leave Policy",
+          "summary": "Annual leave for permanent employees working in Maharashtra",
+          "policyTypeId": 6,
+          "ownerDepartmentId": 4,
+          "defaultCurrencyCode": "INR",
+          "versionId": 5,
+          "versionNumber": 1,
+          "statusId": 1,
+          "status": "Draft",
+          "effectiveFrom": "2026-09-16",
+          "effectiveTo": null,
+          "changeSummary": "Corrected business-specific rule taxonomy",
+          "rules": [
+            {
+              "id": 8,
+              "ruleTypeId": 2,
+              "name": "Annual leave entitlement",
+              "order": 1,
+              "configuration": "{\"unit\": \"DAY\", \"annualEntitlementDays\": 18}"
+            },
+            {
+              "id": 9,
+              "ruleTypeId": 4,
+              "name": "Annual leave carry forward",
+              "order": 2,
+              "configuration": "{\"expiryMonths\": 3, \"carryForwardDays\": 5}"
+            },
+            {
+              "id": 10,
+              "ruleTypeId": 5,
+              "name": "Maharashtra sandwich rule",
+              "order": 3,
+              "configuration": "{\"enabled\": true, \"includeWeeklyOff\": true, \"includePublicHoliday\": true}"
+            }
+          ],
+          "applicability": [
+            {
+              "id": 8,
+              "mode": 1,
+              "priority": 500,
+              "countryId": 1,
+              "stateId": null,
+              "districtId": null,
+              "localityId": null,
+              "tenantLocationId": null,
+              "employeeTypeId": 7,
+              "departmentId": null,
+              "designationId": null,
+              "employeeId": null,
+              "genderId": null,
+              "workArrangementType": null,
+              "employmentStatus": null,
+              "minimumServiceDays": 0,
+              "effectiveFrom": "2026-09-16",
+              "effectiveTo": null
+            }
+          ]
+        },
+        "errors": []
+      }
+    },
+    {
+      "scenario": "ATTENDANCE",
+      "policyName": "Hybrid Web Mobile Device Attendance Policy",
+      "policyCode": "ATTENDANCE_20260916205328",
+      "request": {
+        "moduleId": 110,
+        "policyTypeId": 6,
+        "effectiveFrom": "2026-09-16",
+        "ownerDepartmentId": 4,
+        "operationId": 1,
+        "rules": [
+          {
+            "ruleConfiguration": "{\"allowDevice\":true,\"allowWeb\":true,\"locationValidationRequired\":true,\"allowMobile\":true,\"officeDaysPerWeek\":3}",
+            "ruleOrder": 1,
+            "ruleName": "Hybrid Web Mobile Device Attendance Policy",
+            "policyRuleTypeId": 3
+          }
+        ],
+        "defaultCurrencyCode": "INR",
+        "policyCode": "ATTENDANCE_20260916205328",
+        "applicability": [
+          {
+            "effectiveFrom": "2026-09-16",
+            "minimumServiceDays": 0,
+            "employeeTypeId": 7,
+            "countryId": 1,
+            "priority": 500,
+            "applicabilityMode": 1
+          }
+        ],
+        "policyName": "Hybrid Web Mobile Device Attendance Policy",
+        "summary": "Hybrid attendance through web, mobile or assigned device",
+        "changeSummary": "Named production acceptance scenario"
+      },
+      "createResponse": {
+        "isSucceeded": true,
+        "message": "Policy draft created successfully.",
+        "data": {
+          "id": 5,
+          "code": "ATTENDANCE_20260916205328",
+          "name": "Hybrid Web Mobile Device Attendance Policy",
+          "summary": "Hybrid attendance through web, mobile or assigned device",
+          "policyTypeId": 6,
+          "ownerDepartmentId": 4,
+          "defaultCurrencyCode": "INR",
+          "versionId": 6,
+          "versionNumber": 1,
+          "statusId": 1,
+          "status": "Draft",
+          "effectiveFrom": "2026-09-16",
+          "effectiveTo": null,
+          "changeSummary": "Named production acceptance scenario",
+          "rules": [
+            {
+              "id": 6,
+              "ruleTypeId": 3,
+              "name": "Hybrid Web Mobile Device Attendance Policy",
+              "order": 1,
+              "configuration": "{\"allowWeb\": true, \"allowDevice\": true, \"allowMobile\": true, \"officeDaysPerWeek\": 3, \"locationValidationRequired\": true}"
+            }
+          ],
+          "applicability": [
+            {
+              "id": 6,
+              "mode": 1,
+              "priority": 500,
+              "countryId": 1,
+              "stateId": null,
+              "districtId": null,
+              "localityId": null,
+              "tenantLocationId": null,
+              "employeeTypeId": 7,
+              "departmentId": null,
+              "designationId": null,
+              "employeeId": null,
+              "genderId": null,
+              "workArrangementType": null,
+              "employmentStatus": null,
+              "minimumServiceDays": 0,
+              "effectiveFrom": "2026-09-16",
+              "effectiveTo": null
+            }
+          ]
+        },
+        "errors": []
+      },
+      "readBackResponse": {
+        "isSucceeded": true,
+        "message": "Policy retrieved successfully.",
+        "data": {
+          "id": 5,
+          "code": "ATTENDANCE_20260916205328",
+          "name": "Hybrid Web Mobile Device Attendance Policy",
+          "summary": "Hybrid attendance through web, mobile or assigned device",
+          "policyTypeId": 6,
+          "ownerDepartmentId": 4,
+          "defaultCurrencyCode": "INR",
+          "versionId": 6,
+          "versionNumber": 1,
+          "statusId": 1,
+          "status": "Draft",
+          "effectiveFrom": "2026-09-16",
+          "effectiveTo": null,
+          "changeSummary": "Named production acceptance scenario",
+          "rules": [
+            {
+              "id": 6,
+              "ruleTypeId": 3,
+              "name": "Hybrid Web Mobile Device Attendance Policy",
+              "order": 1,
+              "configuration": "{\"allowWeb\": true, \"allowDevice\": true, \"allowMobile\": true, \"officeDaysPerWeek\": 3, \"locationValidationRequired\": true}"
+            }
+          ],
+          "applicability": [
+            {
+              "id": 6,
+              "mode": 1,
+              "priority": 500,
+              "countryId": 1,
+              "stateId": null,
+              "districtId": null,
+              "localityId": null,
+              "tenantLocationId": null,
+              "employeeTypeId": 7,
+              "departmentId": null,
+              "designationId": null,
+              "employeeId": null,
+              "genderId": null,
+              "workArrangementType": null,
+              "employmentStatus": null,
+              "minimumServiceDays": 0,
+              "effectiveFrom": "2026-09-16",
+              "effectiveTo": null
+            }
+          ]
+        },
+        "errors": []
+      },
+      "inserted": {
+        "table": "skolenza.Policy",
+        "id": 5,
+        "versionTable": "skolenza.PolicyVersion",
+        "status": "Draft",
+        "versionId": 6
+      },
+      "updateRequest": {
+        "rules": [
+          {
+            "policyRuleTypeId": 7,
+            "ruleName": "Hybrid attendance channels",
+            "ruleConfiguration": "{\"officeDaysPerWeek\":3,\"allowWeb\":true,\"allowMobile\":true,\"allowDevice\":true,\"locationValidationRequired\":true}",
+            "ruleOrder": 1
+          }
+        ],
+        "effectiveFrom": "2026-09-16",
+        "changeSummary": "Corrected business-specific rule taxonomy",
+        "applicability": [
+          {
+            "employeeTypeId": 7,
+            "effectiveFrom": "2026-09-16",
+            "applicabilityMode": 1,
+            "countryId": 1,
+            "minimumServiceDays": 0,
+            "priority": 500
+          }
+        ],
+        "summary": "Hybrid attendance through web, mobile or assigned device",
+        "operationId": 2,
+        "ownerDepartmentId": 4,
+        "defaultCurrencyCode": "INR",
+        "policyName": "Hybrid Web Mobile Device Attendance Policy",
+        "moduleId": 110,
+        "policyTypeId": 6,
+        "policyCode": "ATTENDANCE_20260916205328"
+      },
+      "updateResponse": {
+        "isSucceeded": true,
+        "message": "Policy draft updated successfully.",
+        "data": {
+          "id": 5,
+          "code": "ATTENDANCE_20260916205328",
+          "name": "Hybrid Web Mobile Device Attendance Policy",
+          "summary": "Hybrid attendance through web, mobile or assigned device",
+          "policyTypeId": 6,
+          "ownerDepartmentId": 4,
+          "defaultCurrencyCode": "INR",
+          "versionId": 6,
+          "versionNumber": 1,
+          "statusId": 1,
+          "status": "Draft",
+          "effectiveFrom": "2026-09-16",
+          "effectiveTo": null,
+          "changeSummary": "Corrected business-specific rule taxonomy",
+          "rules": [
+            {
+              "id": 11,
+              "ruleTypeId": 7,
+              "name": "Hybrid attendance channels",
+              "order": 1,
+              "configuration": "{\"allowWeb\": true, \"allowDevice\": true, \"allowMobile\": true, \"officeDaysPerWeek\": 3, \"locationValidationRequired\": true}"
+            }
+          ],
+          "applicability": [
+            {
+              "id": 9,
+              "mode": 1,
+              "priority": 500,
+              "countryId": 1,
+              "stateId": null,
+              "districtId": null,
+              "localityId": null,
+              "tenantLocationId": null,
+              "employeeTypeId": 7,
+              "departmentId": null,
+              "designationId": null,
+              "employeeId": null,
+              "genderId": null,
+              "workArrangementType": null,
+              "employmentStatus": null,
+              "minimumServiceDays": 0,
+              "effectiveFrom": "2026-09-16",
+              "effectiveTo": null
+            }
+          ]
+        },
+        "errors": []
+      },
+      "correctedReadBackResponse": {
+        "isSucceeded": true,
+        "message": "Policy retrieved successfully.",
+        "data": {
+          "id": 5,
+          "code": "ATTENDANCE_20260916205328",
+          "name": "Hybrid Web Mobile Device Attendance Policy",
+          "summary": "Hybrid attendance through web, mobile or assigned device",
+          "policyTypeId": 6,
+          "ownerDepartmentId": 4,
+          "defaultCurrencyCode": "INR",
+          "versionId": 6,
+          "versionNumber": 1,
+          "statusId": 1,
+          "status": "Draft",
+          "effectiveFrom": "2026-09-16",
+          "effectiveTo": null,
+          "changeSummary": "Corrected business-specific rule taxonomy",
+          "rules": [
+            {
+              "id": 11,
+              "ruleTypeId": 7,
+              "name": "Hybrid attendance channels",
+              "order": 1,
+              "configuration": "{\"allowWeb\": true, \"allowDevice\": true, \"allowMobile\": true, \"officeDaysPerWeek\": 3, \"locationValidationRequired\": true}"
+            }
+          ],
+          "applicability": [
+            {
+              "id": 9,
+              "mode": 1,
+              "priority": 500,
+              "countryId": 1,
+              "stateId": null,
+              "districtId": null,
+              "localityId": null,
+              "tenantLocationId": null,
+              "employeeTypeId": 7,
+              "departmentId": null,
+              "designationId": null,
+              "employeeId": null,
+              "genderId": null,
+              "workArrangementType": null,
+              "employmentStatus": null,
+              "minimumServiceDays": 0,
+              "effectiveFrom": "2026-09-16",
+              "effectiveTo": null
+            }
+          ]
+        },
+        "errors": []
+      }
+    },
+    {
+      "scenario": "INSURANCE",
+      "policyName": "StaffMember Health Insurance Policy",
+      "policyCode": "INSURANCE_20260916205328",
+      "request": {
+        "moduleId": 110,
+        "policyTypeId": 6,
+        "effectiveFrom": "2026-09-16",
+        "ownerDepartmentId": 4,
+        "operationId": 1,
+        "rules": [
+          {
+            "ruleConfiguration": "{\"coverageAmount\":500000,\"dependentCoverage\":true,\"currency\":\"INR\",\"employeeContributionPercent\":0}",
+            "ruleOrder": 1,
+            "ruleName": "StaffMember Health Insurance Policy",
+            "policyRuleTypeId": 3
+          }
+        ],
+        "defaultCurrencyCode": "INR",
+        "policyCode": "INSURANCE_20260916205328",
+        "applicability": [
+          {
+            "effectiveFrom": "2026-09-16",
+            "minimumServiceDays": 0,
+            "employeeTypeId": 7,
+            "countryId": 1,
+            "priority": 500,
+            "applicabilityMode": 1
+          }
+        ],
+        "policyName": "StaffMember Health Insurance Policy",
+        "summary": "Health insurance for permanent employees and eligible dependants",
+        "changeSummary": "Named production acceptance scenario"
+      },
+      "createResponse": {
+        "isSucceeded": true,
+        "message": "Policy draft created successfully.",
+        "data": {
+          "id": 6,
+          "code": "INSURANCE_20260916205328",
+          "name": "StaffMember Health Insurance Policy",
+          "summary": "Health insurance for permanent employees and eligible dependants",
+          "policyTypeId": 6,
+          "ownerDepartmentId": 4,
+          "defaultCurrencyCode": "INR",
+          "versionId": 7,
+          "versionNumber": 1,
+          "statusId": 1,
+          "status": "Draft",
+          "effectiveFrom": "2026-09-16",
+          "effectiveTo": null,
+          "changeSummary": "Named production acceptance scenario",
+          "rules": [
+            {
+              "id": 7,
+              "ruleTypeId": 3,
+              "name": "StaffMember Health Insurance Policy",
+              "order": 1,
+              "configuration": "{\"currency\": \"INR\", \"coverageAmount\": 500000, \"dependentCoverage\": true, \"employeeContributionPercent\": 0}"
+            }
+          ],
+          "applicability": [
+            {
+              "id": 7,
+              "mode": 1,
+              "priority": 500,
+              "countryId": 1,
+              "stateId": null,
+              "districtId": null,
+              "localityId": null,
+              "tenantLocationId": null,
+              "employeeTypeId": 7,
+              "departmentId": null,
+              "designationId": null,
+              "employeeId": null,
+              "genderId": null,
+              "workArrangementType": null,
+              "employmentStatus": null,
+              "minimumServiceDays": 0,
+              "effectiveFrom": "2026-09-16",
+              "effectiveTo": null
+            }
+          ]
+        },
+        "errors": []
+      },
+      "readBackResponse": {
+        "isSucceeded": true,
+        "message": "Policy retrieved successfully.",
+        "data": {
+          "id": 6,
+          "code": "INSURANCE_20260916205328",
+          "name": "StaffMember Health Insurance Policy",
+          "summary": "Health insurance for permanent employees and eligible dependants",
+          "policyTypeId": 6,
+          "ownerDepartmentId": 4,
+          "defaultCurrencyCode": "INR",
+          "versionId": 7,
+          "versionNumber": 1,
+          "statusId": 1,
+          "status": "Draft",
+          "effectiveFrom": "2026-09-16",
+          "effectiveTo": null,
+          "changeSummary": "Named production acceptance scenario",
+          "rules": [
+            {
+              "id": 7,
+              "ruleTypeId": 3,
+              "name": "StaffMember Health Insurance Policy",
+              "order": 1,
+              "configuration": "{\"currency\": \"INR\", \"coverageAmount\": 500000, \"dependentCoverage\": true, \"employeeContributionPercent\": 0}"
+            }
+          ],
+          "applicability": [
+            {
+              "id": 7,
+              "mode": 1,
+              "priority": 500,
+              "countryId": 1,
+              "stateId": null,
+              "districtId": null,
+              "localityId": null,
+              "tenantLocationId": null,
+              "employeeTypeId": 7,
+              "departmentId": null,
+              "designationId": null,
+              "employeeId": null,
+              "genderId": null,
+              "workArrangementType": null,
+              "employmentStatus": null,
+              "minimumServiceDays": 0,
+              "effectiveFrom": "2026-09-16",
+              "effectiveTo": null
+            }
+          ]
+        },
+        "errors": []
+      },
+      "inserted": {
+        "table": "skolenza.Policy",
+        "id": 6,
+        "versionTable": "skolenza.PolicyVersion",
+        "status": "Draft",
+        "versionId": 7
+      },
+      "updateRequest": {
+        "rules": [
+          {
+            "policyRuleTypeId": 1,
+            "ruleName": "Health insurance eligibility",
+            "ruleConfiguration": "{\"employeeTypeId\":7,\"minimumServiceDays\":0,\"dependentCoverage\":true}",
+            "ruleOrder": 1
+          },
+          {
+            "policyRuleTypeId": 6,
+            "ruleName": "Health insurance coverage limit",
+            "ruleConfiguration": "{\"coverageAmount\":500000,\"currency\":\"INR\",\"employeeContributionPercent\":0}",
+            "ruleOrder": 2
+          }
+        ],
+        "effectiveFrom": "2026-09-16",
+        "changeSummary": "Corrected business-specific rule taxonomy",
+        "applicability": [
+          {
+            "employeeTypeId": 7,
+            "effectiveFrom": "2026-09-16",
+            "applicabilityMode": 1,
+            "countryId": 1,
+            "minimumServiceDays": 0,
+            "priority": 500
+          }
+        ],
+        "summary": "Health insurance for permanent employees and eligible dependants",
+        "operationId": 2,
+        "ownerDepartmentId": 4,
+        "defaultCurrencyCode": "INR",
+        "policyName": "StaffMember Health Insurance Policy",
+        "moduleId": 110,
+        "policyTypeId": 6,
+        "policyCode": "INSURANCE_20260916205328"
+      },
+      "updateResponse": {
+        "isSucceeded": true,
+        "message": "Policy draft updated successfully.",
+        "data": {
+          "id": 6,
+          "code": "INSURANCE_20260916205328",
+          "name": "StaffMember Health Insurance Policy",
+          "summary": "Health insurance for permanent employees and eligible dependants",
+          "policyTypeId": 6,
+          "ownerDepartmentId": 4,
+          "defaultCurrencyCode": "INR",
+          "versionId": 7,
+          "versionNumber": 1,
+          "statusId": 1,
+          "status": "Draft",
+          "effectiveFrom": "2026-09-16",
+          "effectiveTo": null,
+          "changeSummary": "Corrected business-specific rule taxonomy",
+          "rules": [
+            {
+              "id": 12,
+              "ruleTypeId": 1,
+              "name": "Health insurance eligibility",
+              "order": 1,
+              "configuration": "{\"employeeTypeId\": 7, \"dependentCoverage\": true, \"minimumServiceDays\": 0}"
+            },
+            {
+              "id": 13,
+              "ruleTypeId": 6,
+              "name": "Health insurance coverage limit",
+              "order": 2,
+              "configuration": "{\"currency\": \"INR\", \"coverageAmount\": 500000, \"employeeContributionPercent\": 0}"
+            }
+          ],
+          "applicability": [
+            {
+              "id": 10,
+              "mode": 1,
+              "priority": 500,
+              "countryId": 1,
+              "stateId": null,
+              "districtId": null,
+              "localityId": null,
+              "tenantLocationId": null,
+              "employeeTypeId": 7,
+              "departmentId": null,
+              "designationId": null,
+              "employeeId": null,
+              "genderId": null,
+              "workArrangementType": null,
+              "employmentStatus": null,
+              "minimumServiceDays": 0,
+              "effectiveFrom": "2026-09-16",
+              "effectiveTo": null
+            }
+          ]
+        },
+        "errors": []
+      },
+      "correctedReadBackResponse": {
+        "isSucceeded": true,
+        "message": "Policy retrieved successfully.",
+        "data": {
+          "id": 6,
+          "code": "INSURANCE_20260916205328",
+          "name": "StaffMember Health Insurance Policy",
+          "summary": "Health insurance for permanent employees and eligible dependants",
+          "policyTypeId": 6,
+          "ownerDepartmentId": 4,
+          "defaultCurrencyCode": "INR",
+          "versionId": 7,
+          "versionNumber": 1,
+          "statusId": 1,
+          "status": "Draft",
+          "effectiveFrom": "2026-09-16",
+          "effectiveTo": null,
+          "changeSummary": "Corrected business-specific rule taxonomy",
+          "rules": [
+            {
+              "id": 12,
+              "ruleTypeId": 1,
+              "name": "Health insurance eligibility",
+              "order": 1,
+              "configuration": "{\"employeeTypeId\": 7, \"dependentCoverage\": true, \"minimumServiceDays\": 0}"
+            },
+            {
+              "id": 13,
+              "ruleTypeId": 6,
+              "name": "Health insurance coverage limit",
+              "order": 2,
+              "configuration": "{\"currency\": \"INR\", \"coverageAmount\": 500000, \"employeeContributionPercent\": 0}"
+            }
+          ],
+          "applicability": [
+            {
+              "id": 10,
+              "mode": 1,
+              "priority": 500,
+              "countryId": 1,
+              "stateId": null,
+              "districtId": null,
+              "localityId": null,
+              "tenantLocationId": null,
+              "employeeTypeId": 7,
+              "departmentId": null,
+              "designationId": null,
+              "employeeId": null,
+              "genderId": null,
+              "workArrangementType": null,
+              "employmentStatus": null,
+              "minimumServiceDays": 0,
+              "effectiveFrom": "2026-09-16",
+              "effectiveTo": null
+            }
+          ]
+        },
+        "errors": []
+      }
+    }
+  ],
+  "ruleTaxonomy": {
+    "SANDWICH": 5,
+    "ELIGIBILITY": 1,
+    "CARRY_FORWARD": 4,
+    "ENTITLEMENT": 2,
+    "ATTENDANCE_CHANNEL": 7,
+    "LIMIT": 6
+  }
+}

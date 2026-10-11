@@ -1,0 +1,135 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+	  <GenerateDocumentationFile>true</GenerateDocumentationFile>
+	  <NoWarn>1591</NoWarn>
+	  <!-- Optional: XML comment warning suppress -->
+    <Nullable>enable</Nullable>
+	  
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <Optimize>False</Optimize>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+    <Optimize>False</Optimize>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Remove="Features\AssetFeatures\Category\Commands\**" />
+    <Compile Remove="Features\AssetFeatures\Category\Queries\**" />
+    <Compile Remove="Features\AssetFeatures\Status\Commands\**" />
+    <Compile Remove="Features\Cmd - Copy\**" />
+    <Compile Remove="Features\DesignationCmd\Commands\**" />
+    <Compile Remove="Features\StaffMemberCmd\BaseInfo\**" />
+    <Compile Remove="Features\StaffMemberCmd\BasicInfo - Copy %283%29 - Copy %282%29\**" />
+    <Compile Remove="Features\StaffMemberCmd\Commands\**" />
+    <Compile Remove="Features\StaffMemberCmd\DependentInfo\Command\**" />
+    <Compile Remove="Features\InstitutionCmd1\**" />
+    <Compile Remove="Features\InstitutionTypeCmd\Commands\**" />
+    <EmbeddedResource Remove="Features\AssetFeatures\Category\Commands\**" />
+    <EmbeddedResource Remove="Features\AssetFeatures\Category\Queries\**" />
+    <EmbeddedResource Remove="Features\AssetFeatures\Status\Commands\**" />
+    <EmbeddedResource Remove="Features\Cmd - Copy\**" />
+    <EmbeddedResource Remove="Features\DesignationCmd\Commands\**" />
+    <EmbeddedResource Remove="Features\StaffMemberCmd\BaseInfo\**" />
+    <EmbeddedResource Remove="Features\StaffMemberCmd\BasicInfo - Copy %283%29 - Copy %282%29\**" />
+    <EmbeddedResource Remove="Features\StaffMemberCmd\Commands\**" />
+    <EmbeddedResource Remove="Features\StaffMemberCmd\DependentInfo\Command\**" />
+    <EmbeddedResource Remove="Features\InstitutionCmd1\**" />
+    <EmbeddedResource Remove="Features\InstitutionTypeCmd\Commands\**" />
+    <None Remove="Features\AssetFeatures\Category\Commands\**" />
+    <None Remove="Features\AssetFeatures\Category\Queries\**" />
+    <None Remove="Features\AssetFeatures\Status\Commands\**" />
+    <None Remove="Features\Cmd - Copy\**" />
+    <None Remove="Features\DesignationCmd\Commands\**" />
+    <None Remove="Features\StaffMemberCmd\BaseInfo\**" />
+    <None Remove="Features\StaffMemberCmd\BasicInfo - Copy %283%29 - Copy %282%29\**" />
+    <None Remove="Features\StaffMemberCmd\Commands\**" />
+    <None Remove="Features\StaffMemberCmd\DependentInfo\Command\**" />
+    <None Remove="Features\InstitutionCmd1\**" />
+    <None Remove="Features\InstitutionTypeCmd\Commands\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="AutoMapper.Extensions.Microsoft.DependencyInjection" Version="12.0.1" />
+    <PackageReference Include="FluentValidation" Version="12.1.1" />
+    <PackageReference Include="FluentValidation.DependencyInjectionExtensions" Version="12.1.1" />
+    <PackageReference Include="MediatR" Version="14.0.0" />
+    <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.15.0" />
+  </ItemGroup>
+	 
+	<ItemGroup>
+    <Folder Include="Common\PercentageHelper\" />
+    <Folder Include="DTOS\BasicMenu\" />
+    <Folder Include="DTOS\Device\Configurations\" />
+    <Folder Include="DTOS\StaffMember\Emplo\" />
+    <Folder Include="DTOS\NewFolder1\" />
+    <Folder Include="DTOS\NewFolder\" />
+    <Folder Include="DTOS\TicketDTO\NewFolder\" />
+    <Folder Include="Enums\" />
+    <Folder Include="Features\AssetFeatures\Assets\Queries\" />
+    <Folder Include="Features\AssetFeatures\Type\Commands\" />
+    <Folder Include="Features\StaffMemberCmd\DependentInfo\Queries\" />
+    <Folder Include="Features\StaffMemberCmd\EducationInfo\Queries\" />
+    <Folder Include="Features\StaffMemberCmd\StaffMemberBase\Command\" />
+    <Folder Include="Features\StaffMemberCmd\StaffMemberBase\Queries\" />
+    <Folder Include="Features\StaffMemberCmd\ExperienceInfo\Command\" />
+    <Folder Include="Features\StaffMemberCmd\Handlers\NewFolder\" />
+    <Folder Include="Features\StaffMemberCmd\IdentitiesInfo\Command\" />
+    <Folder Include="Features\StaffMemberCmd\IdentitiesInfo\Queries\" />
+    <Folder Include="Features\StaffMemberCmd\ResetPassword\Handlers\" />
+    <Folder Include="Features\StaffEmploymentTypeCmd\Commands\" />
+    <Folder Include="Features\StaffMemberLeavePolicyMapCmd\Queries\" />
+    <Folder Include="Features\StaffMemberLeavePolicyMapCmd\NewFolder2\" />
+    <Folder Include="Features\StaffEmploymentTypeCmd\Queries\" />
+    <Folder Include="Features\HolidayCmd\Commands\" />
+    <Folder Include="Features\LeaveRuleCmd\NewFolder\" />
+    <Folder Include="Features\LeaveCmd\NewFolder\" />
+    <Folder Include="Features\NewFolder1\" />
+    <Folder Include="Features\NewFolder2\" />
+    <Folder Include="Features\OperationCmd\NewFolder1\" />
+    <Folder Include="Features\OperationCmd\NewFolder\" />
+    <Folder Include="Features\OperationsMasterCmd\Handlers\" />
+    <Folder Include="Features\PolicyTypeCmd\Commands\" />
+    <Folder Include="Features\RegistrationCmd\Queries\" />
+    <Folder Include="Features\ReportTypeCmd\NewFolder\" />
+    <Folder Include="Features\ReportTypeCmd\Queries\" />
+    <Folder Include="Features\NewFolder\" />
+    <Folder Include="Features\LocationCmd\Commands\" />
+    <Folder Include="Features\Company\Commands\" />
+    <Folder Include="Features\EmailTemplateCmd\Commands\" />
+    <Folder Include="Features\StaffMemberCmd\NewFolder\Commands\" />
+    <Folder Include="Features\StaffMemberCmd\NewFolder\Handlers\" />
+    <Folder Include="Features\StaffMemberCmd\NewFolder\Queries\" />
+    <Folder Include="Features\ServiceProviderCmd\Commands\" />
+    <Folder Include="Features\ServiceProviderCmd\Queries\" />
+    <Folder Include="Features\SubscriptionCmd\Queries\" />
+    <Folder Include="Features\UserLoginAndDashboardCmd\Queries\" />
+    <Folder Include="Features\VerifyEmailCmd\Commands\" />
+    <Folder Include="Features\VerifyEmailCmd\Queries\" />
+    <Folder Include="Features\WorkstationCmd\Commands\" />
+    <Folder Include="Features\WorkstationCmd\Queries\" />
+    <Folder Include="Interfaces\IRepositories\NewFolder\" />
+    <Folder Include="Interfaces\NewFolder\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EditorConfigFiles Remove="C:\codebase\Skolenza\skolenza.application\DTOs\RoleDTO\.editorconfig" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="C:\codebase\Skolenza\skolenza.application\DTOs\RoleDTO\.editorconfig" />
+    <None Include="DTOS\Compliances\ComplianceRule\UpdateComplianceRuleReponseDTO.cs" />
+    <None Include="DTOS\Department\GetDepartmentRequestDTO.cs" />
+    <None Include="DTOS\Department\GetDepartmentOptionResponseDTO.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\skolenza.domain\skolenza.domain.csproj" />
+  </ItemGroup>
+
+</Project>

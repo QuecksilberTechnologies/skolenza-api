@@ -1,0 +1,45 @@
+// ================================================================
+// Author  : Deepesh Gupta
+// Company : Quecksilber Technologies
+// Role    : CEO
+// Purpose : Defines the request model for adding Header.
+// ================================================================
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using skolenza.application.DTOS.Common;
+using skolenza.domain.Entity; 
+using MediatR;
+
+namespace skolenza.application.DTOS.TicketDTO.Header
+{
+    /// <summary>
+    /// Represents the AddHeaderRequestDTO data transfer model.
+    /// </summary>
+    public class AddHeaderRequestDTO
+    {
+
+       
+
+        public string HeaderName { get; set; } = null!;
+
+        public long TicketClassificationId { get; set; }
+
+        public string? TicketClassificationName { get; set; }
+
+        public string? Description { get; set; }
+
+        public bool IsActive { get; set; }
+
+
+
+
+
+
+
+
+    }
+}

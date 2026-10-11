@@ -1,0 +1,32 @@
+TenantLocationId,HolidayName,HolidayDate,IsOptional,Description,Icon
+5,New Year's Day,2026-01-01,true,MP government optional holiday 2026; verify organization approval,bi bi-calendar-event
+5,Republic Day,2026-01-26,false,MP government gazetted holiday 2026,bi bi-calendar-event
+5,Sant Ravidas Jayanti,2026-02-01,false,MP government gazetted holiday 2026; Sunday,bi bi-calendar-event
+5,Maha Shivaratri,2026-02-15,false,MP government gazetted holiday 2026; Sunday,bi bi-calendar-event
+5,Holi,2026-03-03,false,MP government gazetted holiday 2026,bi bi-calendar-event
+5,Gudi Padwa,2026-03-19,false,MP government gazetted holiday 2026,bi bi-calendar-event
+5,Cheti Chand,2026-03-20,false,MP government gazetted holiday 2026,bi bi-calendar-event
+5,Eid-ul-Fitr,2026-03-21,false,MP government gazetted holiday 2026,bi bi-calendar-event
+5,Ram Navami,2026-03-27,false,MP government gazetted holiday 2026,bi bi-calendar-event
+5,Mahavir Jayanti,2026-03-31,false,MP government gazetted holiday 2026,bi bi-calendar-event
+5,Good Friday,2026-04-03,false,MP government gazetted holiday 2026,bi bi-calendar-event
+5,Ambedkar Jayanti and Vaisakhi,2026-04-14,false,MP government gazetted holiday 2026,bi bi-calendar-event
+5,Parashuram Jayanti,2026-04-20,false,MP government gazetted holiday 2026,bi bi-calendar-event
+5,Buddha Purnima,2026-05-01,false,MP government gazetted holiday 2026,bi bi-calendar-event
+5,Eid al-Adha,2026-05-27,false,MP government gazetted holiday 2026,bi bi-calendar-event
+5,Maharana Pratap and Chhatrasal Jayanti,2026-06-17,false,MP government gazetted holiday 2026,bi bi-calendar-event
+5,Muharram,2026-06-26,false,MP government gazetted holiday 2026,bi bi-calendar-event
+5,Guru Purnima,2026-07-29,true,MP government optional holiday 2026; verify organization approval,bi bi-calendar-event
+5,Independence Day,2026-08-15,false,MP government gazetted holiday 2026; Saturday,bi bi-calendar-event
+5,Milad-un-Nabi,2026-08-26,false,MP government gazetted holiday 2026,bi bi-calendar-event
+5,Raksha Bandhan,2026-08-28,false,MP government gazetted holiday 2026,bi bi-calendar-event
+5,Janmashtami,2026-09-04,false,MP government gazetted holiday 2026,bi bi-calendar-event
+5,Ganesh Chaturthi,2026-09-14,false,MP government gazetted holiday 2026,bi bi-calendar-event
+5,Gandhi Jayanti,2026-10-02,false,MP government gazetted holiday 2026,bi bi-calendar-event
+5,Dussehra,2026-10-20,false,MP government gazetted holiday 2026,bi bi-calendar-event
+5,Maharishi Valmiki Jayanti,2026-10-26,false,MP government gazetted holiday 2026,bi bi-calendar-event
+5,Diwali,2026-11-08,false,MP government gazetted holiday 2026; Sunday,bi bi-calendar-event
+5,Govardhan Puja,2026-11-09,false,MP government gazetted holiday 2026,bi bi-calendar-event
+5,Tribal Pride Day,2026-11-15,false,MP government gazetted holiday 2026; Sunday,bi bi-calendar-event
+5,Guru Nanak Jayanti,2026-11-24,false,MP government gazetted holiday 2026,bi bi-calendar-event
+5,Christmas Day,2026-12-25,false,MP government gazetted holiday 2026,bi bi-calendar-event

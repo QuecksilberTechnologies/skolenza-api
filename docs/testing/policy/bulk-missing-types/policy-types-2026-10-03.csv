@@ -1,0 +1,10 @@
+PolicyTypeCode,PolicyName,PolicyCategoryCode,Description,DefaultCurrencyCode,IsActive
+EMPLOYEE_ACCOMMODATION,Employee Accommodation,ACCOMMODATION,Company accommodation eligibility and accommodation support,INR,true
+EMPLOYEE_WELLNESS,Employee Wellness Benefits,BENEFIT,Employee wellbeing and wellness benefit guidelines,INR,true
+PROFESSIONAL_CONDUCT,Professional Conduct,CUSTOM,Workplace professional conduct and responsibilities,INR,true
+EMPLOYEE_ONBOARDING,Employee Onboarding,EMPLOYMENT,Joining requirements and onboarding responsibilities,INR,true
+EXPENSE_REIMBURSEMENT,Expense Reimbursement,EXPENSE,Business expense eligibility and reimbursement guidelines,INR,true
+HOLIDAY_CALENDAR,Holiday Calendar,HOLIDAY,Company holiday calendar and observance guidelines,INR,true
+SHIFT_SCHEDULING,Shift Scheduling,SHIFT,Employee shift schedules and working time guidelines,INR,true
+BUSINESS_TRAVEL,Business Travel,TRAVEL,Official travel eligibility and travel expense guidelines,INR,true
+HYBRID_WORK,Hybrid Work Arrangement,WORK_ARRANGEMENT,Office and remote work arrangement guidelines,INR,true
