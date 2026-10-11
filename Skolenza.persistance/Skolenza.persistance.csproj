@@ -11,7 +11,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-	  <ProjectReference Include="..\skolenza.application\skolenza.application.csproj" />
+	  <ProjectReference Include="..\Skolenza.application\Skolenza.application.csproj" />
 	</ItemGroup>
 
 </Project>

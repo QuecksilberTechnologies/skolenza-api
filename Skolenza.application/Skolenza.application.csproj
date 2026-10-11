@@ -129,7 +129,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\skolenza.domain\skolenza.domain.csproj" />
+    <ProjectReference Include="..\Skolenza.domain\Skolenza.domain.csproj" />
   </ItemGroup>
 
 </Project>

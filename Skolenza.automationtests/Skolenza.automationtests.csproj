@@ -25,9 +25,9 @@
 
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
-    <ProjectReference Include="..\skolenza.api\skolenza.api.csproj" />
-    <ProjectReference Include="..\skolenza.application\skolenza.application.csproj" />
-    <ProjectReference Include="..\skolenza.infrastructure\skolenza.infrastructure.csproj" />
+    <ProjectReference Include="..\Skolenza.api\Skolenza.api.csproj" />
+    <ProjectReference Include="..\Skolenza.application\Skolenza.application.csproj" />
+    <ProjectReference Include="..\Skolenza.infrastructure\Skolenza.infrastructure.csproj" />
   </ItemGroup>
 
 </Project>

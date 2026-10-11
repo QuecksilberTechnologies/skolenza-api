@@ -19,15 +19,15 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "application", "application"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "domain", "domain", "{29CFD33C-098F-4A60-B472-8FA3069B23D3}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "skolenza.application", "skolenza.application\skolenza.application.csproj", "{F5CB41D8-059D-E42C-F7E4-527D68B94063}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Skolenza.application", "Skolenza.application\Skolenza.application.csproj", "{F5CB41D8-059D-E42C-F7E4-527D68B94063}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "skolenza.domain", "skolenza.domain\skolenza.domain.csproj", "{72786DAB-CDD3-DC20-FA2E-0E985907A044}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Skolenza.domain", "Skolenza.domain\Skolenza.domain.csproj", "{72786DAB-CDD3-DC20-FA2E-0E985907A044}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "skolenza.persistance", "skolenza.persistance\skolenza.persistance.csproj", "{09079233-E5FA-B197-2F47-7DD6BE2602F2}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Skolenza.persistance", "Skolenza.persistance\Skolenza.persistance.csproj", "{09079233-E5FA-B197-2F47-7DD6BE2602F2}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "skolenza.infrastructure", "skolenza.infrastructure\skolenza.infrastructure.csproj", "{BE4256D9-44C2-B3FE-8B8A-B4A47BDBF509}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Skolenza.infrastructure", "Skolenza.infrastructure\Skolenza.infrastructure.csproj", "{BE4256D9-44C2-B3FE-8B8A-B4A47BDBF509}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "skolenza.api", "skolenza.api\skolenza.api.csproj", "{25DB10A3-B9AF-9043-DED7-340AE9AFA16D}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Skolenza.api", "Skolenza.api\Skolenza.api.csproj", "{25DB10A3-B9AF-9043-DED7-340AE9AFA16D}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "skolenza.automationtests", "skolenza.automationtests\skolenza.automationtests.csproj", "{D31E7EE3-9C61-4CD0-9D1B-9D64E55D1A15}"
 EndProject

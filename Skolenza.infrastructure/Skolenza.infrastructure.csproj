@@ -24,8 +24,8 @@
   </ItemGroup>
 	 
 	<ItemGroup>
-	  <ProjectReference Include="..\skolenza.application\skolenza.application.csproj" />
-	  <ProjectReference Include="..\skolenza.persistance\skolenza.persistance.csproj" />
+	  <ProjectReference Include="..\Skolenza.application\Skolenza.application.csproj" />
+	  <ProjectReference Include="..\Skolenza.persistance\Skolenza.persistance.csproj" />
 	</ItemGroup>
 
 </Project>
