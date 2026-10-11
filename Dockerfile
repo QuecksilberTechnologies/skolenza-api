@@ -10,10 +10,10 @@ COPY . .
 
 # Restore only the API dependency graph. The solution also contains the
 # Windows Forms employee agent, which is not part of this Linux service.
-RUN dotnet restore skolenza.api/skolenza.api.csproj
+RUN dotnet restore Skolenza.api/Skolenza.api.csproj
 
 # publish api
-RUN dotnet publish skolenza.api/skolenza.api.csproj \
+RUN dotnet publish Skolenza.api/Skolenza.api.csproj \
     --no-restore \
     -c Release \
     -o /app/publish \
@@ -40,4 +40,4 @@ ENV ASPNETCORE_URLS=http://+:${PORT}
 
 EXPOSE 8080
 
-ENTRYPOINT ["dotnet", "skolenza.api.dll"]
+ENTRYPOINT ["dotnet", "Skolenza.api.dll"]

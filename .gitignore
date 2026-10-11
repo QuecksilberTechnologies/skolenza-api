@@ -382,6 +382,7 @@ skolenza.api/Secrets/*.json
 **/Secrets/*.json
 
 /skolenza.api/appsettings.Development.json
+/Skolenza.api/appsettings.Production.json
 
 # Local database snapshots and test/runtime artifacts
 /DBFullBACKUP/
