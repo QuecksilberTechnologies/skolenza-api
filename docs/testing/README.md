@@ -40,3 +40,4 @@ test run.
 - [Staff naming alignment — 2026-10-11](staff/naming-alignment/2026-10-11.md)
 
 - [Angular, API and SQL naming alignment — 2026-10-11](reconstruction/angular-api-sql-naming-alignment/2026-10-11.md)
+- [Render Docker project-path casing — 2026-10-11](deployment/render-docker-path/2026-10-11.md)
