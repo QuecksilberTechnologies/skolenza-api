@@ -370,10 +370,8 @@ namespace skolenza.application.Features.RegistrationCmd.Handlers
                 // STEP 12 : Seed departments
                 // =====================================================
                 failureStage = "creating default departments";
-                var departmentList = DepartmentSeedHelper.GetRuntimeDepartmentsToSeeds(
-                    new Dictionary<int, string>(),
+                var departmentList = DepartmentSeedHelper.GetRuntimeDepartmentsToSeed(
                     newInstitutionId,
-                    dto.InstitutionTypeId,
                     newInstitutionId);
                 bool isDepartmentSeeded = await _unitOfWork.DepartmentRepository
                     .AutoCreateDepartmentSeedAsync(departmentList, cancellationToken);
@@ -396,10 +394,10 @@ namespace skolenza.application.Features.RegistrationCmd.Handlers
                     return Fail("Seeded departments not found.");
                 }
 
-                string executiveOfficeDepartmentName = departmentList
-                    .FirstOrDefault(x => x.IsExecutiveOffice == true)?.DepartmentName ?? "Executive Office";
-
-                if (!deptMap.TryGetValue(executiveOfficeDepartmentName, out int insertedAdminDepartment) || insertedAdminDepartment <= 0)
+                if (!deptMap.TryGetValue(
+                        DepartmentConstants.ExecutiveOfficeName,
+                        out int insertedAdminDepartment) ||
+                    insertedAdminDepartment <= 0)
                 {
                     await SafeRollbackAsync();
                     return Fail("Executive Office department not found.");
@@ -476,29 +474,15 @@ namespace skolenza.application.Features.RegistrationCmd.Handlers
                 failureStage = "creating default roles";
                 var rolesToCreate = new List<Role>();
 
-                foreach (var roleName in new[]
+                foreach (var roleDefinition in ConstantValues.InstitutionRoleTypes
+                             .Where(roleType => roleType.CreateByDefault))
                 {
-                    ConstantValues.InstitutionAdminRoleName,
-                    ConstantValues.InstitutionManagerRoleName,
-                    ConstantValues.InstitutionStaffMemberRoleName,
-                    ConstantValues.InstitutionExternalRoleName
-                })
-                {
-                    int roleType = roleName switch
-                    {
-                        var r when r == ConstantValues.InstitutionAdminRoleName => ConstantValues.RoleTypeAdmin,
-                        var r when r == ConstantValues.InstitutionManagerRoleName => ConstantValues.RoleTypeManager,
-                        var r when r == ConstantValues.InstitutionStaffMemberRoleName => ConstantValues.RoleTypeStaffMember,
-                        var r when r == ConstantValues.InstitutionExternalRoleName => ConstantValues.RoleTypeClient,
-                        _ => 0
-                    };
-
                     rolesToCreate.Add(new Role
                     {
                         InstitutionId = newInstitutionId,
-                        RoleName = roleName,
-                        RoleType = roleType,
-                        Remark = ConstantValues.GetRoleTypeRemark(roleType),
+                        RoleName = roleDefinition.DefaultRoleName,
+                        RoleType = roleDefinition.Id,
+                        Remark = roleDefinition.Remark,
                         IsActive = true,
                         IsSoftDeleted = false,
                         IsSystemDefault = false,

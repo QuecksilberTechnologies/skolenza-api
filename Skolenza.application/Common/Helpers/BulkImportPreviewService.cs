@@ -195,11 +195,9 @@ public sealed class BulkImportPreviewService(
             {
                 var rawType = row.Values.GetValueOrDefault(BulkImportConstants.RoleType);
                 if (!int.TryParse(rawType, out var roleType) ||
-                    (roleType != ConstantValues.RoleTypeAdmin &&
-                     roleType != ConstantValues.RoleTypeManager &&
-                     roleType != ConstantValues.RoleTypeStaffMember))
+                    !ConstantValues.IsSupportedInstitutionRoleType(roleType))
                 {
-                    row.Errors.Add("RoleType must be an existing Admin, Manager or StaffMember type identifier.");
+                    row.Errors.Add("RoleType must match an ID from the Role Type catalogue.");
                 }
                 var matches = roles.Where(item => Same(item.RoleName, name)).ToList();
                 Match(row, matches.Select(item => (item.Id, item.IsActive)).ToList());

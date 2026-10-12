@@ -58,10 +58,10 @@ public sealed class GetDashboardDataHandler(
                 generatedAtUtc,
                 context.RoleTypeId,
                 cancellationToken),
-            ConstantValues.RoleTypeManagerCode => BuildPeopleManager(
+            ConstantValues.RoleTypeManagerCode => BuildStaffManager(
                 generatedAtUtc,
                 context.RoleTypeId),
-            ConstantValues.RoleTypeStaffMemberCode => BuildWorkforceUser(
+            ConstantValues.RoleTypeStaffMemberCode => BuildStaffMember(
                 generatedAtUtc,
                 context.RoleTypeId),
             ConstantValues.RoleTypeClientCode => BuildExternalUser(
@@ -155,7 +155,7 @@ public sealed class GetDashboardDataHandler(
         return Envelope(roleTypeId, generatedAtUtc, institutionAdministrator: dashboard);
     }
 
-    private static DashboardDataDTO BuildPeopleManager(DateTime now, int roleTypeId)
+    private static DashboardDataDTO BuildStaffManager(DateTime now, int roleTypeId)
     {
         var summary = Metrics(
             new DashboardMetricDTO("TEAM_MEMBERS", "Team Members", 8),
@@ -176,26 +176,26 @@ public sealed class GetDashboardDataHandler(
         DashboardWidgetItemDTO[] onboarding =
         [new("SAMPLE-ONBOARD-001", "Kabir Singh", "Quality Analyst", "ACTIVE", now.AddDays(-3).ToString("yyyy-MM-dd"))];
 
-        var dashboard = new PeopleManagerDashboardDTO(
+        var dashboard = new StaffManagerDashboardDTO(
             Placeholder(summary),
             Placeholder(attendance),
             Placeholder<IReadOnlyList<NoticePeriodStaffMemberDTO>>(notice),
             Placeholder<IReadOnlyList<DashboardWidgetItemDTO>>(leave),
             Placeholder<IReadOnlyList<DashboardWidgetItemDTO>>(birthdays),
             Placeholder<IReadOnlyList<DashboardWidgetItemDTO>>(onboarding));
-        return Envelope(roleTypeId, now, peopleManager: dashboard);
+        return Envelope(roleTypeId, now, staffManager: dashboard);
     }
 
-    private static DashboardDataDTO BuildWorkforceUser(DateTime now, int roleTypeId)
+    private static DashboardDataDTO BuildStaffMember(DateTime now, int roleTypeId)
     {
-        var dashboard = new WorkforceUserDashboardDTO(
+        var dashboard = new StaffMemberDashboardDTO(
             Placeholder(Metrics(new DashboardMetricDTO("PROFILE_COMPLETION", "Profile Completion", 92, "%"))),
             Placeholder(Metrics(new DashboardMetricDTO("WORKING_DAYS", "Working Days", 20), new DashboardMetricDTO("PRESENT_DAYS", "Present Days", 18), new DashboardMetricDTO("LEAVE_DAYS", "Leave Days", 1))),
             Placeholder(Metrics(new DashboardMetricDTO("AVAILABLE_DAYS", "Available", 12, "days"), new DashboardMetricDTO("USED_DAYS", "Used", 6, "days"))),
             Placeholder<IReadOnlyList<DashboardWidgetItemDTO>>([new("SAMPLE-TASK-001", "Complete profile verification", "Upload remaining employment document", "PENDING", null)]),
             Placeholder<IReadOnlyList<DashboardWidgetItemDTO>>([new("SAMPLE-DOC-001", "Employment Agreement", "StaffMember document", "AVAILABLE", null)]),
             Placeholder<IReadOnlyList<DashboardWidgetItemDTO>>([new("SAMPLE-NEWS-001", "Monthly town hall", "Company-wide meeting", "PUBLISHED", now.AddDays(4).ToString("yyyy-MM-dd"))]));
-        return Envelope(roleTypeId, now, workforceUser: dashboard);
+        return Envelope(roleTypeId, now, staffMember: dashboard);
     }
 
     private static DashboardDataDTO BuildExternalUser(DateTime now, int roleTypeId)
@@ -213,8 +213,8 @@ public sealed class GetDashboardDataHandler(
         int roleTypeId,
         DateTime generatedAtUtc,
         InstitutionAdministratorDashboardDTO? institutionAdministrator = null,
-        PeopleManagerDashboardDTO? peopleManager = null,
-        WorkforceUserDashboardDTO? workforceUser = null,
+        StaffManagerDashboardDTO? staffManager = null,
+        StaffMemberDashboardDTO? staffMember = null,
         ExternalUserDashboardDTO? externalUser = null)
     {
         return new DashboardDataDTO(
@@ -222,8 +222,8 @@ public sealed class GetDashboardDataHandler(
             ConstantValues.GetRoleTypeDisplayName(roleTypeId),
             generatedAtUtc,
             institutionAdministrator,
-            peopleManager,
-            workforceUser,
+            staffManager,
+            staffMember,
             externalUser);
     }
 

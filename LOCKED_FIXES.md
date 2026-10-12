@@ -498,17 +498,24 @@ dotnet build .\Skolenza.sln -c Release --no-restore --nologo
 Expected baseline: 32 passed, 0 failed/skipped; Release build zero errors. Local contract
 acceptance passes. Deployed authenticated candidate/bulk/export acceptance remains pending.
 
-## LOCK-ROLE-PERSONA-007: Professional Tenant role-type personas
+## LOCK-ROLE-PERSONA-007: Professional Institution role-type personas
 
 ### Locked behavior
 
-- Persisted RoleType values remain stable: 1, 2, 3 and 4.
-- Their user-facing names are Tenant Administrator, Workforce User, People Manager and External User.
+- Persisted RoleType values 1 through 4 remain stable; Student and Parent / Guardian
+  are additive values 5 and 6.
+- Their user-facing names are Institution Administrator, Staff Member, Staff Manager,
+  External User, Student and Parent / Guardian.
 - Each option returns its centralized, non-empty description from `AppConstants.cs`.
-- Default Role names are Tenant Administrator, Workforce Member, People Manager and External Collaborator.
+- Institution registration creates only the four operational defaults: Institution
+  Administrator, Staff Member, Staff Manager and External User. Student and Parent /
+  Guardian stay available in the central catalogue without being auto-created before
+  their modules and permission model exist.
 - Default Role remarks are resolved by stable RoleType. New tenant roles persist the specific remark, while a legacy shared generated remark is upgraded in API responses without replacing a user-authored remark.
 - Role/list/login mappings resolve the same professional display names; unsupported values remain Unknown.
-- Role IDs, UserRole foreign keys and persisted RoleType values remain unchanged during the default-name migration.
+- Existing Role IDs, UserRole foreign keys and persisted RoleType values remain unchanged.
+- API options, create/update validation, bulk validation and registration defaults
+  consume the single `InstitutionRoleTypes` catalogue. Angular DDL consumers use the API.
 - `GET /api/Role/type-options` keeps bearer authentication and its existing narrow no-ModuleId/OperationId lookup behavior. Other Role requests retain the permission pipeline.
 
 ### Protected areas and gate
@@ -521,7 +528,9 @@ dotnet test .\skolenza.automationtests\skolenza.automationtests.csproj -c Releas
 dotnet test .\skolenza.automationtests\skolenza.automationtests.csproj -c Release --no-build --filter "FullyQualifiedName~HostApiRegressionTests.Tenant_creation_awaits_dependencies_and_preserves_transaction_outcome" --logger "console;verbosity=minimal"
 ```
 
-Expected: Role 20/20 and tenant registration 14/14 pass, with no failures or skips. Local and Render contain no legacy default names and no orphan UserRole references. Evidence: [2026-10-04](docs/testing/role/professional-access-personas/2026-10-04_old.md) and [stable role-type code](docs/testing/role/role-type-stable-code/2026-10-04_old.md). API deployment acceptance remains pending.
+Expected: Role 26/26 and institution registration 14/14 pass, with no failures or
+skips. Current evidence: [2026-10-12](docs/testing/role/institution-persona-catalogue/2026-10-12.md).
+Database migration and deployed API/UI acceptance are recorded separately.
 
 ## LOCK-TENANT-LOCATION-008: Initial TenantLocation lifecycle
 

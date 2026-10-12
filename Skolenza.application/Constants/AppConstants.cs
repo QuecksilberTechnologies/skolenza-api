@@ -663,15 +663,28 @@ namespace skolenza.application.Constants
 
         #region Institution Role Types
 
+        public sealed record InstitutionRoleTypeDefinition(
+            int Id,
+            string Code,
+            string DefaultRoleName,
+            string DisplayName,
+            string Description,
+            string Remark,
+            bool CreateByDefault);
+
         public static readonly string InstitutionAdminRoleName = "Institution Administrator";
         public static readonly string InstitutionAdminRoleDisplayName = "Institution Administrator";
         public static readonly string InstitutionAdminRoleOptionName = "Institution Administrator";
-        public static readonly string InstitutionManagerRoleName = "People Manager";
-        public static readonly string InstitutionStaffMemberRoleName = "Workforce Member";
-        public static readonly string InstitutionExternalRoleName = "External Collaborator";
-        public static readonly string InstitutionStaffMemberRoleDisplayName = "Workforce User";
-        public static readonly string InstitutionManagerRoleDisplayName = "People Manager";
+        public static readonly string InstitutionManagerRoleName = "Staff Manager";
+        public static readonly string InstitutionStaffMemberRoleName = "Staff Member";
+        public static readonly string InstitutionExternalRoleName = "External User";
+        public static readonly string InstitutionStudentRoleName = "Student";
+        public static readonly string InstitutionParentGuardianRoleName = "Parent / Guardian";
+        public static readonly string InstitutionStaffMemberRoleDisplayName = "Staff Member";
+        public static readonly string InstitutionManagerRoleDisplayName = "Staff Manager";
         public static readonly string InstitutionExternalRoleDisplayName = "External User";
+        public static readonly string InstitutionStudentRoleDisplayName = "Student";
+        public static readonly string InstitutionParentGuardianRoleDisplayName = "Parent / Guardian";
         public static readonly string UnknownRoleTypeDisplayName = "Unknown";
 
         public static readonly string InstitutionAdminRoleDescription =
@@ -682,6 +695,10 @@ namespace skolenza.application.Constants
             "Team management access for supervisors and managers, subject to assigned role permissions.";
         public static readonly string InstitutionExternalRoleDescription =
             "Limited portal access for clients, consultants, vendors, and other external users, subject to assigned role permissions.";
+        public static readonly string InstitutionStudentRoleDescription =
+            "Student portal access, subject to the institution's assigned modules and role permissions.";
+        public static readonly string InstitutionParentGuardianRoleDescription =
+            "Parent or guardian portal access, subject to the institution's assigned modules and role permissions.";
 
         public static readonly string InstitutionAdminRoleRemark =
             "Company workspace, users, roles and settings administration.";
@@ -691,16 +708,53 @@ namespace skolenza.application.Constants
             "Team and supervisor management according to assigned permissions.";
         public static readonly string InstitutionExternalRoleRemark =
             "Client, consultant, vendor and external portal access.";
+        public static readonly string InstitutionStudentRoleRemark =
+            "Student portal access according to assigned permissions.";
+        public static readonly string InstitutionParentGuardianRoleRemark =
+            "Parent or guardian portal access according to assigned permissions.";
 
         public static readonly int RoleTypeAdmin = 1;
         public static readonly int RoleTypeStaffMember = 2;
         public static readonly int RoleTypeManager = 3;
         public static readonly int RoleTypeClient = 4;
+        public static readonly int RoleTypeStudent = 5;
+        public static readonly int RoleTypeParentGuardian = 6;
 
         public const string RoleTypeAdminCode = "INSTITUTION_ADMIN";
-        public const string RoleTypeStaffMemberCode = "WORKFORCE_USER";
-        public const string RoleTypeManagerCode = "PEOPLE_MANAGER";
+        public const string RoleTypeStaffMemberCode = "STAFF_MEMBER";
+        public const string RoleTypeManagerCode = "STAFF_MANAGER";
         public const string RoleTypeClientCode = "EXTERNAL_USER";
+        public const string RoleTypeStudentCode = "STUDENT";
+        public const string RoleTypeParentGuardianCode = "PARENT_GUARDIAN";
+
+        /// <summary>
+        /// Authoritative Institution persona catalogue used by API options, validation,
+        /// response mapping and default-role creation.
+        /// </summary>
+        public static IReadOnlyList<InstitutionRoleTypeDefinition> InstitutionRoleTypes { get; } =
+        [
+            new(RoleTypeAdmin, RoleTypeAdminCode, InstitutionAdminRoleName,
+                InstitutionAdminRoleDisplayName, InstitutionAdminRoleDescription,
+                InstitutionAdminRoleRemark, true),
+            new(RoleTypeStaffMember, RoleTypeStaffMemberCode, InstitutionStaffMemberRoleName,
+                InstitutionStaffMemberRoleDisplayName, InstitutionStaffMemberRoleDescription,
+                InstitutionStaffMemberRoleRemark, true),
+            new(RoleTypeManager, RoleTypeManagerCode, InstitutionManagerRoleName,
+                InstitutionManagerRoleDisplayName, InstitutionManagerRoleDescription,
+                InstitutionManagerRoleRemark, true),
+            new(RoleTypeClient, RoleTypeClientCode, InstitutionExternalRoleName,
+                InstitutionExternalRoleDisplayName, InstitutionExternalRoleDescription,
+                InstitutionExternalRoleRemark, true),
+            new(RoleTypeStudent, RoleTypeStudentCode, InstitutionStudentRoleName,
+                InstitutionStudentRoleDisplayName, InstitutionStudentRoleDescription,
+                InstitutionStudentRoleRemark, false),
+            new(RoleTypeParentGuardian, RoleTypeParentGuardianCode, InstitutionParentGuardianRoleName,
+                InstitutionParentGuardianRoleDisplayName, InstitutionParentGuardianRoleDescription,
+                InstitutionParentGuardianRoleRemark, false)
+        ];
+
+        public static bool IsSupportedInstitutionRoleType(int value) =>
+            InstitutionRoleTypes.Any(option => option.Id == value);
 
         /// <summary>
         /// Resolves the stable code for a persisted Institution role type.
@@ -711,6 +765,8 @@ namespace skolenza.application.Constants
             var value when value == RoleTypeStaffMember => RoleTypeStaffMemberCode,
             var value when value == RoleTypeManager => RoleTypeManagerCode,
             var value when value == RoleTypeClient => RoleTypeClientCode,
+            var value when value == RoleTypeStudent => RoleTypeStudentCode,
+            var value when value == RoleTypeParentGuardian => RoleTypeParentGuardianCode,
             _ => string.Empty
         };
 
@@ -723,6 +779,8 @@ namespace skolenza.application.Constants
             var value when value == RoleTypeStaffMember => InstitutionStaffMemberRoleDisplayName,
             var value when value == RoleTypeManager => InstitutionManagerRoleDisplayName,
             var value when value == RoleTypeClient => InstitutionExternalRoleDisplayName,
+            var value when value == RoleTypeStudent => InstitutionStudentRoleDisplayName,
+            var value when value == RoleTypeParentGuardian => InstitutionParentGuardianRoleDisplayName,
             _ => UnknownRoleTypeDisplayName
         };
 
@@ -735,6 +793,8 @@ namespace skolenza.application.Constants
             var value when value == RoleTypeStaffMember => InstitutionStaffMemberRoleRemark,
             var value when value == RoleTypeManager => InstitutionManagerRoleRemark,
             var value when value == RoleTypeClient => InstitutionExternalRoleRemark,
+            var value when value == RoleTypeStudent => InstitutionStudentRoleRemark,
+            var value when value == RoleTypeParentGuardian => InstitutionParentGuardianRoleRemark,
             _ => InstitutionAllRoleRemark
         };
 

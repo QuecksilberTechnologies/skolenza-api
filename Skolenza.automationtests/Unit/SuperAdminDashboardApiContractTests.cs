@@ -46,8 +46,8 @@ public sealed class SuperAdminDashboardApiContractTests
             Assert.That(successResponse?.Type, Is.EqualTo(typeof(ApiResponse<DashboardDataDTO>)));
             Assert.That(typeof(DashboardDataDTO).GetProperty(nameof(DashboardDataDTO.RoleTypeCode)), Is.Not.Null);
             Assert.That(typeof(DashboardDataDTO).GetProperty(nameof(DashboardDataDTO.InstitutionAdministrator)), Is.Not.Null);
-            Assert.That(typeof(DashboardDataDTO).GetProperty(nameof(DashboardDataDTO.PeopleManager)), Is.Not.Null);
-            Assert.That(typeof(DashboardDataDTO).GetProperty(nameof(DashboardDataDTO.WorkforceUser)), Is.Not.Null);
+            Assert.That(typeof(DashboardDataDTO).GetProperty(nameof(DashboardDataDTO.StaffManager)), Is.Not.Null);
+            Assert.That(typeof(DashboardDataDTO).GetProperty(nameof(DashboardDataDTO.StaffMember)), Is.Not.Null);
             Assert.That(typeof(DashboardDataDTO).GetProperty(nameof(DashboardDataDTO.ExternalUser)), Is.Not.Null);
             Assert.That(typeof(DashboardSectionDTO<>).GetProperty(nameof(DashboardSectionDTO<object>.IsPlaceholder)), Is.Not.Null);
             Assert.That(typeof(DashboardSectionDTO<>).GetProperty(nameof(DashboardSectionDTO<object>.Source)), Is.Not.Null);

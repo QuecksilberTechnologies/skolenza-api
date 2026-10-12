@@ -60,7 +60,7 @@ public sealed record InstitutionAdministratorDashboardDTO(
     DashboardSectionDTO<StorageStatusDTO> StorageStatus,
     DashboardSectionDTO<HiringPipelineDTO> HiringPipeline);
 
-public sealed record PeopleManagerDashboardDTO(
+public sealed record StaffManagerDashboardDTO(
     DashboardSectionDTO<DashboardMetricCollectionDTO> TeamSummary,
     DashboardSectionDTO<DashboardMetricCollectionDTO> TeamAttendance,
     DashboardSectionDTO<IReadOnlyList<NoticePeriodStaffMemberDTO>> TeamMembersOnNotice,
@@ -68,7 +68,7 @@ public sealed record PeopleManagerDashboardDTO(
     DashboardSectionDTO<IReadOnlyList<DashboardWidgetItemDTO>> TeamBirthdays,
     DashboardSectionDTO<IReadOnlyList<DashboardWidgetItemDTO>> RecentTeamOnboarding);
 
-public sealed record WorkforceUserDashboardDTO(
+public sealed record StaffMemberDashboardDTO(
     DashboardSectionDTO<DashboardMetricCollectionDTO> MyProfile,
     DashboardSectionDTO<DashboardMetricCollectionDTO> MyAttendance,
     DashboardSectionDTO<DashboardMetricCollectionDTO> MyLeave,
@@ -88,6 +88,6 @@ public sealed record DashboardDataDTO(
     string RoleTypeName,
     DateTime GeneratedAtUtc,
     InstitutionAdministratorDashboardDTO? InstitutionAdministrator,
-    PeopleManagerDashboardDTO? PeopleManager,
-    WorkforceUserDashboardDTO? WorkforceUser,
+    StaffManagerDashboardDTO? StaffManager,
+    StaffMemberDashboardDTO? StaffMember,
     ExternalUserDashboardDTO? ExternalUser);

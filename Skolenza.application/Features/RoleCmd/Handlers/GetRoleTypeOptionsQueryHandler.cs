@@ -41,37 +41,15 @@ namespace skolenza.application.Features.RoleCmd.Handlers
             GetRoleTypeOptionsQuery request,
             CancellationToken cancellationToken)
         {
-            IReadOnlyList<RoleTypeOptionResponseDTO> options =
-            [
-                new()
+            IReadOnlyList<RoleTypeOptionResponseDTO> options = ConstantValues.InstitutionRoleTypes
+                .Select(option => new RoleTypeOptionResponseDTO
                 {
-                    Id = ConstantValues.RoleTypeAdmin,
-                    Code = ConstantValues.RoleTypeAdminCode,
-                    Name = ConstantValues.InstitutionAdminRoleOptionName,
-                    Description = ConstantValues.InstitutionAdminRoleDescription
-                },
-                new()
-                {
-                    Id = ConstantValues.RoleTypeStaffMember,
-                    Code = ConstantValues.RoleTypeStaffMemberCode,
-                    Name = ConstantValues.InstitutionStaffMemberRoleDisplayName,
-                    Description = ConstantValues.InstitutionStaffMemberRoleDescription
-                },
-                new()
-                {
-                    Id = ConstantValues.RoleTypeManager,
-                    Code = ConstantValues.RoleTypeManagerCode,
-                    Name = ConstantValues.InstitutionManagerRoleDisplayName,
-                    Description = ConstantValues.InstitutionManagerRoleDescription
-                },
-                new()
-                {
-                    Id = ConstantValues.RoleTypeClient,
-                    Code = ConstantValues.RoleTypeClientCode,
-                    Name = ConstantValues.InstitutionExternalRoleDisplayName,
-                    Description = ConstantValues.InstitutionExternalRoleDescription
-                }
-            ];
+                    Id = option.Id,
+                    Code = option.Code,
+                    Name = option.DisplayName,
+                    Description = option.Description
+                })
+                .ToList();
 
             return Task.FromResult(
                 ApiResponse<IReadOnlyList<RoleTypeOptionResponseDTO>>.Success(

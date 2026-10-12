@@ -99,6 +99,10 @@ namespace skolenza.application.Features.RoleCmd.Handlers
             if (string.IsNullOrWhiteSpace(roleName))
                 throw new ValidationErrorException("Role name cannot be empty.");
 
+            if (!ConstantValues.IsSupportedInstitutionRoleType(request.DTO.RoleType))
+                throw new ValidationErrorException(
+                    "Role type must match an ID from the Role Type catalogue.");
+
             // Map client-editable fields to the domain entity.
             var entity = _mapper.Map<Role>(request.DTO);
             entity.RoleName = roleName;

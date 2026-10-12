@@ -39,9 +39,11 @@ public sealed class RoleTypeMappingTests
     }
 
     [TestCase(1, "Institution Administrator")]
-    [TestCase(2, "Workforce User")]
-    [TestCase(3, "People Manager")]
+    [TestCase(2, "Staff Member")]
+    [TestCase(3, "Staff Manager")]
     [TestCase(4, "External User")]
+    [TestCase(5, "Student")]
+    [TestCase(6, "Parent / Guardian")]
     [TestCase(99, "Unknown")]
     public void Role_response_mappings_return_the_central_role_type_display_name(
         int roleType,
@@ -71,9 +73,11 @@ public sealed class RoleTypeMappingTests
     }
 
     [TestCase(1, "Institution Administrator", "Company workspace, users, roles and settings administration.")]
-    [TestCase(2, "Workforce Member", "StaffMember self-service, attendance, leave, documents and assigned work.")]
-    [TestCase(3, "People Manager", "Team and supervisor management according to assigned permissions.")]
-    [TestCase(4, "External Collaborator", "Client, consultant, vendor and external portal access.")]
+    [TestCase(2, "Staff Member", "StaffMember self-service, attendance, leave, documents and assigned work.")]
+    [TestCase(3, "Staff Manager", "Team and supervisor management according to assigned permissions.")]
+    [TestCase(4, "External User", "Client, consultant, vendor and external portal access.")]
+    [TestCase(5, "Student", "Student portal access according to assigned permissions.")]
+    [TestCase(6, "Parent / Guardian", "Parent or guardian portal access according to assigned permissions.")]
     [TestCase(99, null, "This is an auto-generated Admin account by AI for the initial setup of the institution.")]
     public void Default_role_name_and_remark_are_resolved_from_the_stable_role_type(
         int roleType,
@@ -86,6 +90,8 @@ public sealed class RoleTypeMappingTests
             var value when value == ConstantValues.RoleTypeStaffMember => ConstantValues.InstitutionStaffMemberRoleName,
             var value when value == ConstantValues.RoleTypeManager => ConstantValues.InstitutionManagerRoleName,
             var value when value == ConstantValues.RoleTypeClient => ConstantValues.InstitutionExternalRoleName,
+            var value when value == ConstantValues.RoleTypeStudent => ConstantValues.InstitutionStudentRoleName,
+            var value when value == ConstantValues.RoleTypeParentGuardian => ConstantValues.InstitutionParentGuardianRoleName,
             _ => null
         };
 
@@ -133,22 +139,26 @@ public sealed class RoleTypeMappingTests
         Assert.Multiple(() =>
         {
             Assert.That(response.IsSucceeded, Is.True);
-            Assert.That(response.Data.Select(option => option.Id), Is.EqualTo(new[] { 1, 2, 3, 4 }));
+            Assert.That(response.Data.Select(option => option.Id), Is.EqualTo(new[] { 1, 2, 3, 4, 5, 6 }));
             Assert.That(response.Data.Select(option => option.Code),
                 Is.EqualTo(new[]
                 {
                     "INSTITUTION_ADMIN",
-                    "WORKFORCE_USER",
-                    "PEOPLE_MANAGER",
-                    "EXTERNAL_USER"
+                    "STAFF_MEMBER",
+                    "STAFF_MANAGER",
+                    "EXTERNAL_USER",
+                    "STUDENT",
+                    "PARENT_GUARDIAN"
                 }));
             Assert.That(response.Data.Select(option => option.Name),
                 Is.EqualTo(new[]
                 {
                     "Institution Administrator",
-                    "Workforce User",
-                    "People Manager",
-                    "External User"
+                    "Staff Member",
+                    "Staff Manager",
+                    "External User",
+                    "Student",
+                    "Parent / Guardian"
                 }));
             Assert.That(
                 response.Data.Select(option => option.Description),
@@ -157,7 +167,9 @@ public sealed class RoleTypeMappingTests
                     "Full company workspace administration, including users, roles, settings, and institution-level configuration.",
                     "StaffMember self-service access to personal information, attendance, leave, documents, and assigned work features.",
                     "Team management access for supervisors and managers, subject to assigned role permissions.",
-                    "Limited portal access for clients, consultants, vendors, and other external users, subject to assigned role permissions."
+                    "Limited portal access for clients, consultants, vendors, and other external users, subject to assigned role permissions.",
+                    "Student portal access, subject to the institution's assigned modules and role permissions.",
+                    "Parent or guardian portal access, subject to the institution's assigned modules and role permissions."
                 }));
             Assert.That(
                 response.Data.Single(option => option.Id == 4).Name,
@@ -166,9 +178,11 @@ public sealed class RoleTypeMappingTests
     }
 
     [TestCase(1, "INSTITUTION_ADMIN")]
-    [TestCase(2, "WORKFORCE_USER")]
-    [TestCase(3, "PEOPLE_MANAGER")]
+    [TestCase(2, "STAFF_MEMBER")]
+    [TestCase(3, "STAFF_MANAGER")]
     [TestCase(4, "EXTERNAL_USER")]
+    [TestCase(5, "STUDENT")]
+    [TestCase(6, "PARENT_GUARDIAN")]
     [TestCase(99, "")]
     public void Role_type_code_is_resolved_from_the_stable_numeric_value(
         int roleType,

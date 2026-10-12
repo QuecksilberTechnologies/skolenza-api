@@ -93,6 +93,10 @@ namespace skolenza.application.Features.RoleCmd.Handlers
             if (request.DTO.Id <= 0 || string.IsNullOrWhiteSpace(request.DTO.RoleName))
                 throw new ValidationErrorException("A valid role identifier and name are required.");
 
+            if (!ConstantValues.IsSupportedInstitutionRoleType(request.DTO.RoleType))
+                throw new ValidationErrorException(
+                    "Role type must match an ID from the Role Type catalogue.");
+
             var entity = await _unitOfWork.RoleRepository.GetByIdForInstitutionAsync(
                 request.DTO.Id,
                 institutionId,
