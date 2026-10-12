@@ -50,6 +50,7 @@ test run.
 - [Local API and database startup — 2026-10-12](runtime/local-api-startup/2026-10-12.md)
 - [Institution access function contract — 2026-10-12](permissions/institution-access-function/2026-10-12.md)
 - [Institution access master permission and ownership alignment — 2026-10-12](permissions/institution-access-master-alignment/2026-10-12.md)
+- [Dashboard staff date widget query translation — 2026-10-13](dashboard/staff-date-widget-query-translation/2026-10-13.md)
 
 - [Staff Category catalogue migration (2026-10-12)](staff/staff-category-catalogue/2026-10-12.md)
 - [Staff professional structure Phase 1B/1C (2026-10-12)](staff/professional-structure/2026-10-12.md)
