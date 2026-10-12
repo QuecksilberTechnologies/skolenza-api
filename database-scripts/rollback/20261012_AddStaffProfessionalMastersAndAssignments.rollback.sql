@@ -1,0 +1,14 @@
+BEGIN;
+DROP FUNCTION IF EXISTS skolenza."SeedInstitutionStaffProfessionalMasters"(bigint,bigint);
+DROP TRIGGER IF EXISTS "TR_StaffPositionAssignment_PrimaryOverlap" ON skolenza."StaffPositionAssignment";
+DROP FUNCTION IF EXISTS skolenza."ValidatePrimaryStaffPositionAssignment"();
+DROP TABLE IF EXISTS skolenza."StaffDutyAssignment";
+DROP TABLE IF EXISTS skolenza."StaffCapabilityAssignment";
+DROP TABLE IF EXISTS skolenza."StaffPositionAssignment";
+DROP TABLE IF EXISTS skolenza."StaffPositionDuty";
+DROP TABLE IF EXISTS skolenza."StaffPositionCapability";
+DROP TABLE IF EXISTS skolenza."StaffPositionMaster";
+DROP TABLE IF EXISTS skolenza."StaffDutyDefinitionMaster";
+DROP TABLE IF EXISTS skolenza."StaffCapabilityMaster";
+DROP TABLE IF EXISTS skolenza."StaffJobFamilyMaster";
+COMMIT;

@@ -1,6 +1,8 @@
 - [Bulk canonical template fields and module permissions — 2026-10-11](bulk/canonical-template-fields/2026-10-11.md)
 # Skolenza scenario test reports
 
+- [Employee email and institution onboarding — 2026-10-12](email/employee-and-institution-onboarding/2026-10-12.md)
+
 - [Institution role persona catalogue — 2026-10-12](role/institution-persona-catalogue/2026-10-12.md)
 
 - [Common menu scope, two-level quick actions and login logo ratio — 2026-10-11](navigation/common-menu-scope/2026-10-11.md)
@@ -45,3 +47,9 @@ test run.
 - [Angular, API and SQL naming alignment — 2026-10-11](reconstruction/angular-api-sql-naming-alignment/2026-10-11.md)
 - [Render Docker project-path casing — 2026-10-11](deployment/render-docker-path/2026-10-11.md)
 - [Public subscription plan production configuration — 2026-10-11](subscription/public-plan-production-config/2026-10-11.md)
+- [Local API and database startup — 2026-10-12](runtime/local-api-startup/2026-10-12.md)
+- [Institution access function contract — 2026-10-12](permissions/institution-access-function/2026-10-12.md)
+- [Institution access master permission and ownership alignment — 2026-10-12](permissions/institution-access-master-alignment/2026-10-12.md)
+
+- [Staff Category catalogue migration (2026-10-12)](staff/staff-category-catalogue/2026-10-12.md)
+- [Staff professional structure Phase 1B/1C (2026-10-12)](staff/professional-structure/2026-10-12.md)

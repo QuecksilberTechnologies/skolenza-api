@@ -30,7 +30,7 @@ public sealed class RolePermissionBehavior<TRequest, TResponse>(
     : IPipelineBehavior<TRequest, TResponse>
     where TRequest : notnull
 {
-    private const string RoleModuleCode = "ACCESS_ROLES";
+    private const string RoleModuleCode = BulkImportConstants.RoleModuleCode;
 
     /// <inheritdoc />
     public async Task<TResponse> Handle(

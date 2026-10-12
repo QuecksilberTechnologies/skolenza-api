@@ -147,6 +147,18 @@ public class UpdateBaseStaffMemberByAdminCommandHandler
                     staffMember.StaffEmploymentTypeId = request.DTO.StaffEmploymentTypeId.Value;
                 }
 
+                if (request.DTO.StaffCategoryId.HasValue)
+                {
+                    if (!await _unitOfWork.StaffCategoryRepository.IsActiveAsync(
+                            request.DTO.StaffCategoryId.Value,
+                            cancellationToken))
+                    {
+                        throw new ValidationErrorException("StaffCategory must reference an active platform category.");
+                    }
+
+                    staffMember.StaffCategoryId = request.DTO.StaffCategoryId.Value;
+                }
+
                 if (request.DTO.CountryId.HasValue)
                     staffMember.CountryId = request.DTO.CountryId.Value;
 
@@ -225,6 +237,22 @@ public class UpdateBaseStaffMemberByAdminCommandHandler
                 await _unitOfWork.StaffMembers.UpdateStaffMemberAsync(
                     staffMember,
                     validation.InstitutionId);
+
+                if (request.DTO.StaffPositionMasterId.HasValue)
+                {
+                    if (request.DTO.StaffPositionMasterId.Value <= 0)
+                    {
+                        throw new ValidationErrorException("StaffPositionMasterId must be greater than zero.");
+                    }
+
+                    await _unitOfWork.StaffProfessionalStructureRepository.ReplacePrimaryPositionAsync(
+                        validation.InstitutionId,
+                        staffMemberId,
+                        request.DTO.StaffPositionMasterId.Value,
+                        DateOnly.FromDateTime(staffMember.DateOfOnBoarding ?? DateTime.UtcNow),
+                        validation.UserStaffMemberId,
+                        cancellationToken);
+                }
 
                 // ===============================
                 // 9️⃣ COMMIT

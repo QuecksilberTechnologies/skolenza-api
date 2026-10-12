@@ -54,7 +54,8 @@ public sealed class StaffMemberInstitutionPermissionBehavior<TRequest, TResponse
         // Like Role/type-options, this enum-only endpoint is protected by [Authorize]
         // at the HTTP boundary. The user explicitly requested token verification only:
         // no institution/user persistence, identifier decoding or module permission lookup.
-        if (request is Contact.Handlers.GetContactRelationOptionsQuery)
+        if (request is Contact.Handlers.GetContactRelationOptionsQuery or
+            StaffCategory.Handlers.GetStaffCategoryOptionsQuery)
         {
             return await next();
         }
@@ -336,6 +337,8 @@ public sealed class StaffMemberInstitutionPermissionBehavior<TRequest, TResponse
         }
         if (requestNamespace.StartsWith("skolenza.application.Features.StaffMemberCmd.UpdateStatus", StringComparison.Ordinal) ||
             requestNamespace.StartsWith("skolenza.application.Features.StaffMemberCmd.UpdateVerification", StringComparison.Ordinal))
+            return "STAFF_DIRECTORY";
+        if (requestNamespace.StartsWith("skolenza.application.Features.StaffMemberCmd.ProfessionalStructure", StringComparison.Ordinal))
             return "STAFF_DIRECTORY";
 
         if (!requestNamespace.StartsWith("skolenza.application.Features.StaffMemberCmd.StaffMemberBase", StringComparison.Ordinal))

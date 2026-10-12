@@ -89,11 +89,11 @@ namespace skolenza.application.Constants
 
         public static class StaffCategories
         {
-            public const short Teaching = 1;
-            public const short NonTeaching = 2;
-            public const short Technical = 3;
-            public const short Administrative = 4;
-            public const short Support = 5;
+            public const short Administrative = 1;
+            public const short Teaching = 2;
+            public const short NonTeaching = 3;
+            public const short Support = 4;
+            public const short Specialist = 5;
         }
 
         #endregion
@@ -647,7 +647,7 @@ namespace skolenza.application.Constants
         #region Authentication And System Values
 
         public static readonly string invalidCredential = "Invalid credentials";
-        public static readonly int ParmanentStaffEmploymentType = 1;
+        public static readonly int PermanentStaffEmploymentType = 1;
         public static readonly bool isSucceeded = true;
         public static readonly string IP = "100.100.100.100";
         public static readonly int Web = 1;
@@ -688,7 +688,7 @@ namespace skolenza.application.Constants
         public static readonly string UnknownRoleTypeDisplayName = "Unknown";
 
         public static readonly string InstitutionAdminRoleDescription =
-            "Full company workspace administration, including users, roles, settings, and institution-level configuration.";
+            "Full institution administration, including users, roles, settings, and institution-level configuration.";
         public static readonly string InstitutionStaffMemberRoleDescription =
             "StaffMember self-service access to personal information, attendance, leave, documents, and assigned work features.";
         public static readonly string InstitutionManagerRoleDescription =
@@ -701,7 +701,7 @@ namespace skolenza.application.Constants
             "Parent or guardian portal access, subject to the institution's assigned modules and role permissions.";
 
         public static readonly string InstitutionAdminRoleRemark =
-            "Company workspace, users, roles and settings administration.";
+            "Institution users, roles, settings and configuration administration.";
         public static readonly string InstitutionStaffMemberRoleRemark =
             "StaffMember self-service, attendance, leave, documents and assigned work.";
         public static readonly string InstitutionManagerRoleRemark =
@@ -724,6 +724,8 @@ namespace skolenza.application.Constants
         public const string RoleTypeStaffMemberCode = "STAFF_MEMBER";
         public const string RoleTypeManagerCode = "STAFF_MANAGER";
         public const string RoleTypeClientCode = "EXTERNAL_USER";
+
+        public const string InstitutionAdministratorPositionCode = "INSTITUTION_ADMINISTRATOR";
         public const string RoleTypeStudentCode = "STUDENT";
         public const string RoleTypeParentGuardianCode = "PARENT_GUARDIAN";
 

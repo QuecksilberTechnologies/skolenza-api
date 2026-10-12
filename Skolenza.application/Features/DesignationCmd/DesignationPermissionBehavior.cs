@@ -30,7 +30,7 @@ public sealed class DesignationPermissionBehavior<TRequest, TResponse>(
     : IPipelineBehavior<TRequest, TResponse>
     where TRequest : notnull
 {
-    private const string DesignationModuleCode = "STAFF_DESIGNATIONS";
+    private const string DesignationModuleCode = BulkImportConstants.DesignationModuleCode;
 
     /// <inheritdoc />
     public async Task<TResponse> Handle(

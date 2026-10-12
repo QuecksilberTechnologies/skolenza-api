@@ -140,6 +140,13 @@ public class GetBaseStaffMemberInfoQueryHandler : IRequestHandler<GetBaseStaffMe
                         validation.Claims.InstitutionEncriptionKey)
                     : new List<GetBaseStaffMemberResponseDTO>();
 
+                var professionalProfile = await _unitOfWork.StaffProfessionalStructureRepository
+                    .GetStaffProfileAsync(validation.InstitutionId, staffMemberId, cancellationToken);
+                foreach (var item in resultList)
+                {
+                    item.ProfessionalProfile = professionalProfile;
+                }
+
                 _logger.LogInformation("GetBaseStaffMemberInfo success");
 
                 // ===============================

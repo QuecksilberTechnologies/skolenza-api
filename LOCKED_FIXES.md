@@ -511,6 +511,9 @@ acceptance passes. Deployed authenticated candidate/bulk/export acceptance remai
   Administrator, Staff Member, Staff Manager and External User. Student and Parent /
   Guardian stay available in the central catalogue without being auto-created before
   their modules and permission model exist.
+- The four registration-created operational roles and institution-created custom roles
+  currently persist `IsSystemDefault=false`. Initial-user and entitlement synchronization
+  resolve the Institution Administrator role using the same false-flag convention.
 - Default Role remarks are resolved by stable RoleType. New tenant roles persist the specific remark, while a legacy shared generated remark is upgraded in API responses without replacing a user-authored remark.
 - Role/list/login mappings resolve the same professional display names; unsupported values remain Unknown.
 - Existing Role IDs, UserRole foreign keys and persisted RoleType values remain unchanged.
@@ -772,6 +775,34 @@ Expected: Employee/contact 52/52, Bank 1/1, locality 9/9, tenant 14/14, PostgreS
 - Authenticated running-product and deployed API/browser reconciliation: PENDING.
 
 Evidence: [2026-10-10](docs/testing/employee/profile-completion-consistency/2026-10-10_old.md).
+
+## LOCK-STAFF-PROFESSIONAL-MODEL-017: Runtime-valid professional master mapping
+
+### Locked behavior
+
+- `InstitutionMasterEntity` is the root of the TPC hierarchy and owns the inherited primary-key
+  and common-property configuration.
+- `StaffJobFamilyMaster`, `StaffCapabilityMaster`, `StaffDutyDefinitionMaster` and
+  `StaffPositionMaster` map to their own `skolenza` tables; derived types must not configure the
+  inherited key again.
+- A successful compile is not acceptance for persistence changes. The EF model must be constructed,
+  the API must start against local PostgreSQL, and an HTTP probe must reach Swagger before the
+  behavior is reported as runtime-valid.
+
+### Protected areas and gate
+
+- `StaffProfessionalStructure` inheritance and `SkolenzaDbContext` professional master mappings.
+- Staff professional structure persistence-model regression test.
+
+```powershell
+dotnet test .\Skolenza.automationtests\Skolenza.automationtests.csproj -c Release --no-restore --filter "TestCategory=StaffProfessionalStructure" --logger "console;verbosity=minimal"
+dotnet run --project .\Skolenza.api\Skolenza.api.csproj -c Release --no-build --launch-profile http
+```
+
+Expected: 4/4 tests pass; API logs `SKOLENZA APPLICATION STARTED SUCCESSFULLY`, executes a local
+PostgreSQL command, Swagger HTML and OpenAPI JSON return HTTP 200, and an unauthenticated protected
+professional-structure endpoint returns HTTP 401 rather than a startup/model exception. Evidence:
+[2026-10-12](docs/testing/staff/professional-structure/2026-10-12.md).
 
 ## Adding the next lock
 

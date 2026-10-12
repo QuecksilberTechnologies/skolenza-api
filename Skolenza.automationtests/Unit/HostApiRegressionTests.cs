@@ -305,6 +305,17 @@ public sealed class HostApiRegressionTests
                 "GetAllSubscribedModuleAsync" => new List<skolenza.domain.Entity.Module> { new() { Id = 8, IsLeafNode = true } },
                 "GetModuleOperationMappings" => new List<ModuleOperationMapping> { new() { ModuleId = 8, OperationId = 4 } },
                 "GetAllInstitutionModuleWithOperation" => new InstitutionEnabledOperationsResponseDTO { Modules = [new() { Id = 8, Operations = [new() { Id = 4 }] }] },
+                "GetPositionsAsync" => new List<skolenza.application.DTOS.Staff.StaffPositionMasterResponseDTO>
+                {
+                    new()
+                    {
+                        Id = 101,
+                        Code = ConstantValues.InstitutionAdministratorPositionCode,
+                        Name = "Institution Administrator",
+                        StaffCategoryId = AppConstants.StaffCategories.Administrative,
+                        StaffJobFamilyMasterId = 201
+                    }
+                },
                 "AddInstitutionSubscriptionAsync" => args![0],
                 "SendTemplatedEmailUsingHostConfigAsync" => scenario != "email-failure",
                 _ => resultType == typeof(bool) ? true : resultType == typeof(int) ? 1 : resultType == typeof(string) ? "test-value" : Activator.CreateInstance(resultType)

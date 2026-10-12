@@ -84,6 +84,8 @@ public class UnitOfWork : IUnitOfWork
     private IUserRoleRepository? _userRoleRepository;
     private IRoleRepository? _roleRepository;
     private IStaffEmploymentTypeRepository? _staffEmploymentTypeRepository;
+    private IStaffCategoryRepository? _staffCategoryRepository;
+    private IStaffProfessionalStructureRepository? _staffProfessionalStructureRepository;
     private IInstitutionStaffCodePatternRepository? _institutionStaffMemberCodePatternRepository;
     private ICategoryRepository? _categoryRepository;
     private IStaffEmploymentTypeBasicMenuRepository? _staffEmploymentTypeBasicMenuRepository;
@@ -280,6 +282,12 @@ public class UnitOfWork : IUnitOfWork
 
     public IStaffEmploymentTypeRepository StaffEmploymentTypeRepository =>
         _staffEmploymentTypeRepository ??= new StaffEmploymentTypeRepository(_context, _mapper);
+
+    public IStaffCategoryRepository StaffCategoryRepository =>
+        _staffCategoryRepository ??= new StaffCategoryRepository(_context);
+
+    public IStaffProfessionalStructureRepository StaffProfessionalStructureRepository =>
+        _staffProfessionalStructureRepository ??= new StaffProfessionalStructureRepository(_context);
 
     public IClientRepository ClientsRepository =>
         _clientRepository ??= new ClientRepository(_context, _loggerFactory.CreateLogger<ClientRepository>());

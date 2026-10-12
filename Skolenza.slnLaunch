@@ -1,0 +1,11 @@
+[
+  {
+    "Name": "Skolenza API",
+    "Projects": [
+      {
+        "Path": "Skolenza.api\\Skolenza.api.csproj",
+        "Action": "Start"
+      }
+    ]
+  }
+]

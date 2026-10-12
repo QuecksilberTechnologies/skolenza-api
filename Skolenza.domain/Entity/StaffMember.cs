@@ -89,6 +89,8 @@ public partial class StaffMember
 
     public virtual Designation? Designation { get; set; }
 
+    public virtual Department? Department { get; set; }
+
     public virtual ICollection<StaffMemberBankDetail> StaffMemberBankDetail { get; set; } = new List<StaffMemberBankDetail>();
 
     public virtual ICollection<StaffMemberCategorySkill> StaffMemberCategorySkill { get; set; } = new List<StaffMemberCategorySkill>();
@@ -118,6 +120,8 @@ public partial class StaffMember
     public virtual ICollection<StaffMemberTaxProfile> StaffMemberTaxProfile { get; set; } = new List<StaffMemberTaxProfile>();
 
     public virtual StaffEmploymentType? StaffEmploymentType { get; set; }
+
+    public virtual StaffCategory? StaffCategory { get; set; }
 
     public virtual ICollection<StaffMembersChangedTypeHistory> StaffMembersChangedTypeHistory { get; set; } = new List<StaffMembersChangedTypeHistory>();
 

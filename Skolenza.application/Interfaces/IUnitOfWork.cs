@@ -72,6 +72,8 @@ namespace skolenza.application.Interfaces
         ICandidateRegistrationRepository CandidatesRegistrationRepository { get; }
         ICandidateCategorySkillRepository CandidateCategorySkillRepository { get; }
         IStaffEmploymentTypeRepository StaffEmploymentTypeRepository { get; }
+        IStaffCategoryRepository StaffCategoryRepository { get; }
+        IStaffProfessionalStructureRepository StaffProfessionalStructureRepository { get; }
         IEmailTemplateRepository EmailTemplateRepository { get; }
         IInstitutionEmailTemplateRepository InstitutionEmailTemplateRepository { get; }
         IUserRoleRepository UserRoleRepository { get; }

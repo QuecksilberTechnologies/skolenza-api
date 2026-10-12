@@ -35,6 +35,8 @@ public partial class Department
 
     public virtual ICollection<Designation> Designation { get; set; } = new List<Designation>();
 
+    public virtual ICollection<StaffMember> StaffMember { get; set; } = new List<StaffMember>();
+
     public virtual ICollection<StaffMemberManagerMapping> StaffMemberManagerMapping { get; set; } = new List<StaffMemberManagerMapping>();
 
     public virtual Institution? Institution { get; set; }

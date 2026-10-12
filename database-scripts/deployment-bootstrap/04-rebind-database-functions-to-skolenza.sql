@@ -393,6 +393,10 @@ BEGIN
 END;
 $function$
 ;
+-- DROP is required when upgrading a legacy database because PostgreSQL does not
+-- allow CREATE OR REPLACE FUNCTION to rename the result column TenantId to InstitutionId.
+DROP FUNCTION IF EXISTS skolenza."GetActiveRoleModuleOperations"(bigint, text);
+
 CREATE OR REPLACE FUNCTION skolenza."GetActiveRoleModuleOperations"(p_institutionid bigint, p_roleids text)
  RETURNS TABLE("RoleId" integer, "InstitutionId" bigint, "ModuleId" integer, "ModuleName" text, "URLPath" text, "DisplayName" text, "ImageIconWeb" text, "ImageIconMobile" text, "ParentModuleId" integer, "SubModuleName" text, "MainModuleId" integer, "MainModuleName" text, "OperationId" integer, "OperationName" text, "DataViewStructureId" integer, "DisplayOn" text)
  LANGUAGE plpgsql

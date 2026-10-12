@@ -34,7 +34,10 @@ public sealed class SuperAdminDashboardRepository(
 
     public async Task<IReadOnlyList<DashboardStaffMemberDTO>> GetUpcomingBirthdaysAsync(long institutionId, DateTime today, int days, CancellationToken cancellationToken)
     {
-        var staffMembers = await BaseStaffMemberQuery(institutionId).Where(x => x.StaffMember.DateOfBirth.HasValue).ToListAsync(cancellationToken);
+        var staffMemberQuery = ActiveStaffMembers(institutionId)
+            .Where(x => x.DateOfBirth.HasValue);
+        var staffMembers = await BaseStaffMemberQuery(institutionId, staffMemberQuery)
+            .ToListAsync(cancellationToken);
         return staffMembers.Select(x => new { Row = x, Next = NextOccurrence(x.StaffMember.DateOfBirth!.Value, today) })
             .Where(x => x.Next <= today.Date.AddDays(days)).OrderBy(x => x.Next).ThenBy(x => x.Row.StaffMember.FirstName)
             .Select(x => MapStaffMember(x.Row, x.Next)).ToList();
@@ -42,8 +45,12 @@ public sealed class SuperAdminDashboardRepository(
 
     public async Task<IReadOnlyList<DashboardStaffMemberDTO>> GetRecentOnboardingAsync(long institutionId, int limit, CancellationToken cancellationToken)
     {
-        var rows = await BaseStaffMemberQuery(institutionId).Where(x => x.StaffMember.DateOfOnBoarding.HasValue)
-            .OrderByDescending(x => x.StaffMember.DateOfOnBoarding).Take(limit).ToListAsync(cancellationToken);
+        var staffMemberQuery = ActiveStaffMembers(institutionId)
+            .Where(x => x.DateOfOnBoarding.HasValue)
+            .OrderByDescending(x => x.DateOfOnBoarding)
+            .Take(limit);
+        var rows = await BaseStaffMemberQuery(institutionId, staffMemberQuery)
+            .ToListAsync(cancellationToken);
         return rows.Select(x => MapStaffMember(x, x.StaffMember.DateOfOnBoarding)).ToList();
     }
 
@@ -53,11 +60,12 @@ public sealed class SuperAdminDashboardRepository(
         int limit,
         CancellationToken cancellationToken)
     {
-        var rows = await BaseStaffMemberQuery(institutionId)
-            .Where(x => x.StaffMember.DateOfOnBoarding.HasValue &&
-                x.StaffMember.DateOfOnBoarding.Value >= fromDate)
-            .OrderByDescending(x => x.StaffMember.DateOfOnBoarding)
-            .Take(limit)
+        var staffMemberQuery = ActiveStaffMembers(institutionId)
+            .Where(x => x.DateOfOnBoarding.HasValue &&
+                x.DateOfOnBoarding.Value >= fromDate)
+            .OrderByDescending(x => x.DateOfOnBoarding)
+            .Take(limit);
+        var rows = await BaseStaffMemberQuery(institutionId, staffMemberQuery)
             .ToListAsync(cancellationToken);
         return rows.Select(x => MapStaffMember(x, x.StaffMember.DateOfOnBoarding)).ToList();
     }
@@ -153,8 +161,16 @@ public sealed class SuperAdminDashboardRepository(
         return new LocationOverviewDTO(total, active, headOffice, rows);
     }
 
-    private IQueryable<StaffMemberDashboardRow> BaseStaffMemberQuery(long institutionId) =>
-        from staffMember in context.StaffMembers.AsNoTracking()
+    private IQueryable<skolenza.domain.Entity.StaffMember> ActiveStaffMembers(long institutionId) =>
+        context.StaffMembers.AsNoTracking()
+            .Where(staffMember => staffMember.InstitutionId == institutionId &&
+                staffMember.IsActive &&
+                !staffMember.IsSoftDeleted);
+
+    private IQueryable<StaffMemberDashboardRow> BaseStaffMemberQuery(
+        long institutionId,
+        IQueryable<skolenza.domain.Entity.StaffMember> staffMembers) =>
+        from staffMember in staffMembers
         join department in context.Departments.AsNoTracking().Where(x => x.InstitutionId == institutionId && !x.IsSoftDeleted)
             on staffMember.DepartmentId equals (int?)department.Id into departments
         from department in departments.DefaultIfEmpty()
@@ -167,8 +183,13 @@ public sealed class SuperAdminDashboardRepository(
                             && role.InstitutionId == institutionId && role.IsActive && role.IsSoftDeleted != true
                         orderby userRole.IsPrimaryRole descending, userRole.Id
                         select role.RoleName).FirstOrDefault()
-        where staffMember.InstitutionId == institutionId && staffMember.IsActive && !staffMember.IsSoftDeleted
-        select new StaffMemberDashboardRow(staffMember, department == null ? null : department.DepartmentName, designation == null ? null : designation.DesignationName, roleName);
+        select new StaffMemberDashboardRow
+        {
+            StaffMember = staffMember,
+            DepartmentName = department == null ? null : department.DepartmentName,
+            DesignationName = designation == null ? null : designation.DesignationName,
+            RoleName = roleName
+        };
 
     private DashboardStaffMemberDTO MapStaffMember(StaffMemberDashboardRow row, DateTime? date)
     {
@@ -206,9 +227,11 @@ public sealed class SuperAdminDashboardRepository(
 
         return next;
     }
-    private sealed record StaffMemberDashboardRow(
-        skolenza.domain.Entity.StaffMember StaffMember,
-        string? DepartmentName,
-        string? DesignationName,
-        string? RoleName);
+    private sealed class StaffMemberDashboardRow
+    {
+        public required skolenza.domain.Entity.StaffMember StaffMember { get; init; }
+        public string? DepartmentName { get; init; }
+        public string? DesignationName { get; init; }
+        public string? RoleName { get; init; }
+    }
 }

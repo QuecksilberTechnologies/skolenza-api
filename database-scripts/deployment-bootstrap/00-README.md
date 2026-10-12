@@ -40,3 +40,8 @@ InstitutionType lookup rows. Run `07-verify-institution-staff-access-catalogue.s
 afterward. The matching rollback is
 `rollback/06-rollback-institution-staff-access-catalogue.sql`.
 
+After the catalogue is present, apply
+`../migrations/20261012_EnforceInstitutionAccessMasterIntegrity.sql`. It binds
+Role, Department, Designation, StaffMember and UserRole records to one
+institution boundary and enforces the centralized RoleType range (1-6).
+

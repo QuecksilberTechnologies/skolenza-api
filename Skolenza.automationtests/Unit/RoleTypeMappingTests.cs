@@ -72,7 +72,7 @@ public sealed class RoleTypeMappingTests
         });
     }
 
-    [TestCase(1, "Institution Administrator", "Company workspace, users, roles and settings administration.")]
+    [TestCase(1, "Institution Administrator", "Institution users, roles, settings and configuration administration.")]
     [TestCase(2, "Staff Member", "StaffMember self-service, attendance, leave, documents and assigned work.")]
     [TestCase(3, "Staff Manager", "Team and supervisor management according to assigned permissions.")]
     [TestCase(4, "External User", "Client, consultant, vendor and external portal access.")]
@@ -164,7 +164,7 @@ public sealed class RoleTypeMappingTests
                 response.Data.Select(option => option.Description),
                 Is.EqualTo(new[]
                 {
-                    "Full company workspace administration, including users, roles, settings, and institution-level configuration.",
+                    "Full institution administration, including users, roles, settings, and institution-level configuration.",
                     "StaffMember self-service access to personal information, attendance, leave, documents, and assigned work features.",
                     "Team management access for supervisors and managers, subject to assigned role permissions.",
                     "Limited portal access for clients, consultants, vendors, and other external users, subject to assigned role permissions.",

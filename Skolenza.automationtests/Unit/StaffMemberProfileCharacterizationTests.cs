@@ -395,7 +395,8 @@ public sealed class StaffMemberProfileCharacterizationTests
             // not represent module operations and never accept staffMember identifiers from callers.
             .Where(type => type.FullName is not
                 "skolenza.application.Features.StaffMemberCmd.StaffMemberWorkInfo.Handlers.GetAttendancePolicyOptionsQuery" and not
-                "skolenza.application.Features.StaffMemberCmd.Contact.Handlers.GetContactRelationOptionsQuery")
+                "skolenza.application.Features.StaffMemberCmd.Contact.Handlers.GetContactRelationOptionsQuery" and not
+                "skolenza.application.Features.StaffMemberCmd.StaffCategory.Handlers.GetStaffCategoryOptionsQuery")
             .OrderBy(type => type.FullName)
             .ToArray();
 

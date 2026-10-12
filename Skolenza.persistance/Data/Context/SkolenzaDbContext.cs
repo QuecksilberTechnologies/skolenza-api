@@ -173,6 +173,26 @@ namespace skolenza.persistance.Data.Context
 
         public virtual DbSet<StaffEmploymentType> StaffEmploymentTypes { get; set; }
 
+        public virtual DbSet<StaffCategory> StaffCategories { get; set; }
+
+        public virtual DbSet<StaffJobFamilyMaster> StaffJobFamilyMasters { get; set; }
+
+        public virtual DbSet<StaffPositionMaster> StaffPositionMasters { get; set; }
+
+        public virtual DbSet<StaffCapabilityMaster> StaffCapabilityMasters { get; set; }
+
+        public virtual DbSet<StaffDutyDefinitionMaster> StaffDutyDefinitionMasters { get; set; }
+
+        public virtual DbSet<StaffPositionCapability> StaffPositionCapabilities { get; set; }
+
+        public virtual DbSet<StaffPositionDuty> StaffPositionDuties { get; set; }
+
+        public virtual DbSet<StaffPositionAssignment> StaffPositionAssignments { get; set; }
+
+        public virtual DbSet<StaffCapabilityAssignment> StaffCapabilityAssignments { get; set; }
+
+        public virtual DbSet<StaffDutyAssignment> StaffDutyAssignments { get; set; }
+
         public virtual DbSet<StaffEmploymentTypeBasicMenu> StaffEmploymentTypeBasicMenus { get; set; }
 
         public virtual DbSet<StaffMembersChangedTypeHistory> StaffMembersChangedTypeHistories { get; set; }
@@ -834,6 +854,7 @@ namespace skolenza.persistance.Data.Context
 
             entity.HasOne(d => d.Department).WithMany(p => p.Designation)
                 .HasForeignKey(d => d.DepartmentId)
+                .OnDelete(DeleteBehavior.Restrict)
                 .HasConstraintName("FK_Designation_Department");
 
             entity.HasOne(d => d.Institution).WithMany(p => p.Designation)
@@ -1121,12 +1142,22 @@ namespace skolenza.persistance.Data.Context
 
             entity.HasOne(d => d.Designation).WithMany(p => p.StaffMember)
                 .HasForeignKey(d => d.DesignationId)
-                .OnDelete(DeleteBehavior.SetNull)
+                .OnDelete(DeleteBehavior.Restrict)
                 .HasConstraintName("FK_StaffMember_Designation");
+
+            entity.HasOne(d => d.Department).WithMany(p => p.StaffMember)
+                .HasForeignKey(d => d.DepartmentId)
+                .OnDelete(DeleteBehavior.Restrict)
+                .HasConstraintName("FK_StaffMember_Department");
 
             entity.HasOne(d => d.StaffEmploymentType).WithMany(p => p.StaffMember)
                 .HasForeignKey(d => d.StaffEmploymentTypeId)
                 .HasConstraintName("FK_StaffMember_StaffEmploymentType");
+
+            entity.HasOne(d => d.StaffCategory).WithMany(p => p.StaffMembers)
+                .HasForeignKey(d => d.StaffCategoryId)
+                .OnDelete(DeleteBehavior.Restrict)
+                .HasConstraintName("FK_StaffMember_StaffCategory");
 
             entity.HasOne(d => d.Gender).WithMany(p => p.StaffMember)
                 .HasForeignKey(d => d.GenderId)
@@ -1505,6 +1536,19 @@ namespace skolenza.persistance.Data.Context
             entity.Property(e => e.Description).HasMaxLength(255);
             entity.Property(e => e.Remark).HasMaxLength(255);
             entity.Property(e => e.TypeName).HasMaxLength(255);
+        });
+
+        modelBuilder.Entity<StaffCategory>(entity =>
+        {
+            entity.ToTable("StaffCategory", "skolenza");
+            entity.HasKey(e => e.Id).HasName("PK_StaffCategory");
+            entity.HasIndex(e => e.Code).IsUnique().HasDatabaseName("UQ_StaffCategory_Code");
+            entity.Property(e => e.Code).HasMaxLength(50);
+            entity.Property(e => e.Name).HasMaxLength(100);
+            entity.Property(e => e.Description).HasMaxLength(500);
+            entity.Property(e => e.IsActive).HasDefaultValue(true);
+            entity.Property(e => e.IsSystemDefined).HasDefaultValue(true);
+            entity.Property(e => e.AddedDateTime).HasDefaultValueSql("now()");
         });
 
         modelBuilder.Entity<StaffEmploymentTypeBasicMenu>(entity =>
@@ -2072,6 +2116,11 @@ namespace skolenza.persistance.Data.Context
                 .HasMaxLength(200)
                 .HasDefaultValueSql("NULL::character varying");
             entity.Property(e => e.RoleName).HasMaxLength(100);
+
+            entity.HasOne(d => d.Institution).WithMany()
+                .HasForeignKey(d => d.InstitutionId)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("FK_Role_Institution");
         });
 
         modelBuilder.Entity<RoleModuleAndPermission>(entity =>
@@ -2874,6 +2923,92 @@ namespace skolenza.persistance.Data.Context
                 entity.Property(e => e.TypeName).HasMaxLength(255);
             });
 
+            modelBuilder.Entity<StaffCategory>(entity =>
+            {
+                entity.ToTable("StaffCategory", "skolenza");
+                entity.HasKey(e => e.Id).HasName("PK_StaffCategory");
+                entity.HasIndex(e => e.Code).IsUnique().HasDatabaseName("UQ_StaffCategory_Code");
+                entity.Property(e => e.Code).HasMaxLength(50);
+                entity.Property(e => e.Name).HasMaxLength(100);
+                entity.Property(e => e.Description).HasMaxLength(500);
+                entity.Property(e => e.IsActive).HasDefaultValue(true);
+                entity.Property(e => e.IsSystemDefined).HasDefaultValue(true);
+                entity.Property(e => e.AddedDateTime).HasDefaultValueSql("now()");
+            });
+
+            #region Staff Professional Structure
+
+            modelBuilder.Entity<InstitutionMasterEntity>(entity =>
+            {
+                entity.UseTpcMappingStrategy();
+                entity.HasKey(item => item.Id);
+                entity.Property(item => item.Code).HasMaxLength(60);
+                entity.Property(item => item.Name).HasMaxLength(150);
+                entity.Property(item => item.Description).HasMaxLength(500);
+                entity.Property(item => item.IsActive).HasDefaultValue(true);
+                entity.Property(item => item.IsSystemDefined).HasDefaultValue(false);
+                entity.Property(item => item.AddedDateTime).HasDefaultValueSql("CURRENT_TIMESTAMP");
+            });
+            ConfigureInstitutionMaster<StaffJobFamilyMaster>(modelBuilder, "StaffJobFamilyMaster");
+            ConfigureInstitutionMaster<StaffCapabilityMaster>(modelBuilder, "StaffCapabilityMaster");
+            ConfigureInstitutionMaster<StaffDutyDefinitionMaster>(modelBuilder, "StaffDutyDefinitionMaster");
+            ConfigureInstitutionMaster<StaffPositionMaster>(modelBuilder, "StaffPositionMaster");
+
+            modelBuilder.Entity<StaffCapabilityMaster>(entity =>
+            {
+                entity.Property(item => item.RequiresCertification).HasDefaultValue(false);
+                entity.Property(item => item.CertificationValidityRequired).HasDefaultValue(false);
+            });
+
+            modelBuilder.Entity<StaffDutyDefinitionMaster>(entity =>
+            {
+                entity.Property(item => item.DefaultFrequency).HasMaxLength(40);
+                entity.Property(item => item.RequiresEvidence).HasDefaultValue(false);
+            });
+
+            modelBuilder.Entity<StaffPositionMaster>(entity =>
+            {
+                entity.HasIndex(item => item.StaffJobFamilyMasterId);
+                entity.HasIndex(item => item.StaffCategoryId);
+            });
+
+            modelBuilder.Entity<StaffPositionCapability>(entity =>
+            {
+                entity.ToTable("StaffPositionCapability", "skolenza");
+                entity.HasKey(item => item.Id);
+                entity.HasIndex(item => new { item.StaffPositionMasterId, item.StaffCapabilityMasterId }).IsUnique();
+            });
+
+            modelBuilder.Entity<StaffPositionDuty>(entity =>
+            {
+                entity.ToTable("StaffPositionDuty", "skolenza");
+                entity.HasKey(item => item.Id);
+                entity.HasIndex(item => new { item.StaffPositionMasterId, item.StaffDutyDefinitionMasterId }).IsUnique();
+            });
+
+            modelBuilder.Entity<StaffPositionAssignment>(entity =>
+            {
+                entity.ToTable("StaffPositionAssignment", "skolenza");
+                entity.HasKey(item => item.Id);
+                entity.Property(item => item.Remark).HasMaxLength(500);
+            });
+
+            modelBuilder.Entity<StaffCapabilityAssignment>(entity =>
+            {
+                entity.ToTable("StaffCapabilityAssignment", "skolenza");
+                entity.HasKey(item => item.Id);
+                entity.Property(item => item.VerificationRemark).HasMaxLength(500);
+            });
+
+            modelBuilder.Entity<StaffDutyAssignment>(entity =>
+            {
+                entity.ToTable("StaffDutyAssignment", "skolenza");
+                entity.HasKey(item => item.Id);
+                entity.Property(item => item.Remark).HasMaxLength(500);
+            });
+
+            #endregion
+
             #region Institution Configuration
 
             modelBuilder.Entity<Campus>(entity =>
@@ -3216,6 +3351,17 @@ namespace skolenza.persistance.Data.Context
 
             modelBuilder.Entity<StaffMemberCountResponseStatsSp>().HasNoKey();
 
+        }
+
+        private static void ConfigureInstitutionMaster<TEntity>(
+            ModelBuilder modelBuilder,
+            string tableName)
+            where TEntity : InstitutionMasterEntity
+        {
+            modelBuilder.Entity<TEntity>(entity =>
+            {
+                entity.ToTable(tableName, "skolenza");
+            });
         }
       
         public async Task<int> SaveChangesAsync()

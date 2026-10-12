@@ -1,4 +1,5 @@
 using skolenza.application.DTOS.Pagination;
+using skolenza.application.DTOS.Staff;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -42,6 +43,7 @@ namespace skolenza.application.DTOS.Staff.BaseStaffMember
             public int DesignationId { get; set; }
             public string? GenderName { get; set; }
             public int StaffEmploymentTypeId { get; set; }
+            public short? StaffCategoryId { get; set; }
        
             public int DepartmentId { get; set; }
             public string? OfficialEmail { get; set; }
@@ -51,6 +53,7 @@ namespace skolenza.application.DTOS.Staff.BaseStaffMember
             public bool? IsMarried { get; set; } 
             public bool? IsInfoVerified { get; set; }
             public double CompletionPercentage { get; set; }
+            public StaffProfessionalProfileResponseDTO? ProfessionalProfile { get; set; }
 
     }
     

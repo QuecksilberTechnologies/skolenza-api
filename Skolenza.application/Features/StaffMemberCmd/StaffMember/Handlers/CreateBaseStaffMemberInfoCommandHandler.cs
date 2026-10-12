@@ -134,6 +134,13 @@ public class CreateBaseStaffMemberInfoCommandHandler
                     throw new ValidationErrorException("StaffEmploymentType must be active and belong to this institution.");
                 }
 
+                if (!await _unitOfWork.StaffCategoryRepository.IsActiveAsync(
+                        request.DTO.StaffCategoryId,
+                        cancellationToken))
+                {
+                    throw new ValidationErrorException("StaffCategory must reference an active platform category.");
+                }
+
                 staffMember.InstitutionId = validation.InstitutionId;
                 staffMember.AddedById = validation.UserStaffMemberId;
                 staffMember.AddedDateTime = DateTime.UtcNow;
@@ -210,6 +217,19 @@ public class CreateBaseStaffMemberInfoCommandHandler
 
                 if (savedStaffMember == null)
                     throw new ApiException("StaffMember creation failed.", 500);
+
+                if (request.DTO.StaffPositionMasterId <= 0)
+                {
+                    throw new ValidationErrorException("StaffPositionMasterId is required.");
+                }
+
+                await _unitOfWork.StaffProfessionalStructureRepository.AssignPrimaryPositionAsync(
+                    validation.InstitutionId,
+                    staffMember.Id,
+                    request.DTO.StaffPositionMasterId,
+                    DateOnly.FromDateTime(staffMember.DateOfOnBoarding!.Value),
+                    validation.UserStaffMemberId,
+                    cancellationToken);
 
                 // ===============================
                 // 1️⃣1️⃣ COMMIT

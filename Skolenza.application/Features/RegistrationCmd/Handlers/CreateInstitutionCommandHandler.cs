@@ -583,6 +583,7 @@ namespace skolenza.application.Features.RegistrationCmd.Handlers
                     IsEditAllowed = true,
                     StaffEmploymentTypeId = onboardingTypeId,
                     StaffCategoryId = AppConstants.StaffCategories.Administrative,
+                    DateOfOnBoarding = DateTime.UtcNow,
                     AddedById = newInstitutionId,
                     AddedDateTime = DateTime.UtcNow
                 };
@@ -635,6 +636,40 @@ namespace skolenza.application.Features.RegistrationCmd.Handlers
                     await SafeRollbackAsync();
                     return Fail("StaffMember creation failed.");
                 }
+
+                // =====================================================
+                // STEP 17.1 : Create institution professional masters
+                //             and administrator position assignments
+                // =====================================================
+                failureStage = "creating the staff professional structure";
+                await _unitOfWork.StaffProfessionalStructureRepository.SeedInstitutionMastersAsync(
+                    newInstitutionId,
+                    staffMemberId,
+                    cancellationToken);
+
+                var administratorPosition = (await _unitOfWork.StaffProfessionalStructureRepository.GetPositionsAsync(
+                        newInstitutionId,
+                        true,
+                        AppConstants.StaffCategories.Administrative,
+                        cancellationToken))
+                    .SingleOrDefault(position => string.Equals(
+                        position.Code,
+                        ConstantValues.InstitutionAdministratorPositionCode,
+                        StringComparison.OrdinalIgnoreCase));
+
+                if (administratorPosition is null)
+                {
+                    await SafeRollbackAsync();
+                    return Fail("Institution administrator position was not created.");
+                }
+
+                await _unitOfWork.StaffProfessionalStructureRepository.AssignPrimaryPositionAsync(
+                    newInstitutionId,
+                    staffMemberId,
+                    administratorPosition.Id,
+                    DateOnly.FromDateTime(staffMember.DateOfOnBoarding.Value),
+                    staffMemberId,
+                    cancellationToken);
 
                 var createdStaffMember = await _unitOfWork.StaffMembers.GetCreatedStaffMemberResponseAsync(staffMemberId, cancellationToken);
 

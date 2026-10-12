@@ -3,6 +3,9 @@ namespace skolenza.application.Constants;
 /// <summary>Central parsing limits and column contracts for master import previews.</summary>
 public static class BulkImportConstants
 {
+    public const string DepartmentModuleCode = "INSTITUTION_DEPARTMENTS";
+    public const string DesignationModuleCode = "INSTITUTION_STAFF_DESIGNATIONS";
+    public const string RoleModuleCode = "INSTITUTION_ACCESS";
     public const string HostDeviceBulkModuleCode = "HOST_DEVICE_SETUP";
     public const string HostCardBulkModuleCode = "HOST_INSTITUTION_RFID_MANAGEMENT";
     public const string HostModuleBulkModuleCode = "HOST_MODULES";

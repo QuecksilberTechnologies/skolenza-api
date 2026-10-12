@@ -148,12 +148,12 @@ public sealed class StaffEmploymentTypeRepository(SkolenzaDbContext context, IMa
         return true;
     }
 
-    /// <summary>Preserves existing super-admin onboarding with one institution-owned Permanent type, not six defaults.</summary>
+    /// <summary>Creates or resolves the institution-owned Permanent type used by the initial Institution Administrator.</summary>
     public async Task<int> EnsureOnboardingTypeAsync(long institutionId, long actorId, CancellationToken cancellationToken)
     {
-        // Caller is the existing institution-creation transaction. The legacy constant is a template ID only.
+        // Caller is the institution-creation transaction. The platform constant identifies the global template only.
         var template = await context.StaffEmploymentTypes.AsNoTracking().SingleAsync(item =>
-            item.Id == ConstantValues.ParmanentStaffEmploymentType && item.InstitutionId == null, cancellationToken);
+            item.Id == ConstantValues.PermanentStaffEmploymentType && item.InstitutionId == null, cancellationToken);
         var existing = await context.StaffEmploymentTypes.SingleOrDefaultAsync(item => item.InstitutionId == institutionId &&
             item.TypeName == template.TypeName && item.IsSoftDeleted != true, cancellationToken);
         if (existing is not null)

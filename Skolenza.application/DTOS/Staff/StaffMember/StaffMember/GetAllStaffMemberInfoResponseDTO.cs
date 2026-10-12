@@ -31,6 +31,7 @@ namespace skolenza.application.DTOS.Staff.BaseStaffMember
             public int DesignationId { get; set; }
             public string? DesignationName { get; set; }
             public int StaffEmploymentTypeId { get; set; }
+            public short? StaffCategoryId { get; set; }
             public string? StaffEmploymentTypeName { get; set; }
             public string? OfficialEmail { get; set; }          
             public string? EmergencyContactPerson { get; set; }          
