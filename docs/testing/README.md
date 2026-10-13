@@ -59,3 +59,5 @@ test run.
 
 - [Staff curriculum and lesson delivery (2026-10-13)](staff/curriculum-delivery/2026-10-13.md)
 - [Staff legacy identifier retirement (2026-10-13)](staff/legacy-identifiers/2026-10-13.md)
+
+- [Staff professional category hierarchy (2026-10-13)](staff/professional-category-hierarchy/2026-10-13.md)

@@ -147,16 +147,18 @@ public class UpdateBaseStaffMemberByAdminCommandHandler
                     staffMember.StaffEmploymentTypeId = request.DTO.StaffEmploymentTypeId.Value;
                 }
 
-                if (request.DTO.StaffCategoryId.HasValue)
+                if (request.DTO.InstitutionStaffCategoryMasterId.HasValue)
                 {
-                    if (!await _unitOfWork.StaffCategoryRepository.IsActiveAsync(
-                            request.DTO.StaffCategoryId.Value,
-                            cancellationToken))
+                    if (!request.DTO.StaffPositionMasterId.HasValue || request.DTO.StaffPositionMasterId.Value <= 0)
                     {
-                        throw new ValidationErrorException("StaffCategory must reference an active platform category.");
+                        throw new ValidationErrorException("A Position is required when Staff Category changes.");
                     }
-
-                    staffMember.StaffCategoryId = request.DTO.StaffCategoryId.Value;
+                    var institutionCategory = (await _unitOfWork.StaffProfessionalStructureRepository
+                        .GetInstitutionCategoriesAsync(validation.InstitutionId, true, cancellationToken))
+                        .SingleOrDefault(item => item.Id == request.DTO.InstitutionStaffCategoryMasterId.Value)
+                        ?? throw new ValidationErrorException("Staff Category must be active and belong to this institution.");
+                    staffMember.InstitutionStaffCategoryMasterId = institutionCategory.Id;
+                    staffMember.StaffCategoryId = institutionCategory.StaffCategoryTypeId;
                 }
 
                 if (request.DTO.CountryId.HasValue)

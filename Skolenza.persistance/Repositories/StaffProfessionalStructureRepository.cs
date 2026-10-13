@@ -17,9 +17,191 @@ public sealed class StaffProfessionalStructureRepository(SkolenzaDbContext conte
         long? actorStaffMemberId,
         CancellationToken cancellationToken = default)
     {
-        return context.Database.ExecuteSqlInterpolatedAsync(
+        return SeedInstitutionStructureAsync(institutionId, actorStaffMemberId, cancellationToken);
+    }
+
+    private async Task SeedInstitutionStructureAsync(
+        long institutionId,
+        long? actorStaffMemberId,
+        CancellationToken cancellationToken)
+    {
+        await context.Database.ExecuteSqlInterpolatedAsync(
             $"SELECT skolenza.\"SeedInstitutionStaffProfessionalMasters\"({institutionId}, {actorStaffMemberId})",
             cancellationToken);
+        await context.Database.ExecuteSqlInterpolatedAsync(
+            $"SELECT skolenza.\"SeedInstitutionStaffCategoryHierarchy\"({institutionId}, {actorStaffMemberId})",
+            cancellationToken);
+    }
+
+    public async Task<List<InstitutionStaffCategoryResponseDTO>> GetInstitutionCategoriesAsync(
+        long institutionId,
+        bool activeOnly,
+        CancellationToken cancellationToken = default)
+    {
+        var query = context.InstitutionStaffCategoryMasters.AsNoTracking()
+            .Where(item => item.InstitutionId == institutionId && !item.IsSoftDeleted);
+        if (activeOnly)
+        {
+            query = query.Where(item => item.IsActive);
+        }
+
+        return await query
+            .OrderBy(item => item.DisplayOrder)
+            .ThenBy(item => item.Name)
+            .Select(item => new InstitutionStaffCategoryResponseDTO
+            {
+                Id = item.Id,
+                StaffCategoryTypeId = item.StaffCategoryTypeId,
+                StaffCategoryTypeName = context.StaffCategories
+                    .Where(type => type.Id == item.StaffCategoryTypeId)
+                    .Select(type => type.Name)
+                    .FirstOrDefault() ?? string.Empty,
+                Code = item.Code,
+                Name = item.Name,
+                Description = item.Description,
+                DisplayOrder = item.DisplayOrder,
+                IsActive = item.IsActive,
+                ActiveJobFamilyCount = context.StaffCategoryJobFamilies.Count(mapping =>
+                    mapping.InstitutionId == institutionId &&
+                    mapping.InstitutionStaffCategoryMasterId == item.Id && mapping.IsActive),
+                StaffJobFamilyMasterIds = context.StaffCategoryJobFamilies
+                    .Where(mapping => mapping.InstitutionId == institutionId &&
+                        mapping.InstitutionStaffCategoryMasterId == item.Id && mapping.IsActive)
+                    .OrderBy(mapping => mapping.StaffJobFamilyMasterId)
+                    .Select(mapping => mapping.StaffJobFamilyMasterId)
+                    .ToList(),
+                ActivePositionCount = context.StaffPositionMasters.Count(position =>
+                    position.InstitutionId == institutionId &&
+                    position.InstitutionStaffCategoryMasterId == item.Id && position.IsActive && !position.IsSoftDeleted),
+                ActiveStaffCount = context.StaffMembers.Count(staff =>
+                    staff.InstitutionId == institutionId &&
+                    staff.InstitutionStaffCategoryMasterId == item.Id && staff.IsActive && !staff.IsSoftDeleted)
+            })
+            .ToListAsync(cancellationToken);
+    }
+
+    public async Task<InstitutionStaffCategoryResponseDTO> SaveInstitutionCategoryAsync(
+        InstitutionStaffCategoryRequestDTO request,
+        long institutionId,
+        long actorStaffMemberId,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(request.Code) || string.IsNullOrWhiteSpace(request.Name) ||
+            !await context.StaffCategories.AnyAsync(type => type.Id == request.StaffCategoryTypeId && type.IsActive, cancellationToken))
+        {
+            throw new ValidationErrorException("Code, name and an active Staff Category type are required.");
+        }
+
+        InstitutionStaffCategoryMaster entity;
+        if (request.Id.HasValue)
+        {
+            entity = await context.InstitutionStaffCategoryMasters.FirstOrDefaultAsync(item =>
+                    item.Id == request.Id && item.InstitutionId == institutionId && !item.IsSoftDeleted, cancellationToken)
+                ?? throw new KeyNotFoundException("Staff Category was not found.");
+            entity.UpdatedById = actorStaffMemberId;
+            entity.UpdatedDateTime = DateTime.UtcNow;
+        }
+        else
+        {
+            entity = new InstitutionStaffCategoryMaster
+            {
+                InstitutionId = institutionId,
+                AddedById = actorStaffMemberId,
+                AddedDateTime = DateTime.UtcNow
+            };
+            await context.InstitutionStaffCategoryMasters.AddAsync(entity, cancellationToken);
+        }
+
+        var code = NormalizeCode(request.Code);
+        if (await context.InstitutionStaffCategoryMasters.AnyAsync(item => item.InstitutionId == institutionId &&
+                item.Id != entity.Id && !item.IsSoftDeleted && item.Code.ToLower() == code.ToLower(), cancellationToken))
+        {
+            throw new ConflictException("A Staff Category with this code already exists.");
+        }
+
+        entity.StaffCategoryTypeId = request.StaffCategoryTypeId;
+        entity.Code = code;
+        entity.Name = request.Name.Trim();
+        entity.Description = NormalizeOptional(request.Description);
+        entity.DisplayOrder = request.DisplayOrder;
+        entity.IsActive = request.IsActive;
+        await context.SaveChangesAsync(cancellationToken);
+        return (await GetInstitutionCategoriesAsync(institutionId, false, cancellationToken)).Single(item => item.Id == entity.Id);
+    }
+
+    public async Task SetCategoryJobFamiliesAsync(
+        StaffCategoryJobFamilyRequestDTO request,
+        long institutionId,
+        long actorStaffMemberId,
+        CancellationToken cancellationToken = default)
+    {
+        var category = await context.InstitutionStaffCategoryMasters.FirstOrDefaultAsync(item =>
+                item.Id == request.InstitutionStaffCategoryMasterId && item.InstitutionId == institutionId &&
+                item.IsActive && !item.IsSoftDeleted, cancellationToken)
+            ?? throw new KeyNotFoundException("Staff Category was not found.");
+        var familyIds = request.StaffJobFamilyMasterIds.Distinct().ToList();
+        if (familyIds.Count != await context.StaffJobFamilyMasters.CountAsync(item =>
+                familyIds.Contains(item.Id) && item.InstitutionId == institutionId && item.IsActive && !item.IsSoftDeleted,
+                cancellationToken))
+        {
+            throw new ValidationErrorException("One or more selected Job Families are unavailable.");
+        }
+
+        var existing = await context.StaffCategoryJobFamilies
+            .Where(item => item.InstitutionId == institutionId && item.InstitutionStaffCategoryMasterId == category.Id)
+            .ToListAsync(cancellationToken);
+        var removedFamilyIds = existing.Where(item => item.IsActive && !familyIds.Contains(item.StaffJobFamilyMasterId))
+            .Select(item => item.StaffJobFamilyMasterId).ToList();
+        if (removedFamilyIds.Count > 0 && await context.StaffPositionMasters.AnyAsync(position =>
+                position.InstitutionId == institutionId && position.InstitutionStaffCategoryMasterId == category.Id &&
+                removedFamilyIds.Contains(position.StaffJobFamilyMasterId) && position.IsActive && !position.IsSoftDeleted,
+                cancellationToken))
+        {
+            throw new ConflictException("Deactivate Positions under the removed Job Family mappings first.");
+        }
+        foreach (var mapping in existing)
+        {
+            mapping.IsActive = familyIds.Contains(mapping.StaffJobFamilyMasterId);
+            mapping.UpdatedById = actorStaffMemberId;
+            mapping.UpdatedDateTime = DateTime.UtcNow;
+        }
+        foreach (var familyId in familyIds.Except(existing.Select(item => item.StaffJobFamilyMasterId)))
+        {
+            await context.StaffCategoryJobFamilies.AddAsync(new StaffCategoryJobFamily
+            {
+                InstitutionId = institutionId,
+                InstitutionStaffCategoryMasterId = category.Id,
+                StaffJobFamilyMasterId = familyId,
+                AddedById = actorStaffMemberId,
+                AddedDateTime = DateTime.UtcNow
+            }, cancellationToken);
+        }
+        await context.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task SetInstitutionCategoryActiveAsync(
+        int id,
+        bool isActive,
+        long institutionId,
+        long actorStaffMemberId,
+        CancellationToken cancellationToken = default)
+    {
+        var category = await context.InstitutionStaffCategoryMasters.FirstOrDefaultAsync(item =>
+                item.Id == id && item.InstitutionId == institutionId && !item.IsSoftDeleted, cancellationToken)
+            ?? throw new KeyNotFoundException("Staff Category was not found.");
+        if (!isActive && (await context.StaffCategoryJobFamilies.AnyAsync(item => item.InstitutionId == institutionId &&
+                item.InstitutionStaffCategoryMasterId == id && item.IsActive, cancellationToken) ||
+            await context.StaffPositionMasters.AnyAsync(item => item.InstitutionId == institutionId &&
+                item.InstitutionStaffCategoryMasterId == id && item.IsActive && !item.IsSoftDeleted, cancellationToken) ||
+            await context.StaffMembers.AnyAsync(item => item.InstitutionId == institutionId &&
+                item.InstitutionStaffCategoryMasterId == id && item.IsActive && !item.IsSoftDeleted, cancellationToken)))
+        {
+            throw new ConflictException("Deactivate dependent Job Family mappings, Positions and active Staff assignments first.");
+        }
+        category.IsActive = isActive;
+        category.UpdatedById = actorStaffMemberId;
+        category.UpdatedDateTime = DateTime.UtcNow;
+        await context.SaveChangesAsync(cancellationToken);
     }
 
     public Task<List<StaffProfessionalMasterResponseDTO>> GetMastersAsync(
@@ -75,14 +257,20 @@ public sealed class StaffProfessionalStructureRepository(SkolenzaDbContext conte
         bool hasDependency = type switch
         {
             StaffProfessionalMasterType.JobFamily => await context.StaffPositionMasters.AnyAsync(
-                item => item.InstitutionId == institutionId && item.StaffJobFamilyMasterId == id && !item.IsSoftDeleted,
+                item => item.InstitutionId == institutionId && item.StaffJobFamilyMasterId == id && item.IsActive && !item.IsSoftDeleted,
                 cancellationToken),
-            StaffProfessionalMasterType.Capability => await context.StaffPositionCapabilities.AnyAsync(
-                item => item.InstitutionId == institutionId && item.StaffCapabilityMasterId == id,
-                cancellationToken),
-            StaffProfessionalMasterType.DutyDefinition => await context.StaffPositionDuties.AnyAsync(
-                item => item.InstitutionId == institutionId && item.StaffDutyDefinitionMasterId == id,
-                cancellationToken),
+            StaffProfessionalMasterType.Capability => await (
+                from mapping in context.StaffPositionCapabilities
+                join position in context.StaffPositionMasters on mapping.StaffPositionMasterId equals position.Id
+                where mapping.InstitutionId == institutionId && mapping.StaffCapabilityMasterId == id &&
+                      position.IsActive && !position.IsSoftDeleted
+                select mapping.Id).AnyAsync(cancellationToken),
+            StaffProfessionalMasterType.DutyDefinition => await (
+                from mapping in context.StaffPositionDuties
+                join position in context.StaffPositionMasters on mapping.StaffPositionMasterId equals position.Id
+                where mapping.InstitutionId == institutionId && mapping.StaffDutyDefinitionMasterId == id &&
+                      position.IsActive && !position.IsSoftDeleted
+                select mapping.Id).AnyAsync(cancellationToken),
             _ => false
         };
         if (hasDependency)
@@ -90,17 +278,16 @@ public sealed class StaffProfessionalStructureRepository(SkolenzaDbContext conte
             throw new ConflictException("This master is in use. Remove its position dependencies before deleting it.");
         }
 
-        entity.IsSoftDeleted = true;
         entity.IsActive = false;
-        entity.SoftDeletedById = actorStaffMemberId;
-        entity.DeletedDateTime = DateTime.UtcNow;
+        entity.UpdatedById = actorStaffMemberId;
+        entity.UpdatedDateTime = DateTime.UtcNow;
         await context.SaveChangesAsync(cancellationToken);
     }
 
     public async Task<List<StaffPositionMasterResponseDTO>> GetPositionsAsync(
         long institutionId,
         bool activeOnly,
-        short? staffCategoryId,
+        int? institutionStaffCategoryMasterId,
         CancellationToken cancellationToken = default)
     {
         var query = context.StaffPositionMasters.AsNoTracking()
@@ -109,9 +296,9 @@ public sealed class StaffProfessionalStructureRepository(SkolenzaDbContext conte
         {
             query = query.Where(item => item.IsActive);
         }
-        if (staffCategoryId.HasValue)
+        if (institutionStaffCategoryMasterId.HasValue)
         {
-            query = query.Where(item => item.StaffCategoryId == staffCategoryId.Value);
+            query = query.Where(item => item.InstitutionStaffCategoryMasterId == institutionStaffCategoryMasterId.Value);
         }
 
         var positions = await query.OrderBy(item => item.DisplayOrder).ThenBy(item => item.Name).ToListAsync(cancellationToken);
@@ -125,20 +312,22 @@ public sealed class StaffProfessionalStructureRepository(SkolenzaDbContext conte
         CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(request.Code) || string.IsNullOrWhiteSpace(request.Name) ||
-            request.StaffJobFamilyMasterId <= 0 || request.StaffCategoryId <= 0)
+            request.StaffJobFamilyMasterId <= 0 || request.InstitutionStaffCategoryMasterId <= 0)
         {
             throw new ValidationErrorException("Code, name, job family and staff category are required.");
         }
 
-        bool referencesValid = await context.StaffJobFamilyMasters.AnyAsync(
-                item => item.Id == request.StaffJobFamilyMasterId && item.InstitutionId == institutionId && item.IsActive && !item.IsSoftDeleted,
-                cancellationToken) &&
-            await context.StaffCategories.AnyAsync(
-                item => item.Id == request.StaffCategoryId && item.IsActive,
-                cancellationToken);
-        if (!referencesValid)
+        var institutionCategory = await context.InstitutionStaffCategoryMasters.AsNoTracking().FirstOrDefaultAsync(
+            item => item.Id == request.InstitutionStaffCategoryMasterId && item.InstitutionId == institutionId && item.IsActive && !item.IsSoftDeleted,
+            cancellationToken);
+        bool mappingAvailable = institutionCategory is not null && await context.StaffCategoryJobFamilies.AnyAsync(
+            item => item.InstitutionId == institutionId &&
+                    item.InstitutionStaffCategoryMasterId == request.InstitutionStaffCategoryMasterId &&
+                    item.StaffJobFamilyMasterId == request.StaffJobFamilyMasterId && item.IsActive,
+            cancellationToken);
+        if (!mappingAvailable)
         {
-            throw new ValidationErrorException("The selected job family or staff category is unavailable.");
+            throw new ValidationErrorException("The selected job family is not mapped to the selected institution Staff Category.");
         }
         if (request.DepartmentId.HasValue && !await context.Departments.AnyAsync(
                 item => item.Id == request.DepartmentId && item.InstitutionId == institutionId && item.IsActive && item.IsSoftDeleted != true,
@@ -153,8 +342,10 @@ public sealed class StaffProfessionalStructureRepository(SkolenzaDbContext conte
             throw new ValidationErrorException("The selected designation is unavailable.");
         }
 
-        var capabilityIds = request.CapabilityIds.Distinct().ToList();
-        var dutyIds = request.DutyDefinitionIds.Distinct().ToList();
+        var capabilities = request.Capabilities.GroupBy(item => item.Id).Select(group => group.First()).ToList();
+        var duties = request.Duties.GroupBy(item => item.Id).Select(group => group.First()).ToList();
+        var capabilityIds = capabilities.Select(item => item.Id).ToList();
+        var dutyIds = duties.Select(item => item.Id).ToList();
         if (capabilityIds.Count != await context.StaffCapabilityMasters.CountAsync(
                 item => capabilityIds.Contains(item.Id) && item.InstitutionId == institutionId && item.IsActive && !item.IsSoftDeleted,
                 cancellationToken) ||
@@ -198,7 +389,8 @@ public sealed class StaffProfessionalStructureRepository(SkolenzaDbContext conte
         entity.Name = request.Name.Trim();
         entity.Description = NormalizeOptional(request.Description);
         entity.StaffJobFamilyMasterId = request.StaffJobFamilyMasterId;
-        entity.StaffCategoryId = request.StaffCategoryId;
+        entity.InstitutionStaffCategoryMasterId = institutionCategory!.Id;
+        entity.StaffCategoryId = institutionCategory.StaffCategoryTypeId;
         entity.DepartmentId = request.DepartmentId;
         entity.DesignationId = request.DesignationId;
         entity.DisplayOrder = request.DisplayOrder;
@@ -209,23 +401,23 @@ public sealed class StaffProfessionalStructureRepository(SkolenzaDbContext conte
         var oldDuties = await context.StaffPositionDuties.Where(item => item.StaffPositionMasterId == entity.Id).ToListAsync(cancellationToken);
         context.StaffPositionCapabilities.RemoveRange(oldCapabilities);
         context.StaffPositionDuties.RemoveRange(oldDuties);
-        await context.StaffPositionCapabilities.AddRangeAsync(capabilityIds.Select((id, index) => new StaffPositionCapability
+        await context.StaffPositionCapabilities.AddRangeAsync(capabilities.Select((requirement, index) => new StaffPositionCapability
         {
             InstitutionId = institutionId,
             StaffPositionMasterId = entity.Id,
-            StaffCapabilityMasterId = id,
-            IsMandatory = true,
-            DisplayOrder = checked((short)((index + 1) * 10)),
+            StaffCapabilityMasterId = requirement.Id,
+            IsMandatory = requirement.IsMandatory,
+            DisplayOrder = requirement.DisplayOrder > 0 ? requirement.DisplayOrder : checked((short)((index + 1) * 10)),
             AddedById = actorStaffMemberId,
             AddedDateTime = DateTime.UtcNow
         }), cancellationToken);
-        await context.StaffPositionDuties.AddRangeAsync(dutyIds.Select((id, index) => new StaffPositionDuty
+        await context.StaffPositionDuties.AddRangeAsync(duties.Select((requirement, index) => new StaffPositionDuty
         {
             InstitutionId = institutionId,
             StaffPositionMasterId = entity.Id,
-            StaffDutyDefinitionMasterId = id,
-            IsMandatory = true,
-            DisplayOrder = checked((short)((index + 1) * 10)),
+            StaffDutyDefinitionMasterId = requirement.Id,
+            IsMandatory = requirement.IsMandatory,
+            DisplayOrder = requirement.DisplayOrder > 0 ? requirement.DisplayOrder : checked((short)((index + 1) * 10)),
             AddedById = actorStaffMemberId,
             AddedDateTime = DateTime.UtcNow
         }), cancellationToken);
@@ -244,14 +436,13 @@ public sealed class StaffProfessionalStructureRepository(SkolenzaDbContext conte
                 item => item.Id == id && item.InstitutionId == institutionId && !item.IsSoftDeleted,
                 cancellationToken)
             ?? throw new KeyNotFoundException("Position was not found.");
-        if (await context.StaffPositionAssignments.AnyAsync(item => item.StaffPositionMasterId == id, cancellationToken))
+        if (await context.StaffPositionAssignments.AnyAsync(item => item.StaffPositionMasterId == id && item.IsActive, cancellationToken))
         {
             throw new ConflictException("This position has StaffMember assignments and cannot be deleted. Deactivate it instead.");
         }
         position.IsActive = false;
-        position.IsSoftDeleted = true;
-        position.SoftDeletedById = actorStaffMemberId;
-        position.DeletedDateTime = DateTime.UtcNow;
+        position.UpdatedById = actorStaffMemberId;
+        position.UpdatedDateTime = DateTime.UtcNow;
         await context.SaveChangesAsync(cancellationToken);
     }
 
@@ -412,7 +603,7 @@ public sealed class StaffProfessionalStructureRepository(SkolenzaDbContext conte
                 item => item.Id == staffMemberId && item.InstitutionId == institutionId && item.IsSoftDeleted != true,
                 cancellationToken)
             ?? throw new ValidationErrorException("The selected StaffMember is unavailable.");
-        if (staffMember.StaffCategoryId != position.StaffCategoryId)
+        if (staffMember.InstitutionStaffCategoryMasterId != position.InstitutionStaffCategoryMasterId)
         {
             throw new ValidationErrorException("The selected position is not available for the StaffMember category.");
         }
@@ -470,26 +661,30 @@ public sealed class StaffProfessionalStructureRepository(SkolenzaDbContext conte
     {
         var ids = positions.Select(item => item.Id).ToList();
         var familyIds = positions.Select(item => item.StaffJobFamilyMasterId).Distinct().ToList();
-        var categoryIds = positions.Select(item => item.StaffCategoryId).Distinct().ToList();
+        var institutionCategoryIds = positions.Where(item => item.InstitutionStaffCategoryMasterId.HasValue)
+            .Select(item => item.InstitutionStaffCategoryMasterId!.Value).Distinct().ToList();
         var families = await context.StaffJobFamilyMasters.AsNoTracking().Where(item => familyIds.Contains(item.Id)).ToDictionaryAsync(item => item.Id, cancellationToken);
-        var categories = await context.StaffCategories.AsNoTracking().Where(item => categoryIds.Contains(item.Id)).ToDictionaryAsync(item => item.Id, cancellationToken);
+        var categories = await context.InstitutionStaffCategoryMasters.AsNoTracking()
+            .Where(item => institutionCategoryIds.Contains(item.Id)).ToDictionaryAsync(item => item.Id, cancellationToken);
         var capabilityRows = await (
             from mapping in context.StaffPositionCapabilities.AsNoTracking()
             join master in context.StaffCapabilityMasters.AsNoTracking() on mapping.StaffCapabilityMasterId equals master.Id
             where ids.Contains(mapping.StaffPositionMasterId) && mapping.InstitutionId == institutionId
-            select new { mapping.StaffPositionMasterId, Master = master }).ToListAsync(cancellationToken);
+            select new { mapping.StaffPositionMasterId, mapping.IsMandatory, mapping.DisplayOrder, Master = master }).ToListAsync(cancellationToken);
         var dutyRows = await (
             from mapping in context.StaffPositionDuties.AsNoTracking()
             join master in context.StaffDutyDefinitionMasters.AsNoTracking() on mapping.StaffDutyDefinitionMasterId equals master.Id
             where ids.Contains(mapping.StaffPositionMasterId) && mapping.InstitutionId == institutionId
-            select new { mapping.StaffPositionMasterId, Master = master }).ToListAsync(cancellationToken);
+            select new { mapping.StaffPositionMasterId, mapping.IsMandatory, mapping.DisplayOrder, Master = master }).ToListAsync(cancellationToken);
         return positions.Select(position => new StaffPositionMasterResponseDTO
         {
             Id = position.Id,
             StaffJobFamilyMasterId = position.StaffJobFamilyMasterId,
             JobFamilyName = families[position.StaffJobFamilyMasterId].Name,
+            InstitutionStaffCategoryMasterId = position.InstitutionStaffCategoryMasterId,
             StaffCategoryId = position.StaffCategoryId,
-            StaffCategoryName = categories[position.StaffCategoryId].Name,
+            StaffCategoryName = position.InstitutionStaffCategoryMasterId.HasValue && categories.TryGetValue(position.InstitutionStaffCategoryMasterId.Value, out var category)
+                ? category.Name : string.Empty,
             DepartmentId = position.DepartmentId,
             DesignationId = position.DesignationId,
             Code = position.Code,
@@ -497,10 +692,29 @@ public sealed class StaffProfessionalStructureRepository(SkolenzaDbContext conte
             Description = position.Description,
             DisplayOrder = position.DisplayOrder,
             IsActive = position.IsActive,
-            Capabilities = capabilityRows.Where(item => item.StaffPositionMasterId == position.Id).Select(item => MapMaster(item.Master)).ToList(),
-            Duties = dutyRows.Where(item => item.StaffPositionMasterId == position.Id).Select(item => MapMaster(item.Master)).ToList()
+            Capabilities = capabilityRows.Where(item => item.StaffPositionMasterId == position.Id)
+                .OrderBy(item => item.DisplayOrder).Select(item => MapRequirement(item.Master, item.IsMandatory)).ToList(),
+            Duties = dutyRows.Where(item => item.StaffPositionMasterId == position.Id)
+                .OrderBy(item => item.DisplayOrder).Select(item => MapRequirement(item.Master, item.IsMandatory)).ToList()
         }).ToList();
     }
+
+    private static StaffPositionRequirementResponseDTO MapRequirement(
+        InstitutionMasterEntity master,
+        bool isMandatory) => new()
+    {
+        Id = master.Id,
+        Code = master.Code,
+        Name = master.Name,
+        Description = master.Description,
+        DisplayOrder = master.DisplayOrder,
+        IsActive = master.IsActive,
+        RequiresCertification = master is StaffCapabilityMaster capability && capability.RequiresCertification,
+        CertificationValidityRequired = master is StaffCapabilityMaster capabilityWithValidity && capabilityWithValidity.CertificationValidityRequired,
+        DefaultFrequency = master is StaffDutyDefinitionMaster duty ? duty.DefaultFrequency : null,
+        RequiresEvidence = master is StaffDutyDefinitionMaster dutyWithEvidence && dutyWithEvidence.RequiresEvidence,
+        IsMandatory = isMandatory
+    };
 
     private static async Task<List<StaffProfessionalMasterResponseDTO>> QueryMasters<TEntity>(
         IQueryable<TEntity> source,

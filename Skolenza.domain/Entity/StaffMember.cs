@@ -33,6 +33,8 @@ public partial class StaffMember
 
     public short? StaffCategoryId { get; set; }
 
+    public int? InstitutionStaffCategoryMasterId { get; set; }
+
     public int? DepartmentId { get; set; }
 
     public string? OfficialEmail { get; set; }

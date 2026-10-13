@@ -1130,6 +1130,7 @@ namespace skolenza.persistance.Repositories
 
                         StaffEmploymentTypeId = x.StaffMember.StaffEmploymentTypeId ?? 0,
                         StaffCategoryId = x.StaffMember.StaffCategoryId,
+                        InstitutionStaffCategoryMasterId = x.StaffMember.InstitutionStaffCategoryMasterId,
                         StaffCategoryName = x.StaffMember.StaffCategoryId.HasValue
                             ? staffCategoryLookup.GetValueOrDefault(x.StaffMember.StaffCategoryId.Value)
                             : null,
@@ -2265,6 +2266,7 @@ namespace skolenza.persistance.Repositories
                    EmergencyContactNumber = emp.EmergencyContactNumber,
                    StaffEmploymentTypeId = emp.StaffEmploymentTypeId ?? 0,
                    StaffCategoryId = emp.StaffCategoryId,
+                   InstitutionStaffCategoryMasterId = emp.InstitutionStaffCategoryMasterId,
                    Type = empType != null ? empType.TypeName : null,
                    DateOfBirth = emp.DateOfBirth,
                    DateOfOnBoarding = emp.DateOfOnBoarding,
@@ -2413,6 +2415,7 @@ namespace skolenza.persistance.Repositories
                          EmergencyContactNumber = emp.EmergencyContactNumber,
                          StaffEmploymentTypeId = emp.StaffEmploymentTypeId ?? 0,
                          StaffCategoryId = emp.StaffCategoryId,
+                         InstitutionStaffCategoryMasterId = emp.InstitutionStaffCategoryMasterId,
                          Type = empType != null ? empType.TypeName : null,
                          DateOfBirth = emp.DateOfBirth,
                          DateOfOnBoarding = emp.DateOfOnBoarding,

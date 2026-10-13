@@ -26,6 +26,8 @@ public sealed class StaffProfessionalStructureTests
             Assert.That(context.Model.FindEntityType(typeof(StaffCapabilityMaster))?.GetTableName(), Is.EqualTo("StaffCapabilityMaster"));
             Assert.That(context.Model.FindEntityType(typeof(StaffDutyDefinitionMaster))?.GetTableName(), Is.EqualTo("StaffDutyDefinitionMaster"));
             Assert.That(context.Model.FindEntityType(typeof(StaffPositionMaster))?.GetTableName(), Is.EqualTo("StaffPositionMaster"));
+            Assert.That(context.Model.FindEntityType(typeof(InstitutionStaffCategoryMaster))?.GetTableName(), Is.EqualTo("InstitutionStaffCategoryMaster"));
+            Assert.That(context.Model.FindEntityType(typeof(StaffCategoryJobFamily))?.GetTableName(), Is.EqualTo("StaffCategoryJobFamily"));
         });
     }
 
@@ -35,7 +37,9 @@ public sealed class StaffProfessionalStructureTests
         Assert.Multiple(() =>
         {
             Assert.That(typeof(CreateBaseStaffMemberRequestDTO).GetProperty("StaffPositionMasterId"), Is.Not.Null);
+            Assert.That(typeof(CreateBaseStaffMemberRequestDTO).GetProperty("InstitutionStaffCategoryMasterId"), Is.Not.Null);
             Assert.That(typeof(UpdateStaffMemberRequestOfficialDTO).GetProperty("StaffPositionMasterId"), Is.Not.Null);
+            Assert.That(typeof(UpdateStaffMemberRequestOfficialDTO).GetProperty("InstitutionStaffCategoryMasterId"), Is.Not.Null);
             Assert.That(typeof(GetBaseStaffMemberResponseDTO).GetProperty("ProfessionalProfile"), Is.Not.Null);
         });
     }
@@ -47,6 +51,9 @@ public sealed class StaffProfessionalStructureTests
         Assert.Multiple(() =>
         {
             Assert.That(methods, Does.Contain("GetMasters"));
+            Assert.That(methods, Does.Contain("GetCategories"));
+            Assert.That(methods, Does.Contain("SetCategoryJobFamilies"));
+            Assert.That(methods, Does.Contain("SetCategoryActive"));
             Assert.That(methods, Does.Contain("CreateMaster"));
             Assert.That(methods, Does.Contain("UpdateMaster"));
             Assert.That(methods, Does.Contain("DeleteMaster"));
@@ -69,6 +76,22 @@ public sealed class StaffProfessionalStructureTests
             Assert.That(script, Does.Contain("\"StaffDutyDefinitionMaster\""));
             Assert.That(script, Does.Contain("ValidatePrimaryStaffPositionAssignment"));
             Assert.That(script, Does.Contain("SeedInstitutionStaffProfessionalMasters"));
+        });
+    }
+
+    [Test]
+    public void Category_hierarchy_migration_is_idempotent_and_backfills_staff_and_positions()
+    {
+        var repositoryRoot = Path.GetFullPath(Path.Combine(TestContext.CurrentContext.TestDirectory, "..", "..", "..", ".."));
+        var script = File.ReadAllText(Path.Combine(repositoryRoot, "database-scripts", "migrations", "20261013_AddInstitutionStaffCategoryHierarchy.sql"));
+        Assert.Multiple(() =>
+        {
+            Assert.That(script, Does.Contain("CREATE TABLE IF NOT EXISTS skolenza.\"InstitutionStaffCategoryMaster\""));
+            Assert.That(script, Does.Contain("CREATE TABLE IF NOT EXISTS skolenza.\"StaffCategoryJobFamily\""));
+            Assert.That(script, Does.Contain("SeedInstitutionStaffCategoryHierarchy"));
+            Assert.That(script, Does.Contain("UPDATE skolenza.\"StaffPositionMaster\""));
+            Assert.That(script, Does.Contain("UPDATE skolenza.\"StaffMember\""));
+            Assert.That(script, Does.Contain("pg_constraint"));
         });
     }
 }

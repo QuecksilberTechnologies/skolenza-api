@@ -42,7 +42,7 @@ namespace skolenza.application.DTOS.Staff.BaseStaffMember
         public int? CountryId { get; set; }
         public int? DepartmentId { get; set; }
         public int? StaffEmploymentTypeId { get; set; }
-        public short? StaffCategoryId { get; set; }
+        public int? InstitutionStaffCategoryMasterId { get; set; }
         public int? StaffPositionMasterId { get; set; }
         public int? GenderId { get; set; }           
         public DateTime? DateOfOnBoarding { get; set; }

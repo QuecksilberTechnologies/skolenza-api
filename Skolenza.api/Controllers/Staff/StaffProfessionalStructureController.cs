@@ -12,6 +12,44 @@ namespace skolenza.api.Controllers.Staff;
 [Route("api/Staff/professional-structure")]
 public sealed class StaffProfessionalStructureController(IMediator mediator) : ControllerBase
 {
+    /// <summary>Used-In-Angular: returns institution-owned Staff Categories with dependency counts.</summary>
+    [HttpGet("categories")]
+    public async Task<IActionResult> GetCategories(
+        [FromQuery] bool activeOnly,
+        [FromQuery] StaffProfessionalPermissionRequestDTO dto,
+        CancellationToken cancellationToken) =>
+        Ok(await mediator.Send(new GetInstitutionStaffCategoriesQuery(activeOnly, dto), cancellationToken));
+
+    /// <summary>Used-In-Angular: creates an institution-owned Staff Category.</summary>
+    [HttpPost("categories")]
+    public async Task<IActionResult> CreateCategory([FromBody] InstitutionStaffCategoryRequestDTO dto, CancellationToken cancellationToken) =>
+        Ok(await mediator.Send(new SaveInstitutionStaffCategoryCommand(dto), cancellationToken));
+
+    /// <summary>Used-In-Angular: updates an institution-owned Staff Category.</summary>
+    [HttpPut("categories/{id:int}")]
+    public async Task<IActionResult> UpdateCategory(int id, [FromBody] InstitutionStaffCategoryRequestDTO dto, CancellationToken cancellationToken)
+    {
+        dto.Id = id;
+        return Ok(await mediator.Send(new SaveInstitutionStaffCategoryCommand(dto), cancellationToken));
+    }
+
+    /// <summary>Used-In-Angular: replaces the active Job Family mappings for one Staff Category.</summary>
+    [HttpPut("categories/{id:int}/job-families")]
+    public async Task<IActionResult> SetCategoryJobFamilies(int id, [FromBody] StaffCategoryJobFamilyRequestDTO dto, CancellationToken cancellationToken)
+    {
+        dto.InstitutionStaffCategoryMasterId = id;
+        return Ok(await mediator.Send(new SetStaffCategoryJobFamiliesCommand(dto), cancellationToken));
+    }
+
+    /// <summary>Used-In-Angular: dependency-safe Staff Category activation or deactivation.</summary>
+    [HttpPut("categories/{id:int}/active/{isActive:bool}")]
+    public async Task<IActionResult> SetCategoryActive(
+        int id,
+        bool isActive,
+        [FromBody] StaffProfessionalPermissionRequestDTO dto,
+        CancellationToken cancellationToken) =>
+        Ok(await mediator.Send(new SetInstitutionStaffCategoryActiveCommand(id, isActive, dto), cancellationToken));
+
     [HttpGet("masters/{masterType}")]
     public async Task<IActionResult> GetMasters(
         StaffProfessionalMasterType masterType,
@@ -38,6 +76,7 @@ public sealed class StaffProfessionalStructureController(IMediator mediator) : C
         return Ok(await mediator.Send(new SaveStaffProfessionalMasterCommand(masterType, dto), cancellationToken));
     }
 
+    /// <summary>Used-In-Angular: dependency-safe deactivation; inactive records remain editable and can be reactivated.</summary>
     [HttpDelete("masters/{masterType}/{id:int}")]
     public async Task<IActionResult> DeleteMaster(
         StaffProfessionalMasterType masterType,
@@ -52,10 +91,10 @@ public sealed class StaffProfessionalStructureController(IMediator mediator) : C
     [HttpGet("positions")]
     public async Task<IActionResult> GetPositions(
         [FromQuery] bool activeOnly,
-        [FromQuery] short? staffCategoryId,
+        [FromQuery] int? institutionStaffCategoryMasterId,
         [FromQuery] StaffProfessionalPermissionRequestDTO dto,
         CancellationToken cancellationToken) =>
-        Ok(await mediator.Send(new GetStaffPositionsQuery(activeOnly, staffCategoryId, dto), cancellationToken));
+        Ok(await mediator.Send(new GetStaffPositionsQuery(activeOnly, institutionStaffCategoryMasterId, dto), cancellationToken));
 
     [HttpPost("positions")]
     public async Task<IActionResult> CreatePosition([FromBody] StaffPositionMasterRequestDTO dto, CancellationToken cancellationToken) =>
@@ -68,6 +107,7 @@ public sealed class StaffProfessionalStructureController(IMediator mediator) : C
         return Ok(await mediator.Send(new SaveStaffPositionCommand(dto), cancellationToken));
     }
 
+    /// <summary>Used-In-Angular: dependency-safe deactivation; inactive positions remain editable and can be reactivated.</summary>
     [HttpDelete("positions/{id:int}")]
     public async Task<IActionResult> DeletePosition(int id, [FromQuery] StaffProfessionalDeleteRequestDTO dto, CancellationToken cancellationToken)
     {

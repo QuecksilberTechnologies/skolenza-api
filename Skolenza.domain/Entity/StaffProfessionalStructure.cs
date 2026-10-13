@@ -22,6 +22,28 @@ public abstract class InstitutionMasterEntity
 
 public sealed class StaffJobFamilyMaster : InstitutionMasterEntity;
 
+/// <summary>
+/// Institution-owned category label backed by one stable platform StaffCategory type.
+/// </summary>
+public sealed class InstitutionStaffCategoryMaster : InstitutionMasterEntity
+{
+    public short StaffCategoryTypeId { get; set; }
+}
+
+/// <summary>Explicitly allows a Job Family under an institution Staff Category.</summary>
+public sealed class StaffCategoryJobFamily
+{
+    public long Id { get; set; }
+    public long InstitutionId { get; set; }
+    public int InstitutionStaffCategoryMasterId { get; set; }
+    public int StaffJobFamilyMasterId { get; set; }
+    public bool IsActive { get; set; } = true;
+    public long? AddedById { get; set; }
+    public DateTime AddedDateTime { get; set; }
+    public long? UpdatedById { get; set; }
+    public DateTime? UpdatedDateTime { get; set; }
+}
+
 public sealed class StaffCapabilityMaster : InstitutionMasterEntity
 {
     public bool RequiresCertification { get; set; }
@@ -37,6 +59,7 @@ public sealed class StaffDutyDefinitionMaster : InstitutionMasterEntity
 public sealed class StaffPositionMaster : InstitutionMasterEntity
 {
     public int StaffJobFamilyMasterId { get; set; }
+    public int? InstitutionStaffCategoryMasterId { get; set; }
     public short StaffCategoryId { get; set; }
     public int? DepartmentId { get; set; }
     public int? DesignationId { get; set; }

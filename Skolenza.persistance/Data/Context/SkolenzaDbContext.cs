@@ -177,6 +177,10 @@ namespace skolenza.persistance.Data.Context
 
         public virtual DbSet<StaffJobFamilyMaster> StaffJobFamilyMasters { get; set; }
 
+        public virtual DbSet<InstitutionStaffCategoryMaster> InstitutionStaffCategoryMasters { get; set; }
+
+        public virtual DbSet<StaffCategoryJobFamily> StaffCategoryJobFamilies { get; set; }
+
         public virtual DbSet<StaffPositionMaster> StaffPositionMasters { get; set; }
 
         public virtual DbSet<StaffCapabilityMaster> StaffCapabilityMasters { get; set; }
@@ -1138,6 +1142,8 @@ namespace skolenza.persistance.Data.Context
 
             entity.HasIndex(e => e.Id, "UX_StaffMember_InstitutionId_Null_OnlyOnce").IsUnique();
 
+            entity.HasIndex(e => e.InstitutionStaffCategoryMasterId);
+
             entity.Property(e => e.AddedDateTime).HasDefaultValueSql("CURRENT_TIMESTAMP");
             entity.Property(e => e.BloodGroup).HasMaxLength(10);
             entity.Property(e => e.Description).HasMaxLength(500);
@@ -1176,6 +1182,11 @@ namespace skolenza.persistance.Data.Context
                 .HasForeignKey(d => d.StaffCategoryId)
                 .OnDelete(DeleteBehavior.Restrict)
                 .HasConstraintName("FK_StaffMember_StaffCategory");
+
+            entity.HasOne<InstitutionStaffCategoryMaster>().WithMany()
+                .HasForeignKey(d => d.InstitutionStaffCategoryMasterId)
+                .OnDelete(DeleteBehavior.Restrict)
+                .HasConstraintName("FK_StaffMember_InstitutionCategory");
 
             entity.HasOne(d => d.Gender).WithMany(p => p.StaffMember)
                 .HasForeignKey(d => d.GenderId)
@@ -2968,6 +2979,7 @@ namespace skolenza.persistance.Data.Context
                 entity.Property(item => item.AddedDateTime).HasDefaultValueSql("CURRENT_TIMESTAMP");
             });
             ConfigureInstitutionMaster<StaffJobFamilyMaster>(modelBuilder, "StaffJobFamilyMaster");
+            ConfigureInstitutionMaster<InstitutionStaffCategoryMaster>(modelBuilder, "InstitutionStaffCategoryMaster");
             ConfigureInstitutionMaster<StaffCapabilityMaster>(modelBuilder, "StaffCapabilityMaster");
             ConfigureInstitutionMaster<StaffDutyDefinitionMaster>(modelBuilder, "StaffDutyDefinitionMaster");
             ConfigureInstitutionMaster<StaffPositionMaster>(modelBuilder, "StaffPositionMaster");
@@ -2988,6 +3000,34 @@ namespace skolenza.persistance.Data.Context
             {
                 entity.HasIndex(item => item.StaffJobFamilyMasterId);
                 entity.HasIndex(item => item.StaffCategoryId);
+                entity.HasIndex(item => item.InstitutionStaffCategoryMasterId);
+                entity.HasOne<InstitutionStaffCategoryMaster>().WithMany()
+                    .HasForeignKey(item => item.InstitutionStaffCategoryMasterId)
+                    .OnDelete(DeleteBehavior.Restrict)
+                    .HasConstraintName("FK_StaffPositionMaster_InstitutionCategory");
+            });
+
+            modelBuilder.Entity<InstitutionStaffCategoryMaster>(entity =>
+            {
+                entity.HasIndex(item => item.StaffCategoryTypeId);
+            });
+
+            modelBuilder.Entity<StaffCategoryJobFamily>(entity =>
+            {
+                entity.ToTable("StaffCategoryJobFamily", "skolenza");
+                entity.HasKey(item => item.Id);
+                entity.HasIndex(item => new
+                {
+                    item.InstitutionId,
+                    item.InstitutionStaffCategoryMasterId,
+                    item.StaffJobFamilyMasterId
+                }).IsUnique();
+                entity.HasOne<InstitutionStaffCategoryMaster>().WithMany()
+                    .HasForeignKey(item => item.InstitutionStaffCategoryMasterId)
+                    .OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne<StaffJobFamilyMaster>().WithMany()
+                    .HasForeignKey(item => item.StaffJobFamilyMasterId)
+                    .OnDelete(DeleteBehavior.Restrict);
             });
 
             modelBuilder.Entity<StaffPositionCapability>(entity =>

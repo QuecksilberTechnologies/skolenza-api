@@ -650,7 +650,7 @@ namespace skolenza.application.Features.RegistrationCmd.Handlers
                 var administratorPosition = (await _unitOfWork.StaffProfessionalStructureRepository.GetPositionsAsync(
                         newInstitutionId,
                         true,
-                        AppConstants.StaffCategories.Administrative,
+                        null,
                         cancellationToken))
                     .SingleOrDefault(position => string.Equals(
                         position.Code,

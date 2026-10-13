@@ -857,3 +857,26 @@ Keep the earlier report available.
 
 
 
+
+## LOCK-STAFF-INSTITUTION-CATEGORY-HIERARCHY-019: Institution-owned professional hierarchy
+
+### Locked behavior
+
+- `StaffCategory` remains the central platform semantic catalogue; institutions manage working copies in `InstitutionStaffCategoryMaster`.
+- Active `StaffCategoryJobFamily` mappings are the authoritative Category to Job Family hierarchy. A Position and StaffMember use an institution-owned category and retain the canonical type only for shared semantics.
+- Position writes reject cross-tenant, inactive or unmapped Category/Job Family combinations. Position capability and duty mappings preserve required versus optional status.
+- Deactivation is tenant-isolated and dependency-safe. Records remain available for reactivation; business history is not soft-deleted by the UI deactivate action.
+- Staff create and official update accept `InstitutionStaffCategoryMasterId`; the API derives `StaffCategoryId` and validates the selected Position against the same institution category.
+
+### Protected areas and gate
+
+- Institution category, Category/Job Family mapping, Position and StaffMember entities and EF configuration.
+- Professional structure repository, handlers, controller, migration/rollback and Angular Staff Professional Structure/create/edit flows.
+
+```powershell
+dotnet test .\skolenza.automationtests\Skolenza.automationtests.csproj -c Release --no-restore --filter "TestCategory=StaffAcademicStructure|TestCategory=StaffProfessionalStructure|TestCategory=StaffCategoryCatalogue" --logger "console;verbosity=minimal"
+dotnet build .\Skolenza.sln -c Release --no-restore --nologo
+bunx ng build --no-progress
+```
+
+Expected: 13 focused Staff tests pass with zero failures/skips; backend Release and Angular production builds succeed. The idempotent migration must leave zero institution-owned active Position or categorized StaffMember rows without `InstitutionStaffCategoryMasterId` in both local and Render databases. Evidence: [2026-10-13](docs/testing/staff/professional-category-hierarchy/2026-10-13.md).

@@ -12,6 +12,18 @@ namespace skolenza.application.Features.StaffMemberCmd.ProfessionalStructure;
 
 #region Requests
 
+public sealed record GetInstitutionStaffCategoriesQuery(bool ActiveOnly, StaffProfessionalPermissionRequestDTO DTO)
+    : IRequest<ApiResponse<List<InstitutionStaffCategoryResponseDTO>>>;
+
+public sealed record SaveInstitutionStaffCategoryCommand(InstitutionStaffCategoryRequestDTO DTO)
+    : IRequest<ApiResponse<InstitutionStaffCategoryResponseDTO>>;
+
+public sealed record SetStaffCategoryJobFamiliesCommand(StaffCategoryJobFamilyRequestDTO DTO)
+    : IRequest<ApiResponse<bool>>;
+
+public sealed record SetInstitutionStaffCategoryActiveCommand(int Id, bool IsActive, StaffProfessionalPermissionRequestDTO DTO)
+    : IRequest<ApiResponse<bool>>;
+
 public sealed record GetStaffProfessionalMastersQuery(
     StaffProfessionalMasterType MasterType,
     bool ActiveOnly,
@@ -30,7 +42,7 @@ public sealed record DeleteStaffProfessionalMasterCommand(
 
 public sealed record GetStaffPositionsQuery(
     bool ActiveOnly,
-    short? StaffCategoryId,
+    int? InstitutionStaffCategoryMasterId,
     StaffProfessionalPermissionRequestDTO DTO)
     : IRequest<ApiResponse<List<StaffPositionMasterResponseDTO>>>;
 
@@ -49,6 +61,54 @@ public sealed record VerifyStaffCapabilityCommand(VerifyStaffCapabilityRequestDT
 #endregion
 
 #region Handlers
+
+public sealed class GetInstitutionStaffCategoriesQueryHandler(IUnitOfWork unitOfWork, ICommonRequestService commonRequestService)
+    : IRequestHandler<GetInstitutionStaffCategoriesQuery, ApiResponse<List<InstitutionStaffCategoryResponseDTO>>>
+{
+    public async Task<ApiResponse<List<InstitutionStaffCategoryResponseDTO>>> Handle(GetInstitutionStaffCategoriesQuery request, CancellationToken cancellationToken)
+    {
+        var actor = await ProfessionalStructureRequestContext.ResolveAsync(commonRequestService);
+        var data = await unitOfWork.StaffProfessionalStructureRepository.GetInstitutionCategoriesAsync(
+            actor.InstitutionId, request.ActiveOnly, cancellationToken);
+        return ApiResponse<List<InstitutionStaffCategoryResponseDTO>>.Success(data, "Institution Staff Categories retrieved successfully.");
+    }
+}
+
+public sealed class SaveInstitutionStaffCategoryCommandHandler(IUnitOfWork unitOfWork, ICommonRequestService commonRequestService)
+    : IRequestHandler<SaveInstitutionStaffCategoryCommand, ApiResponse<InstitutionStaffCategoryResponseDTO>>
+{
+    public async Task<ApiResponse<InstitutionStaffCategoryResponseDTO>> Handle(SaveInstitutionStaffCategoryCommand request, CancellationToken cancellationToken)
+    {
+        var actor = await ProfessionalStructureRequestContext.ResolveAsync(commonRequestService);
+        var data = await unitOfWork.StaffProfessionalStructureRepository.SaveInstitutionCategoryAsync(
+            request.DTO, actor.InstitutionId, actor.StaffMemberId, cancellationToken);
+        return ApiResponse<InstitutionStaffCategoryResponseDTO>.Success(data, "Institution Staff Category saved successfully.");
+    }
+}
+
+public sealed class SetStaffCategoryJobFamiliesCommandHandler(IUnitOfWork unitOfWork, ICommonRequestService commonRequestService)
+    : IRequestHandler<SetStaffCategoryJobFamiliesCommand, ApiResponse<bool>>
+{
+    public async Task<ApiResponse<bool>> Handle(SetStaffCategoryJobFamiliesCommand request, CancellationToken cancellationToken)
+    {
+        var actor = await ProfessionalStructureRequestContext.ResolveAsync(commonRequestService);
+        await unitOfWork.StaffProfessionalStructureRepository.SetCategoryJobFamiliesAsync(
+            request.DTO, actor.InstitutionId, actor.StaffMemberId, cancellationToken);
+        return ApiResponse<bool>.Success(true, "Staff Category Job Families saved successfully.");
+    }
+}
+
+public sealed class SetInstitutionStaffCategoryActiveCommandHandler(IUnitOfWork unitOfWork, ICommonRequestService commonRequestService)
+    : IRequestHandler<SetInstitutionStaffCategoryActiveCommand, ApiResponse<bool>>
+{
+    public async Task<ApiResponse<bool>> Handle(SetInstitutionStaffCategoryActiveCommand request, CancellationToken cancellationToken)
+    {
+        var actor = await ProfessionalStructureRequestContext.ResolveAsync(commonRequestService);
+        await unitOfWork.StaffProfessionalStructureRepository.SetInstitutionCategoryActiveAsync(
+            request.Id, request.IsActive, actor.InstitutionId, actor.StaffMemberId, cancellationToken);
+        return ApiResponse<bool>.Success(true, request.IsActive ? "Staff Category activated successfully." : "Staff Category deactivated successfully.");
+    }
+}
 
 public sealed class GetStaffProfessionalMastersQueryHandler(
     IUnitOfWork unitOfWork,
@@ -92,7 +152,7 @@ public sealed class DeleteStaffProfessionalMasterCommandHandler(
         var actor = await ProfessionalStructureRequestContext.ResolveAsync(commonRequestService);
         await unitOfWork.StaffProfessionalStructureRepository.DeleteMasterAsync(
             request.MasterType, request.DTO.Id, actor.InstitutionId, actor.StaffMemberId, cancellationToken);
-        return ApiResponse<bool>.Success(true, "Professional master deleted successfully.");
+        return ApiResponse<bool>.Success(true, "Professional master deactivated successfully.");
     }
 }
 
@@ -105,7 +165,7 @@ public sealed class GetStaffPositionsQueryHandler(
     {
         var actor = await ProfessionalStructureRequestContext.ResolveAsync(commonRequestService);
         var data = await unitOfWork.StaffProfessionalStructureRepository.GetPositionsAsync(
-            actor.InstitutionId, request.ActiveOnly, request.StaffCategoryId, cancellationToken);
+            actor.InstitutionId, request.ActiveOnly, request.InstitutionStaffCategoryMasterId, cancellationToken);
         return ApiResponse<List<StaffPositionMasterResponseDTO>>.Success(data, "Positions retrieved successfully.");
     }
 }
@@ -134,7 +194,7 @@ public sealed class DeleteStaffPositionCommandHandler(
         var actor = await ProfessionalStructureRequestContext.ResolveAsync(commonRequestService);
         await unitOfWork.StaffProfessionalStructureRepository.DeletePositionAsync(
             request.DTO.Id, actor.InstitutionId, actor.StaffMemberId, cancellationToken);
-        return ApiResponse<bool>.Success(true, "Position deleted successfully.");
+        return ApiResponse<bool>.Success(true, "Position deactivated successfully.");
     }
 }
 

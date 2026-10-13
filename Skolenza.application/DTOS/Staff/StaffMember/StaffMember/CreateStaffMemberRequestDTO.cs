@@ -49,7 +49,7 @@ namespace skolenza.application.DTOS.Staff.BaseStaffMember
         public int StaffEmploymentTypeId { get; set; }
 
         [Required]
-        public short StaffCategoryId { get; set; }
+        public int InstitutionStaffCategoryMasterId { get; set; }
 
         [Required]
         public int StaffPositionMasterId { get; set; }
