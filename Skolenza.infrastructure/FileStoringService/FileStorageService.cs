@@ -20,6 +20,7 @@ namespace skolenza.infrastructure.FileStoringService
     {
         private readonly IAmazonS3 _s3Client;
         private readonly string _bucketName;
+        private readonly string _basePath;
 
         public FileStorageService(IConfiguration configuration)
         {
@@ -27,6 +28,7 @@ namespace skolenza.infrastructure.FileStoringService
             var secretKey = configuration["AWSUploads:Secretaccesskey"];
             var region = configuration["AWSUploads:Region"];
             _bucketName = configuration["AWSUploads:BucketName"]!;
+            _basePath = configuration["AWSUploads:BasePath"]?.Trim().Trim('/') ?? string.Empty;
 
 
             _s3Client = new AmazonS3Client(
@@ -43,7 +45,7 @@ namespace skolenza.infrastructure.FileStoringService
 
             var fileExtension = Path.GetExtension(file.FileName);
             // var fileName = $"{Guid.NewGuid()}{fileExtension}";
-            var key = $"{folderPath}/{fileName}{fileExtension}";
+            var key = BuildObjectKey(folderPath, $"{fileName}{fileExtension}");
 
             using var stream = file.OpenReadStream();
 
@@ -94,7 +96,7 @@ namespace skolenza.infrastructure.FileStoringService
             memoryStream.Position = 0;
 
             // ✅ Final S3 Key
-            var key = $"{folderPath}/{fileName}{fileExtension}";
+            var key = BuildObjectKey(folderPath, $"{fileName}{fileExtension}");
 
             var request = new PutObjectRequest
             {
@@ -107,6 +109,14 @@ namespace skolenza.infrastructure.FileStoringService
             await _s3Client.PutObjectAsync(request);
 
             return key;
+        }
+
+        private string BuildObjectKey(string folderPath, string fileName)
+        {
+            var relativePath = $"{folderPath.Trim().Trim('/')}/{fileName.Trim().Trim('/')}";
+            return string.IsNullOrWhiteSpace(_basePath)
+                ? relativePath
+                : $"{_basePath}/{relativePath}";
         }
     }
 }

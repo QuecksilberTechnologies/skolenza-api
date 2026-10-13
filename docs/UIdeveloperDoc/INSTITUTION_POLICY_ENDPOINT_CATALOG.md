@@ -580,9 +580,12 @@ state. It also contains `IsEffective` and `StateReason`, including
   acknowledgement; audit; clone; reject/resubmit/approve.
 - PASS: Policy Type, Definition and Assignment durable imports have live target
   persistence evidence. A repeat assignment reports `Existing`.
-- BLOCKED: document upload/list/delete. Render S3 rejects the configured access
-  key before policy metadata is written. UI should show the API failure and must
-  not claim the document was saved.
+- LOCAL STORAGE PASS: development credentials are stored outside source control
+  through .NET User Secrets. Uploads use the configured bucket and the central
+  `skolenza/` object-key prefix; upload, signed download and cleanup were verified.
+  Render environment configuration and authenticated deployed policy-document
+  acceptance remain pending. UI should continue to show any API storage failure
+  and must not claim the document was saved.
 - FIXED LOCALLY, DEPLOYMENT PENDING: cancelling a terminal bulk job now returns
   conflict instead of successful no-op.
 - PENDING: successful Retry path needs a genuine failed worker row.

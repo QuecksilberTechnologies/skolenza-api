@@ -61,3 +61,4 @@ test run.
 - [Staff legacy identifier retirement (2026-10-13)](staff/legacy-identifiers/2026-10-13.md)
 
 - [Staff professional category hierarchy (2026-10-13)](staff/professional-category-hierarchy/2026-10-13.md)
+- [Development S3 storage prefix and connectivity (2026-10-13)](storage/development-s3-prefix/2026-10-13.md)
