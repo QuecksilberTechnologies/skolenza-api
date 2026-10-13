@@ -18,6 +18,8 @@ public sealed class StaffTimetableAndCommunicationTests
         var types = new Dictionary<Type, string>
         {
             [typeof(TimetablePeriodMaster)] = "TimetablePeriodMaster", [typeof(TimetableEntry)] = "TimetableEntry",
+            [typeof(TimetableWorkflowMaster)] = "TimetableWorkflowMaster", [typeof(TimetableWorkflowStep)] = "TimetableWorkflowStep",
+            [typeof(TimetableApprovalHistory)] = "TimetableApprovalHistory",
             [typeof(SubstituteWorkflowMaster)] = "SubstituteWorkflowMaster", [typeof(SubstituteWorkflowStep)] = "SubstituteWorkflowStep",
             [typeof(StaffAbsenceImpact)] = "StaffAbsenceImpact", [typeof(SubstituteAssignment)] = "SubstituteAssignment",
             [typeof(InstitutionCommunicationSetting)] = "InstitutionCommunicationSetting", [typeof(StaffQueryCategoryMaster)] = "StaffQueryCategoryMaster",
@@ -35,6 +37,12 @@ public sealed class StaffTimetableAndCommunicationTests
         {
             Assert.That(methods, Does.Contain("GetOptions"));
             Assert.That(methods, Does.Contain("GetPeriods")); Assert.That(methods, Does.Contain("CreateEntry"));
+            Assert.That(methods, Does.Contain("GetTimetableWorkflows"));
+            Assert.That(methods, Does.Contain("CreateTimetableWorkflow"));
+            Assert.That(methods, Does.Contain("SubmitTimetableEntry"));
+            Assert.That(methods, Does.Contain("ActOnTimetableEntry"));
+            Assert.That(methods, Does.Contain("CreateTimetableRevision"));
+            Assert.That(methods, Does.Contain("GetTimetableHistory"));
             Assert.That(methods, Does.Contain("GetWorkflows"));
             Assert.That(methods, Does.Contain("GetAbsenceImpacts"));
             Assert.That(methods, Does.Contain("SynchronizeLeaveImpacts"));
@@ -50,6 +58,26 @@ public sealed class StaffTimetableAndCommunicationTests
             Assert.That(methods, Does.Contain("AddMessage"));
             Assert.That(methods, Does.Contain("MarkConversationRead"));
             Assert.That(methods, Does.Contain("CloseConversation"));
+        });
+    }
+
+    [Test]
+    public void Timetable_approval_migration_is_idempotent_and_dynamic()
+    {
+        var root = Path.GetFullPath(Path.Combine(TestContext.CurrentContext.TestDirectory, "..", "..", "..", ".."));
+        var migration = File.ReadAllText(Path.Combine(root, "database-scripts", "20261014_AddDynamicTimetableApproval.sql"));
+        var seed = File.ReadAllText(Path.Combine(root, "database-scripts", "20261014_SeedDynamicTimetableApproval.sql"));
+        Assert.Multiple(() =>
+        {
+            Assert.That(migration, Does.Contain("CREATE TABLE IF NOT EXISTS"));
+            Assert.That(migration, Does.Contain("TimetableWorkflowMaster"));
+            Assert.That(migration, Does.Contain("TimetableApprovalHistory"));
+            Assert.That(migration, Does.Contain("MANAGER"));
+            Assert.That(migration, Does.Contain("ACCESS_ROLE"));
+            Assert.That(migration, Does.Contain("POSITION"));
+            Assert.That(migration, Does.Contain("STAFF_MEMBER"));
+            Assert.That(seed, Does.Contain("ON CONFLICT"));
+            Assert.That(seed, Does.Contain("AllowTeacherDraftProposal"));
         });
     }
 
