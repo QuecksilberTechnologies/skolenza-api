@@ -9,6 +9,12 @@ public interface IStaffAcademicStructureRepository
     Task<TimetablePeriodResponseDTO> SaveTimetablePeriodAsync(TimetablePeriodRequestDTO request, long institutionId, long actorId, CancellationToken token);
     Task<List<TimetableEntryResponseDTO>> GetTimetableEntriesAsync(long institutionId, CancellationToken token);
     Task<TimetableEntryResponseDTO> SaveTimetableEntryAsync(TimetableEntryRequestDTO request, long institutionId, long actorId, CancellationToken token);
+    Task<List<TimetableWorkflowResponseDTO>> GetTimetableWorkflowsAsync(long institutionId, CancellationToken token);
+    Task<TimetableWorkflowResponseDTO> SaveTimetableWorkflowAsync(TimetableWorkflowRequestDTO request, long institutionId, long actorId, CancellationToken token);
+    Task<TimetableEntryResponseDTO> SubmitTimetableEntryAsync(long entryId, long institutionId, long actorId, CancellationToken token);
+    Task<TimetableEntryResponseDTO> ActOnTimetableEntryAsync(long entryId, TimetableActionRequestDTO request, long institutionId, long actorId, CancellationToken token);
+    Task<TimetableEntryResponseDTO> CreateTimetableRevisionAsync(long entryId, long institutionId, long actorId, CancellationToken token);
+    Task<List<TimetableApprovalHistoryResponseDTO>> GetTimetableHistoryAsync(long entryId, long institutionId, CancellationToken token);
     Task<List<SubstituteWorkflowResponseDTO>> GetSubstituteWorkflowsAsync(long institutionId, CancellationToken token);
     Task<SubstituteWorkflowResponseDTO> SaveSubstituteWorkflowAsync(SubstituteWorkflowRequestDTO request, long institutionId, long actorId, CancellationToken token);
     Task<List<StaffAbsenceImpactResponseDTO>> GetAbsenceImpactsAsync(long institutionId, CancellationToken token);

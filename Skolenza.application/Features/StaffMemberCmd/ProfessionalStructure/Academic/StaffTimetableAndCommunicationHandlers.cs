@@ -11,6 +11,12 @@ public sealed record GetTimetablePeriodsQuery(StaffOperationsPermissionRequestDT
 public sealed record SaveTimetablePeriodCommand(TimetablePeriodRequestDTO DTO) : IRequest<ApiResponse<TimetablePeriodResponseDTO>>;
 public sealed record GetTimetableEntriesQuery(StaffOperationsPermissionRequestDTO DTO) : IRequest<ApiResponse<List<TimetableEntryResponseDTO>>>;
 public sealed record SaveTimetableEntryCommand(TimetableEntryRequestDTO DTO) : IRequest<ApiResponse<TimetableEntryResponseDTO>>;
+public sealed record GetTimetableWorkflowsQuery(StaffOperationsPermissionRequestDTO DTO) : IRequest<ApiResponse<List<TimetableWorkflowResponseDTO>>>;
+public sealed record SaveTimetableWorkflowCommand(TimetableWorkflowRequestDTO DTO) : IRequest<ApiResponse<TimetableWorkflowResponseDTO>>;
+public sealed record SubmitTimetableEntryCommand(long EntryId, StaffOperationsPermissionRequestDTO DTO) : IRequest<ApiResponse<TimetableEntryResponseDTO>>;
+public sealed record ActOnTimetableEntryCommand(long EntryId, TimetableActionRequestDTO DTO) : IRequest<ApiResponse<TimetableEntryResponseDTO>>;
+public sealed record CreateTimetableRevisionCommand(long EntryId, StaffOperationsPermissionRequestDTO DTO) : IRequest<ApiResponse<TimetableEntryResponseDTO>>;
+public sealed record GetTimetableHistoryQuery(long EntryId, StaffOperationsPermissionRequestDTO DTO) : IRequest<ApiResponse<List<TimetableApprovalHistoryResponseDTO>>>;
 public sealed record GetSubstituteWorkflowsQuery(StaffOperationsPermissionRequestDTO DTO) : IRequest<ApiResponse<List<SubstituteWorkflowResponseDTO>>>;
 public sealed record SaveSubstituteWorkflowCommand(SubstituteWorkflowRequestDTO DTO) : IRequest<ApiResponse<SubstituteWorkflowResponseDTO>>;
 public sealed record GetStaffAbsenceImpactsQuery(StaffOperationsPermissionRequestDTO DTO) : IRequest<ApiResponse<List<StaffAbsenceImpactResponseDTO>>>;
@@ -68,6 +74,54 @@ public sealed class GetTimetableEntriesQueryHandler(IUnitOfWork unit, ICommonReq
 public sealed class SaveTimetableEntryCommandHandler(IUnitOfWork unit, ICommonRequestService common) : IRequestHandler<SaveTimetableEntryCommand, ApiResponse<TimetableEntryResponseDTO>>
 {
     public async Task<ApiResponse<TimetableEntryResponseDTO>> Handle(SaveTimetableEntryCommand request, CancellationToken token) { var actor = await StaffOperationsContext.ResolveAsync(common); return ApiResponse<TimetableEntryResponseDTO>.Success(await unit.StaffAcademicStructureRepository.SaveTimetableEntryAsync(request.DTO, actor.InstitutionId, actor.StaffMemberId, token), "Timetable entry saved successfully."); }
+}
+public sealed class GetTimetableWorkflowsQueryHandler(IUnitOfWork unit, ICommonRequestService common) : IRequestHandler<GetTimetableWorkflowsQuery, ApiResponse<List<TimetableWorkflowResponseDTO>>>
+{
+    public async Task<ApiResponse<List<TimetableWorkflowResponseDTO>>> Handle(GetTimetableWorkflowsQuery request, CancellationToken token)
+    {
+        var actor = await StaffOperationsContext.ResolveAsync(common);
+        return ApiResponse<List<TimetableWorkflowResponseDTO>>.Success(await unit.StaffAcademicStructureRepository.GetTimetableWorkflowsAsync(actor.InstitutionId, token), "Timetable workflows retrieved successfully.");
+    }
+}
+public sealed class SaveTimetableWorkflowCommandHandler(IUnitOfWork unit, ICommonRequestService common) : IRequestHandler<SaveTimetableWorkflowCommand, ApiResponse<TimetableWorkflowResponseDTO>>
+{
+    public async Task<ApiResponse<TimetableWorkflowResponseDTO>> Handle(SaveTimetableWorkflowCommand request, CancellationToken token)
+    {
+        var actor = await StaffOperationsContext.ResolveAsync(common);
+        return ApiResponse<TimetableWorkflowResponseDTO>.Success(await unit.StaffAcademicStructureRepository.SaveTimetableWorkflowAsync(request.DTO, actor.InstitutionId, actor.StaffMemberId, token), "Timetable workflow saved successfully.");
+    }
+}
+public sealed class SubmitTimetableEntryCommandHandler(IUnitOfWork unit, ICommonRequestService common) : IRequestHandler<SubmitTimetableEntryCommand, ApiResponse<TimetableEntryResponseDTO>>
+{
+    public async Task<ApiResponse<TimetableEntryResponseDTO>> Handle(SubmitTimetableEntryCommand request, CancellationToken token)
+    {
+        var actor = await StaffOperationsContext.ResolveAsync(common);
+        return ApiResponse<TimetableEntryResponseDTO>.Success(await unit.StaffAcademicStructureRepository.SubmitTimetableEntryAsync(request.EntryId, actor.InstitutionId, actor.StaffMemberId, token), "Timetable draft submitted successfully.");
+    }
+}
+public sealed class ActOnTimetableEntryCommandHandler(IUnitOfWork unit, ICommonRequestService common) : IRequestHandler<ActOnTimetableEntryCommand, ApiResponse<TimetableEntryResponseDTO>>
+{
+    public async Task<ApiResponse<TimetableEntryResponseDTO>> Handle(ActOnTimetableEntryCommand request, CancellationToken token)
+    {
+        var actor = await StaffOperationsContext.ResolveAsync(common);
+        return ApiResponse<TimetableEntryResponseDTO>.Success(await unit.StaffAcademicStructureRepository.ActOnTimetableEntryAsync(request.EntryId, request.DTO, actor.InstitutionId, actor.StaffMemberId, token), "Timetable action completed successfully.");
+    }
+}
+public sealed class CreateTimetableRevisionCommandHandler(IUnitOfWork unit, ICommonRequestService common) : IRequestHandler<CreateTimetableRevisionCommand, ApiResponse<TimetableEntryResponseDTO>>
+{
+    public async Task<ApiResponse<TimetableEntryResponseDTO>> Handle(CreateTimetableRevisionCommand request, CancellationToken token)
+    {
+        var actor = await StaffOperationsContext.ResolveAsync(common);
+        return ApiResponse<TimetableEntryResponseDTO>.Success(await unit.StaffAcademicStructureRepository.CreateTimetableRevisionAsync(request.EntryId, actor.InstitutionId, actor.StaffMemberId, token), "Timetable revision created successfully.");
+    }
+}
+public sealed class GetTimetableHistoryQueryHandler(IUnitOfWork unit, ICommonRequestService common) : IRequestHandler<GetTimetableHistoryQuery, ApiResponse<List<TimetableApprovalHistoryResponseDTO>>>
+{
+    public async Task<ApiResponse<List<TimetableApprovalHistoryResponseDTO>>> Handle(GetTimetableHistoryQuery request, CancellationToken token)
+    {
+        var actor = await StaffOperationsContext.ResolveAsync(common);
+        return ApiResponse<List<TimetableApprovalHistoryResponseDTO>>.Success(await unit.StaffAcademicStructureRepository.GetTimetableHistoryAsync(request.EntryId, actor.InstitutionId, token), "Timetable approval history retrieved successfully.");
+    }
 }
 public sealed class GetSubstituteWorkflowsQueryHandler(IUnitOfWork unit, ICommonRequestService common) : IRequestHandler<GetSubstituteWorkflowsQuery, ApiResponse<List<SubstituteWorkflowResponseDTO>>>
 {

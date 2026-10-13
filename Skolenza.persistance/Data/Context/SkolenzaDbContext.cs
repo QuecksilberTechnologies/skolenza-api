@@ -216,6 +216,9 @@ namespace skolenza.persistance.Data.Context
         public virtual DbSet<LessonDeliveryCoverage> LessonDeliveryCoverages { get; set; }
         public virtual DbSet<TimetablePeriodMaster> TimetablePeriodMasters { get; set; }
         public virtual DbSet<TimetableEntry> TimetableEntries { get; set; }
+        public virtual DbSet<TimetableWorkflowMaster> TimetableWorkflowMasters { get; set; }
+        public virtual DbSet<TimetableWorkflowStep> TimetableWorkflowSteps { get; set; }
+        public virtual DbSet<TimetableApprovalHistory> TimetableApprovalHistories { get; set; }
         public virtual DbSet<SubstituteWorkflowMaster> SubstituteWorkflowMasters { get; set; }
         public virtual DbSet<SubstituteWorkflowStep> SubstituteWorkflowSteps { get; set; }
         public virtual DbSet<StaffAbsenceImpact> StaffAbsenceImpacts { get; set; }
@@ -3199,6 +3202,7 @@ namespace skolenza.persistance.Data.Context
             });
 
             ConfigureAcademicEntity<TimetablePeriodMaster>(modelBuilder, "TimetablePeriodMaster");
+            ConfigureAcademicEntity<TimetableWorkflowMaster>(modelBuilder, "TimetableWorkflowMaster");
             ConfigureAcademicEntity<SubstituteWorkflowMaster>(modelBuilder, "SubstituteWorkflowMaster");
             ConfigureAcademicEntity<StaffQueryCategoryMaster>(modelBuilder, "StaffQueryCategoryMaster");
             modelBuilder.Entity<TimetableEntry>(entity =>
@@ -3206,8 +3210,25 @@ namespace skolenza.persistance.Data.Context
                 entity.ToTable("TimetableEntry", "skolenza");
                 entity.HasKey(item => item.Id);
                 entity.Property(item => item.RoomReference).HasMaxLength(100);
+                entity.Property(item => item.StatusCode).HasMaxLength(40);
+                entity.Property(item => item.ReviewRemark).HasMaxLength(500);
                 entity.HasIndex(item => new { item.InstitutionId, item.StaffTeachingAssignmentId, item.DayOfWeek, item.TimetablePeriodMasterId, item.EffectiveFrom });
                 entity.HasIndex(item => new { item.InstitutionId, item.ClassSectionId, item.DayOfWeek, item.TimetablePeriodMasterId, item.EffectiveFrom });
+            });
+            modelBuilder.Entity<TimetableWorkflowStep>(entity =>
+            {
+                entity.ToTable("TimetableWorkflowStep", "skolenza");
+                entity.HasKey(item => item.Id);
+                entity.Property(item => item.ApproverTypeCode).HasMaxLength(40);
+                entity.HasIndex(item => new { item.TimetableWorkflowMasterId, item.Sequence }).IsUnique();
+            });
+            modelBuilder.Entity<TimetableApprovalHistory>(entity =>
+            {
+                entity.ToTable("TimetableApprovalHistory", "skolenza");
+                entity.HasKey(item => item.Id);
+                entity.Property(item => item.ActionCode).HasMaxLength(40);
+                entity.Property(item => item.Remark).HasMaxLength(500);
+                entity.HasIndex(item => new { item.TimetableEntryId, item.Sequence });
             });
             modelBuilder.Entity<SubstituteWorkflowStep>(entity =>
             {

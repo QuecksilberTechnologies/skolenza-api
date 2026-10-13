@@ -71,9 +71,56 @@ public sealed class TimetableEntryResponseDTO : TimetableEntryRequestDTO
     public string CourseOfferingName { get; set; } = string.Empty;
     public string PeriodName { get; set; } = string.Empty;
     public string TeacherName { get; set; } = string.Empty;
+    public string StatusCode { get; set; } = string.Empty;
+    public int RevisionNumber { get; set; }
+    public short CurrentApprovalSequence { get; set; }
+    public bool CanEdit { get; set; }
+    public bool CanSubmit { get; set; }
+    public bool CanReview { get; set; }
+    public bool CanPublish { get; set; }
+    public string? ReviewRemark { get; set; }
 }
 
-public sealed class SubstituteWorkflowStepDTO
+public sealed class TimetableWorkflowStepDTO : SubstituteWorkflowStepDTO;
+
+public class TimetableWorkflowRequestDTO : StaffOperationsPermissionRequestDTO
+{
+    public long? Id { get; set; }
+    public string Code { get; set; } = string.Empty;
+    public string Name { get; set; } = string.Empty;
+    public string? Description { get; set; }
+    public long? CampusId { get; set; }
+    public long? ClassSectionId { get; set; }
+    public bool AllowTeacherDraftProposal { get; set; }
+    public bool AutoPublishAfterFinalApproval { get; set; } = true;
+    public bool IsDefault { get; set; }
+    public bool IsActive { get; set; } = true;
+    public List<TimetableWorkflowStepDTO> Steps { get; set; } = [];
+}
+
+public sealed class TimetableWorkflowResponseDTO : TimetableWorkflowRequestDTO
+{
+    public new long Id { get; set; }
+}
+
+public sealed class TimetableActionRequestDTO : StaffOperationsPermissionRequestDTO
+{
+    public string ActionCode { get; set; } = string.Empty;
+    public string? Remark { get; set; }
+}
+
+public sealed class TimetableApprovalHistoryResponseDTO
+{
+    public long Id { get; set; }
+    public short Sequence { get; set; }
+    public long ActionByStaffMemberId { get; set; }
+    public string ActionByName { get; set; } = string.Empty;
+    public string ActionCode { get; set; } = string.Empty;
+    public string? Remark { get; set; }
+    public DateTime ActionDateTime { get; set; }
+}
+
+public class SubstituteWorkflowStepDTO
 {
     public long? Id { get; set; }
     public short Sequence { get; set; }

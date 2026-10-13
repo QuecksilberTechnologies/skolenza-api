@@ -25,11 +25,57 @@ public sealed class TimetableEntry
     public DateOnly EffectiveFrom { get; set; }
     public DateOnly? EffectiveTo { get; set; }
     public bool IsActive { get; set; } = true;
+    public long? TimetableWorkflowMasterId { get; set; }
+    public long? ParentTimetableEntryId { get; set; }
+    public int RevisionNumber { get; set; } = 1;
+    public string StatusCode { get; set; } = "DRAFT";
+    public short CurrentApprovalSequence { get; set; }
+    public DateTime? SubmittedDateTime { get; set; }
+    public DateTime? ApprovedDateTime { get; set; }
+    public DateTime? PublishedDateTime { get; set; }
+    public DateTime? RejectedDateTime { get; set; }
+    public string? ReviewRemark { get; set; }
     public bool IsSoftDeleted { get; set; }
     public long AddedById { get; set; }
     public DateTime AddedDateTime { get; set; }
     public long? UpdatedById { get; set; }
     public DateTime? UpdatedDateTime { get; set; }
+}
+
+public sealed class TimetableWorkflowMaster : InstitutionAcademicEntity
+{
+    public long? CampusId { get; set; }
+    public long? ClassSectionId { get; set; }
+    public bool AllowTeacherDraftProposal { get; set; }
+    public bool AutoPublishAfterFinalApproval { get; set; } = true;
+    public bool IsDefault { get; set; }
+}
+
+public sealed class TimetableWorkflowStep
+{
+    public long Id { get; set; }
+    public long InstitutionId { get; set; }
+    public long TimetableWorkflowMasterId { get; set; }
+    public short Sequence { get; set; }
+    public string ApproverTypeCode { get; set; } = string.Empty;
+    public int? AccessRoleId { get; set; }
+    public int? StaffPositionMasterId { get; set; }
+    public long? StaffMemberId { get; set; }
+    public bool IsActive { get; set; } = true;
+    public long AddedById { get; set; }
+    public DateTime AddedDateTime { get; set; }
+}
+
+public sealed class TimetableApprovalHistory
+{
+    public long Id { get; set; }
+    public long InstitutionId { get; set; }
+    public long TimetableEntryId { get; set; }
+    public short Sequence { get; set; }
+    public long ActionByStaffMemberId { get; set; }
+    public string ActionCode { get; set; } = string.Empty;
+    public string? Remark { get; set; }
+    public DateTime ActionDateTime { get; set; }
 }
 
 public sealed class SubstituteWorkflowMaster : InstitutionAcademicEntity

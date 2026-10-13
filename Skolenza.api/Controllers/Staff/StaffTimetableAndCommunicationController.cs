@@ -55,6 +55,30 @@ public sealed class StaffTimetableAndCommunicationController(IMediator mediator)
         dto.Id = id;
         return Ok(await mediator.Send(new SaveTimetableEntryCommand(dto), token));
     }
+    [HttpGet("timetable/workflows")]
+    public async Task<IActionResult> GetTimetableWorkflows([FromQuery] StaffOperationsPermissionRequestDTO dto, CancellationToken token) =>
+        Ok(await mediator.Send(new GetTimetableWorkflowsQuery(dto), token));
+    [HttpPost("timetable/workflows")]
+    public async Task<IActionResult> CreateTimetableWorkflow([FromBody] TimetableWorkflowRequestDTO dto, CancellationToken token) =>
+        Ok(await mediator.Send(new SaveTimetableWorkflowCommand(dto), token));
+    [HttpPut("timetable/workflows/{id:long}")]
+    public async Task<IActionResult> UpdateTimetableWorkflow(long id, [FromBody] TimetableWorkflowRequestDTO dto, CancellationToken token)
+    {
+        dto.Id = id;
+        return Ok(await mediator.Send(new SaveTimetableWorkflowCommand(dto), token));
+    }
+    [HttpPost("timetable/entries/{id:long}/submit")]
+    public async Task<IActionResult> SubmitTimetableEntry(long id, [FromBody] StaffOperationsPermissionRequestDTO dto, CancellationToken token) =>
+        Ok(await mediator.Send(new SubmitTimetableEntryCommand(id, dto), token));
+    [HttpPost("timetable/entries/{id:long}/actions")]
+    public async Task<IActionResult> ActOnTimetableEntry(long id, [FromBody] TimetableActionRequestDTO dto, CancellationToken token) =>
+        Ok(await mediator.Send(new ActOnTimetableEntryCommand(id, dto), token));
+    [HttpPost("timetable/entries/{id:long}/revisions")]
+    public async Task<IActionResult> CreateTimetableRevision(long id, [FromBody] StaffOperationsPermissionRequestDTO dto, CancellationToken token) =>
+        Ok(await mediator.Send(new CreateTimetableRevisionCommand(id, dto), token));
+    [HttpGet("timetable/entries/{id:long}/history")]
+    public async Task<IActionResult> GetTimetableHistory(long id, [FromQuery] StaffOperationsPermissionRequestDTO dto, CancellationToken token) =>
+        Ok(await mediator.Send(new GetTimetableHistoryQuery(id, dto), token));
     [HttpGet("substitute-workflows")]
     public async Task<IActionResult> GetWorkflows(
         [FromQuery] StaffOperationsPermissionRequestDTO dto,
