@@ -223,3 +223,106 @@ public sealed class ClassTeacherAssignment
     public long? UpdatedById { get; set; }
     public DateTime? UpdatedDateTime { get; set; }
 }
+
+/// <summary>Central workflow-state catalogue used by curriculum planning and delivery review.</summary>
+public sealed class AcademicWorkflowStatusMaster
+{
+    public short Id { get; set; }
+    public string Code { get; set; } = string.Empty;
+    public string Name { get; set; } = string.Empty;
+    public short DisplayOrder { get; set; }
+    public bool IsActive { get; set; } = true;
+}
+
+public sealed class CurriculumFrameworkMaster : InstitutionAcademicEntity
+{
+    public long AcademicSessionId { get; set; }
+    public string AuthorityName { get; set; } = string.Empty;
+    public string Version { get; set; } = string.Empty;
+    public DateOnly EffectiveFrom { get; set; }
+    public DateOnly? EffectiveTo { get; set; }
+    public short WorkflowStatusId { get; set; }
+    public long? ReviewedById { get; set; }
+    public DateTime? ReviewedDateTime { get; set; }
+    public string? ReviewRemark { get; set; }
+}
+
+public sealed class CurriculumUnit : InstitutionAcademicEntity
+{
+    public long CurriculumFrameworkId { get; set; }
+    public long CourseOfferingId { get; set; }
+    public long? ParentCurriculumUnitId { get; set; }
+    public short Sequence { get; set; }
+    public short PlannedPeriods { get; set; }
+    public string? LearningOutcome { get; set; }
+}
+
+public sealed class CurriculumTopic : InstitutionAcademicEntity
+{
+    public long CurriculumUnitId { get; set; }
+    public short Sequence { get; set; }
+    public short PlannedPeriods { get; set; }
+    public string? LearningOutcome { get; set; }
+}
+
+public sealed class LessonPlan
+{
+    public long Id { get; set; }
+    public long InstitutionId { get; set; }
+    public long StaffTeachingAssignmentId { get; set; }
+    public DateOnly PlannedDate { get; set; }
+    public string? PeriodReference { get; set; }
+    public string Objectives { get; set; } = string.Empty;
+    public string? TeachingMethod { get; set; }
+    public string? Resources { get; set; }
+    public string? Activities { get; set; }
+    public string? Assessment { get; set; }
+    public string? Homework { get; set; }
+    public short WorkflowStatusId { get; set; }
+    public long? ReviewedById { get; set; }
+    public DateTime? ReviewedDateTime { get; set; }
+    public string? ReviewRemark { get; set; }
+    public bool IsActive { get; set; } = true;
+    public bool IsSoftDeleted { get; set; }
+    public long AddedById { get; set; }
+    public DateTime AddedDateTime { get; set; }
+    public long? UpdatedById { get; set; }
+    public DateTime? UpdatedDateTime { get; set; }
+}
+
+public sealed class LessonPlanCurriculumTopic
+{
+    public long LessonPlanId { get; set; }
+    public long CurriculumTopicId { get; set; }
+}
+
+public sealed class LessonDeliveryLog
+{
+    public long Id { get; set; }
+    public long InstitutionId { get; set; }
+    public long LessonPlanId { get; set; }
+    public DateOnly DeliveredDate { get; set; }
+    public string CoverageNotes { get; set; } = string.Empty;
+    public string? Homework { get; set; }
+    public string? EvidenceReference { get; set; }
+    public string? ExceptionReason { get; set; }
+    public string? ReplanAction { get; set; }
+    public short WorkflowStatusId { get; set; }
+    public long? ReviewedById { get; set; }
+    public DateTime? ReviewedDateTime { get; set; }
+    public string? ReviewRemark { get; set; }
+    public bool IsActive { get; set; } = true;
+    public bool IsSoftDeleted { get; set; }
+    public long AddedById { get; set; }
+    public DateTime AddedDateTime { get; set; }
+    public long? UpdatedById { get; set; }
+    public DateTime? UpdatedDateTime { get; set; }
+}
+
+public sealed class LessonDeliveryCoverage
+{
+    public long Id { get; set; }
+    public long LessonDeliveryLogId { get; set; }
+    public long CurriculumTopicId { get; set; }
+    public decimal CompletionPercent { get; set; }
+}

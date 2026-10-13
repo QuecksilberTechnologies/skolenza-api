@@ -202,6 +202,14 @@ namespace skolenza.persistance.Data.Context
         public virtual DbSet<TeachingAssignmentTypeMaster> TeachingAssignmentTypes { get; set; }
         public virtual DbSet<StaffTeachingAssignment> StaffTeachingAssignments { get; set; }
         public virtual DbSet<ClassTeacherAssignment> ClassTeacherAssignments { get; set; }
+        public virtual DbSet<AcademicWorkflowStatusMaster> AcademicWorkflowStatuses { get; set; }
+        public virtual DbSet<CurriculumFrameworkMaster> CurriculumFrameworks { get; set; }
+        public virtual DbSet<CurriculumUnit> CurriculumUnits { get; set; }
+        public virtual DbSet<CurriculumTopic> CurriculumTopics { get; set; }
+        public virtual DbSet<LessonPlan> LessonPlans { get; set; }
+        public virtual DbSet<LessonPlanCurriculumTopic> LessonPlanCurriculumTopics { get; set; }
+        public virtual DbSet<LessonDeliveryLog> LessonDeliveryLogs { get; set; }
+        public virtual DbSet<LessonDeliveryCoverage> LessonDeliveryCoverages { get; set; }
 
         public virtual DbSet<StaffEmploymentTypeBasicMenu> StaffEmploymentTypeBasicMenus { get; set; }
 
@@ -3069,6 +3077,71 @@ namespace skolenza.persistance.Data.Context
             {
                 entity.ToTable("ClassTeacherAssignment", "skolenza");
                 entity.HasKey(item => item.Id);
+            });
+
+            ConfigureAcademicEntity<CurriculumFrameworkMaster>(modelBuilder, "CurriculumFrameworkMaster");
+            ConfigureAcademicEntity<CurriculumUnit>(modelBuilder, "CurriculumUnit");
+            ConfigureAcademicEntity<CurriculumTopic>(modelBuilder, "CurriculumTopic");
+            modelBuilder.Entity<AcademicWorkflowStatusMaster>(entity =>
+            {
+                entity.ToTable("AcademicWorkflowStatusMaster", "skolenza");
+                entity.HasKey(item => item.Id);
+                entity.Property(item => item.Code).HasMaxLength(40);
+                entity.Property(item => item.Name).HasMaxLength(80);
+                entity.HasIndex(item => item.Code).IsUnique();
+            });
+            modelBuilder.Entity<CurriculumFrameworkMaster>(entity =>
+            {
+                entity.Property(item => item.AuthorityName).HasMaxLength(150);
+                entity.Property(item => item.Version).HasMaxLength(60);
+                entity.Property(item => item.ReviewRemark).HasMaxLength(500);
+                entity.HasIndex(item => new { item.InstitutionId, item.Code }).IsUnique();
+            });
+            modelBuilder.Entity<CurriculumUnit>(entity =>
+            {
+                entity.Property(item => item.LearningOutcome).HasMaxLength(1000);
+                entity.HasIndex(item => new { item.InstitutionId, item.CurriculumFrameworkId, item.Code }).IsUnique();
+            });
+            modelBuilder.Entity<CurriculumTopic>(entity =>
+            {
+                entity.Property(item => item.LearningOutcome).HasMaxLength(1000);
+                entity.HasIndex(item => new { item.InstitutionId, item.CurriculumUnitId, item.Code }).IsUnique();
+            });
+            modelBuilder.Entity<LessonPlan>(entity =>
+            {
+                entity.ToTable("LessonPlan", "skolenza");
+                entity.HasKey(item => item.Id);
+                entity.Property(item => item.PeriodReference).HasMaxLength(80);
+                entity.Property(item => item.Objectives).HasMaxLength(2000);
+                entity.Property(item => item.TeachingMethod).HasMaxLength(1000);
+                entity.Property(item => item.Resources).HasMaxLength(1000);
+                entity.Property(item => item.Activities).HasMaxLength(2000);
+                entity.Property(item => item.Assessment).HasMaxLength(1000);
+                entity.Property(item => item.Homework).HasMaxLength(1000);
+                entity.Property(item => item.ReviewRemark).HasMaxLength(500);
+            });
+            modelBuilder.Entity<LessonPlanCurriculumTopic>(entity =>
+            {
+                entity.ToTable("LessonPlanCurriculumTopic", "skolenza");
+                entity.HasKey(item => new { item.LessonPlanId, item.CurriculumTopicId });
+            });
+            modelBuilder.Entity<LessonDeliveryLog>(entity =>
+            {
+                entity.ToTable("LessonDeliveryLog", "skolenza");
+                entity.HasKey(item => item.Id);
+                entity.Property(item => item.CoverageNotes).HasMaxLength(2000);
+                entity.Property(item => item.Homework).HasMaxLength(1000);
+                entity.Property(item => item.EvidenceReference).HasMaxLength(500);
+                entity.Property(item => item.ExceptionReason).HasMaxLength(1000);
+                entity.Property(item => item.ReplanAction).HasMaxLength(1000);
+                entity.Property(item => item.ReviewRemark).HasMaxLength(500);
+            });
+            modelBuilder.Entity<LessonDeliveryCoverage>(entity =>
+            {
+                entity.ToTable("LessonDeliveryCoverage", "skolenza");
+                entity.HasKey(item => item.Id);
+                entity.Property(item => item.CompletionPercent).HasPrecision(5, 2);
+                entity.HasIndex(item => new { item.LessonDeliveryLogId, item.CurriculumTopicId }).IsUnique();
             });
 
             #endregion

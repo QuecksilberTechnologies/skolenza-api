@@ -1,0 +1,10 @@
+BEGIN;
+DROP TABLE IF EXISTS skolenza."LessonDeliveryCoverage";
+DROP TABLE IF EXISTS skolenza."LessonDeliveryLog";
+DROP TABLE IF EXISTS skolenza."LessonPlanCurriculumTopic";
+DROP TABLE IF EXISTS skolenza."LessonPlan";
+DROP TABLE IF EXISTS skolenza."CurriculumTopic";
+DROP TABLE IF EXISTS skolenza."CurriculumUnit";
+DROP TABLE IF EXISTS skolenza."CurriculumFrameworkMaster";
+DROP TABLE IF EXISTS skolenza."AcademicWorkflowStatusMaster";
+COMMIT;

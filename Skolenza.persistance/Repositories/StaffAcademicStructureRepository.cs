@@ -8,7 +8,7 @@ using Microsoft.EntityFrameworkCore;
 namespace skolenza.persistance.Repositories;
 
 /// <summary>Persists institution-owned academic structure and effective-dated StaffMember academic assignments.</summary>
-public sealed class StaffAcademicStructureRepository(SkolenzaDbContext context)
+public sealed partial class StaffAcademicStructureRepository(SkolenzaDbContext context)
     : IStaffAcademicStructureRepository
 {
     public async Task<List<TeachingAssignmentTypeOptionDTO>> GetTeachingAssignmentTypesAsync(CancellationToken cancellationToken = default)
