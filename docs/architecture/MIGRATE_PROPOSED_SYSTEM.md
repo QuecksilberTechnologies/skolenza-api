@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This is the execution contract for migrating Skolenza from its inherited workforce model to the proposed school and college staff-management system. Read it with `LOCKED_FIXES.md`, both repository `AGENTS` files, `SKOLENZA_RECONSTRUCTION_MASTER_PLAN.md`, and `STAFF_MANAGEMENT_PROPOSED_SYSTEM.md` before changing this programme.
+This is the execution contract for migrating Skolenza from its inherited workforce model to the proposed school, college and coaching-center staff-management system. Read it with `LOCKED_FIXES.md`, both repository `AGENTS` files, `SKOLENZA_RECONSTRUCTION_MASTER_PLAN.md`, and `STAFF_MANAGEMENT_PROPOSED_SYSTEM.md` before changing this programme.
 
 Database, API and Angular must move together in every vertical slice. A slice is **WIP** until its schema, data, backend contract, UI consumer, tests, migration evidence and documentation are at the same stage.
 
@@ -30,7 +30,7 @@ The user explicitly waived a new database backup on 2026-10-12 because a backup 
 | 1A | Central Staff Category catalogue | COMPLETE | COMPLETE | COMPLETE | COMPLETE |
 | 1B | Job families, positions, capabilities and duties | COMPLETE | COMPLETE | COMPLETE | COMPLETE |
 | 1C | Effective-dated staff assignments | COMPLETE | COMPLETE | COMPLETE | COMPLETE |
-| 2 | Academic structure and teaching assignments | PENDING | PENDING | PENDING | PENDING |
+| 2 | Academic structure and teaching assignments | COMPLETE | COMPLETE | COMPLETE | COMPLETE |
 | 3 | Curriculum, lesson planning and syllabus progress | PENDING | PENDING | PENDING | PENDING |
 | 4 | Timetable, leave impact and substitute coverage | PENDING | PENDING | PENDING | PENDING |
 | 5 | Staff queries, direct messages and broadcasts | PENDING | PENDING | PENDING | PENDING |
@@ -152,12 +152,20 @@ canonical profile and authorized capability approval persists its audit.
 
 ## Phase 2 — academic structure and teaching assignments
 
-- Add institution-scoped `AcademicSession`, `AcademicProgramme`, `AcademicClass`, `AcademicSection`, `Subject` and mapping tables.
+Implementation status (2026-10-13): local Phase 2 is complete. The additive migration, EF model, tenant ownership/date/conflict validation, permission-pipeline API endpoints, central teaching-assignment-role catalogue, Angular catalogue/assignment pages and Staff Overview read-back are synchronized. The configured local database was migrated; API build/startup, Angular production build, 12 focused Staff regressions, authenticated CRUD/read-back, conflict and cross-institution scenarios passed. The same migration is applied and reconciled on Render PostgreSQL. Render API/UI deployment acceptance remains tracked separately and does not change the local phase result.
+
+- Add institution-scoped catalogue tables `AcademicSessionMaster`, `AcademicProgrammeMaster`, `AcademicGroupMaster`, `ClassSectionMaster`, `SubjectMaster`, `CourseOfferingMaster` and operational assignment tables. Domain/API names may omit the suffix, while physical seed/catalogue tables retain it for database clarity.
 - Add effective-dated `StaffTeachingAssignment` for session, class/section, subject and assignment role.
 - Represent class teacher, subject teacher, sports and arts through assignments, not special StaffMember columns.
 - Add API validation for duplicates/conflicts and Angular master/assignment workflows.
 
-Decision D-03: confirm whether the first release models school, college, or both; this controls programme/class/section cardinality.
+Decision D-03 resolved on 2026-10-13: the first academic model supports School,
+College and Coaching Center. `AcademicProgramme` and `AcademicGroup` provide the
+shared hierarchy; institution type controls applicable levels and UI terminology.
+School can represent grade/class/section, College can represent programme/
+semester/batch, and Coaching Center can represent course/batch/group without
+duplicating teaching-assignment logic. Exact hierarchy rows remain institution-owned
+master data and must not be hardcoded in Angular.
 
 ## Phase 3 — curriculum and delivery
 
@@ -208,7 +216,7 @@ Update this file, the relevant `docs/UIdeveloperDoc` handoff, a dated `docs/test
 | D-00 | Proposed ID mapping approved and applied locally on 2026-10-12 | RESOLVED |
 | D-01 | Platform templates copied into institution-owned capability/duty masters | RESOLVED on 2026-10-12 |
 | D-02 | Meaning and mapping of `FunctionalId` and `ReferalId` | Phase 1C cleanup |
-| D-03 | First academic model: school, college or both | Phase 2 |
+| D-03 | First academic model supports School + College + Coaching Center through the shared academic hierarchy | RESOLVED on 2026-10-13 |
 | D-04 | Substitute approval and acceptance workflow | Phase 4 |
 | D-05 | Broadcast channels and retention | Phase 5 |
 | D-06 | New seed-bearing master tables use the `Master` suffix | RESOLVED on 2026-10-12 |

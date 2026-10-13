@@ -118,6 +118,8 @@ Every entry must include:
 | `LOCK-POLICY-IDENTITY-014` | Tenant policy-name uniqueness and version guidance | LOCKED | Backend 48/48; Release build; Local/Render unique index verified | DB APPLIED; API DEPLOYMENT PENDING | [2026-10-09](docs/testing/policy/policy-name-uniqueness/2026-10-09_old.md) |
 | `LOCK-POLICY-DRAFT-SAVE-015` | Atomic replacement of Draft policy rules and targets | LOCKED | Backend 49/49; Release build | API DEPLOYMENT PENDING | [2026-10-09](docs/testing/policy/draft-replacement-save/2026-10-09_old.md) |
 | `LOCK-EMP-PROFILE-COMPLETION-016` | Mandatory-aware Employee profile completion consistency | LOCKED | Employee/contact 52/52; Bank 1/1; locality 9/9; tenant 14/14 + DB rollback 2/2; Role 20/20; Release build | API DEPLOYMENT PENDING | [2026-10-10](docs/testing/employee/profile-completion-consistency/2026-10-10_old.md) |
+| `LOCK-STAFF-PROFESSIONAL-MODEL-017` | Runtime-valid professional master mapping | LOCKED | Staff professional 4/4; API startup/EF model/Swagger/runtime probes | PENDING | [2026-10-12](docs/testing/staff/professional-structure/2026-10-12.md) |
+| `LOCK-STAFF-ACADEMIC-018` | Tenant-owned academic hierarchy and effective staff teaching responsibility | LOCKED | Staff combined 12/12; tenant rollback 2/2; Release API and Angular production builds; authenticated local CRUD/conflict/isolation | DB APPLIED; API/UI PENDING | [2026-10-13](docs/testing/staff/academic-structure/2026-10-13.md) |
 
 ## LOCK-TENANT-REG-001: Tenant registration transaction and actionable errors
 
@@ -803,6 +805,42 @@ Expected: 4/4 tests pass; API logs `SKOLENZA APPLICATION STARTED SUCCESSFULLY`, 
 PostgreSQL command, Swagger HTML and OpenAPI JSON return HTTP 200, and an unauthenticated protected
 professional-structure endpoint returns HTTP 401 rather than a startup/model exception. Evidence:
 [2026-10-12](docs/testing/staff/professional-structure/2026-10-12.md).
+
+## LOCK-STAFF-ACADEMIC-018: Academic structure and teaching assignments
+
+### Locked behavior
+
+- School, College and Coaching Center use the same institution-owned Session, Programme,
+  Group, Section, Subject and Course Offering hierarchy.
+- `TeachingAssignmentTypeMaster` is the authoritative teaching-role catalogue. UI consumers
+  resolve it through the authenticated API and do not hardcode IDs or labels.
+- Teaching and class-teacher responsibilities are effective-dated, tenant-isolated assignments.
+  Overlapping duplicate teaching allocation and overlapping primary class-teacher responsibility
+  are rejected with Conflict.
+- Catalogue parents, campuses, Staff members, offerings and sections must belong to the same
+  institution. Existing permission middleware remains authoritative.
+- Staff Overview reads the persisted canonical assignments and their resolved catalogue names.
+
+### Protected areas and gate
+
+- Academic master and assignment entities, EF mappings, migration and rollback scripts.
+- `StaffAcademicStructureRepository`, DTOs, handlers and controller.
+- Angular academic structure API, full-page management UI, permission-route mapping and Staff
+  Overview assignment display.
+
+```powershell
+dotnet test .\Skolenza.automationtests\Skolenza.automationtests.csproj -c Release --no-restore --filter "TestCategory=StaffAcademicStructure|TestCategory=StaffProfessionalStructure|TestCategory=StaffCategoryCatalogue" --logger "console;verbosity=minimal"
+$env:SKOLENZA_HOST_DB_SETTINGS=(Resolve-Path '.\Skolenza.api\appsettings.Development.json').Path
+dotnet test .\Skolenza.automationtests\Skolenza.automationtests.csproj -c Release --no-build --filter "FullyQualifiedName~HostApiRegressionTests.Institution_creation_real_database_rollback_probe" --logger "console;verbosity=minimal"
+dotnet build .\Skolenza.sln -c Release --no-restore --nologo
+bun run build -- --configuration production
+```
+
+Expected: 12 focused Staff tests and 2 rollback probes pass with zero failures/skips; API Release
+and Angular production builds succeed; API starts against PostgreSQL. Authenticated local CRUD,
+read-back, HTTP 409 overlap and cross-institution denial remain part of the acceptance baseline.
+Evidence: [2026-10-13](docs/testing/staff/academic-structure/2026-10-13.md). Deployed acceptance is
+pending and must be recorded separately.
 
 ## Adding the next lock
 

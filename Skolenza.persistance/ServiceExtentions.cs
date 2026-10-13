@@ -105,6 +105,7 @@ namespace skolenza.persistance
             services.AddScoped<IStaffEmploymentTypeRepository, StaffEmploymentTypeRepository>();
             services.AddScoped<IStaffCategoryRepository, StaffCategoryRepository>();
             services.AddScoped<IStaffProfessionalStructureRepository, StaffProfessionalStructureRepository>();
+            services.AddScoped<IStaffAcademicStructureRepository, StaffAcademicStructureRepository>();
             services.AddScoped<IStaffEmploymentTypeBasicMenuRepository, StaffEmploymentTypeBasicMenuRepository>();
             services.AddScoped<IUserRolesPermissionOnModuleRepository, UserRolesPermissionOnModuleRepository>();
             services.AddScoped<IStaffMemberExperienceRepository, StaffMemberExpereinceRepository>();

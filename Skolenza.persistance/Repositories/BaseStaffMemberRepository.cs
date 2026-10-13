@@ -1092,6 +1092,10 @@ namespace skolenza.persistance.Repositories
                 var typeLookup = await _context.StaffEmploymentTypes
                     .ToDictionaryAsync(x => x.Id, x => x.TypeName);
 
+                var staffCategoryLookup = await _context.StaffCategories
+                    .AsNoTracking()
+                    .ToDictionaryAsync(x => x.Id, x => x.Name);
+
                 var genderLookup = await _context.Genders
                     .ToDictionaryAsync(x => x.Id, x => x.GenderName);
 
@@ -1126,6 +1130,9 @@ namespace skolenza.persistance.Repositories
 
                         StaffEmploymentTypeId = x.StaffMember.StaffEmploymentTypeId ?? 0,
                         StaffCategoryId = x.StaffMember.StaffCategoryId,
+                        StaffCategoryName = x.StaffMember.StaffCategoryId.HasValue
+                            ? staffCategoryLookup.GetValueOrDefault(x.StaffMember.StaffCategoryId.Value)
+                            : null,
                         Type = typeLookup.GetValueOrDefault(x.StaffMember.StaffEmploymentTypeId ?? 0),
                         DateOfBirth = x.StaffMember.DateOfBirth,
                         DateOfOnBoarding = x.StaffMember.DateOfOnBoarding,

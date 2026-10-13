@@ -119,3 +119,107 @@ public sealed class StaffDutyAssignment
     public long? UpdatedById { get; set; }
     public DateTime? UpdatedDateTime { get; set; }
 }
+
+public abstract class InstitutionAcademicEntity
+{
+    public long Id { get; set; }
+    public long InstitutionId { get; set; }
+    public string Code { get; set; } = string.Empty;
+    public string Name { get; set; } = string.Empty;
+    public string? Description { get; set; }
+    public bool IsActive { get; set; } = true;
+    public bool IsSoftDeleted { get; set; }
+    public long AddedById { get; set; }
+    public DateTime AddedDateTime { get; set; }
+    public long? UpdatedById { get; set; }
+    public DateTime? UpdatedDateTime { get; set; }
+}
+
+public sealed class AcademicSession : InstitutionAcademicEntity
+{
+    public long? CampusId { get; set; }
+    public long? ParentAcademicSessionId { get; set; }
+    public short SessionType { get; set; }
+    public DateOnly StartDate { get; set; }
+    public DateOnly EndDate { get; set; }
+}
+
+public sealed class AcademicProgramme : InstitutionAcademicEntity
+{
+    public string? Level { get; set; }
+}
+
+public sealed class AcademicGroup : InstitutionAcademicEntity
+{
+    public long AcademicSessionId { get; set; }
+    public long? AcademicProgrammeId { get; set; }
+    public long? ParentAcademicGroupId { get; set; }
+    public short GroupType { get; set; }
+}
+
+public sealed class ClassSection : InstitutionAcademicEntity
+{
+    public long AcademicGroupId { get; set; }
+    public long? CampusId { get; set; }
+    public int? Capacity { get; set; }
+}
+
+public sealed class Subject : InstitutionAcademicEntity
+{
+    public short SubjectType { get; set; }
+}
+
+public sealed class CourseOffering : InstitutionAcademicEntity
+{
+    public long AcademicSessionId { get; set; }
+    public long AcademicGroupId { get; set; }
+    public long SubjectId { get; set; }
+    public string? CurriculumVersion { get; set; }
+    public short? RequiredPeriodsPerWeek { get; set; }
+}
+
+/// <summary>Central assignment-role catalogue shared by all institutions.</summary>
+public sealed class TeachingAssignmentTypeMaster
+{
+    public short Id { get; set; }
+    public string Code { get; set; } = string.Empty;
+    public string Name { get; set; } = string.Empty;
+    public string? Description { get; set; }
+    public short DisplayOrder { get; set; }
+    public bool IsActive { get; set; } = true;
+}
+
+public sealed class StaffTeachingAssignment
+{
+    public long Id { get; set; }
+    public long InstitutionId { get; set; }
+    public long StaffMemberId { get; set; }
+    public long CourseOfferingId { get; set; }
+    public long ClassSectionId { get; set; }
+    public short AssignmentType { get; set; }
+    public decimal ContributionPercent { get; set; }
+    public DateOnly EffectiveFrom { get; set; }
+    public DateOnly? EffectiveTo { get; set; }
+    public bool IsPrimary { get; set; }
+    public bool IsActive { get; set; } = true;
+    public long AddedById { get; set; }
+    public DateTime AddedDateTime { get; set; }
+    public long? UpdatedById { get; set; }
+    public DateTime? UpdatedDateTime { get; set; }
+}
+
+public sealed class ClassTeacherAssignment
+{
+    public long Id { get; set; }
+    public long InstitutionId { get; set; }
+    public long StaffMemberId { get; set; }
+    public long ClassSectionId { get; set; }
+    public DateOnly EffectiveFrom { get; set; }
+    public DateOnly? EffectiveTo { get; set; }
+    public bool IsPrimary { get; set; } = true;
+    public bool IsActive { get; set; } = true;
+    public long AddedById { get; set; }
+    public DateTime AddedDateTime { get; set; }
+    public long? UpdatedById { get; set; }
+    public DateTime? UpdatedDateTime { get; set; }
+}

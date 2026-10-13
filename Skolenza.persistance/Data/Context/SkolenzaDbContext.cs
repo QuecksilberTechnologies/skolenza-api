@@ -193,6 +193,16 @@ namespace skolenza.persistance.Data.Context
 
         public virtual DbSet<StaffDutyAssignment> StaffDutyAssignments { get; set; }
 
+        public virtual DbSet<AcademicSession> AcademicSessions { get; set; }
+        public virtual DbSet<AcademicProgramme> AcademicProgrammes { get; set; }
+        public virtual DbSet<AcademicGroup> AcademicGroups { get; set; }
+        public virtual DbSet<ClassSection> ClassSections { get; set; }
+        public virtual DbSet<Subject> Subjects { get; set; }
+        public virtual DbSet<CourseOffering> CourseOfferings { get; set; }
+        public virtual DbSet<TeachingAssignmentTypeMaster> TeachingAssignmentTypes { get; set; }
+        public virtual DbSet<StaffTeachingAssignment> StaffTeachingAssignments { get; set; }
+        public virtual DbSet<ClassTeacherAssignment> ClassTeacherAssignments { get; set; }
+
         public virtual DbSet<StaffEmploymentTypeBasicMenu> StaffEmploymentTypeBasicMenus { get; set; }
 
         public virtual DbSet<StaffMembersChangedTypeHistory> StaffMembersChangedTypeHistories { get; set; }
@@ -3009,6 +3019,60 @@ namespace skolenza.persistance.Data.Context
 
             #endregion
 
+            #region Staff Academic Structure
+
+            modelBuilder.Entity<InstitutionAcademicEntity>(entity =>
+            {
+                entity.UseTpcMappingStrategy();
+                entity.HasKey(item => item.Id);
+                entity.Property(item => item.Code).HasMaxLength(60);
+                entity.Property(item => item.Name).HasMaxLength(150);
+                entity.Property(item => item.Description).HasMaxLength(500);
+                entity.Property(item => item.IsActive).HasDefaultValue(true);
+                entity.Property(item => item.IsSoftDeleted).HasDefaultValue(false);
+                entity.Property(item => item.AddedDateTime).HasDefaultValueSql("CURRENT_TIMESTAMP");
+            });
+
+            ConfigureAcademicEntity<AcademicSession>(modelBuilder, "AcademicSessionMaster");
+            ConfigureAcademicEntity<AcademicProgramme>(modelBuilder, "AcademicProgrammeMaster");
+            ConfigureAcademicEntity<AcademicGroup>(modelBuilder, "AcademicGroupMaster");
+            ConfigureAcademicEntity<ClassSection>(modelBuilder, "ClassSectionMaster");
+            ConfigureAcademicEntity<Subject>(modelBuilder, "SubjectMaster");
+            ConfigureAcademicEntity<CourseOffering>(modelBuilder, "CourseOfferingMaster");
+
+            modelBuilder.Entity<AcademicProgramme>(entity => entity.Property(item => item.Level).HasMaxLength(80));
+            modelBuilder.Entity<CourseOffering>(entity =>
+            {
+                entity.Property(item => item.CurriculumVersion).HasMaxLength(80);
+                entity.HasIndex(item => new { item.InstitutionId, item.AcademicSessionId, item.AcademicGroupId, item.SubjectId }).IsUnique();
+            });
+            modelBuilder.Entity<TeachingAssignmentTypeMaster>(entity =>
+            {
+                entity.ToTable("TeachingAssignmentTypeMaster", "skolenza");
+                entity.HasKey(item => item.Id);
+                entity.Property(item => item.Code).HasMaxLength(50);
+                entity.Property(item => item.Name).HasMaxLength(100);
+                entity.Property(item => item.Description).HasMaxLength(300);
+                entity.HasIndex(item => item.Code).IsUnique();
+            });
+            modelBuilder.Entity<StaffTeachingAssignment>(entity =>
+            {
+                entity.ToTable("StaffTeachingAssignment", "skolenza");
+                entity.HasKey(item => item.Id);
+                entity.Property(item => item.ContributionPercent).HasPrecision(5, 2);
+                entity.HasOne<TeachingAssignmentTypeMaster>()
+                    .WithMany()
+                    .HasForeignKey(item => item.AssignmentType)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+            modelBuilder.Entity<ClassTeacherAssignment>(entity =>
+            {
+                entity.ToTable("ClassTeacherAssignment", "skolenza");
+                entity.HasKey(item => item.Id);
+            });
+
+            #endregion
+
             #region Institution Configuration
 
             modelBuilder.Entity<Campus>(entity =>
@@ -3361,6 +3425,18 @@ namespace skolenza.persistance.Data.Context
             modelBuilder.Entity<TEntity>(entity =>
             {
                 entity.ToTable(tableName, "skolenza");
+            });
+        }
+
+        private static void ConfigureAcademicEntity<TEntity>(
+            ModelBuilder modelBuilder,
+            string tableName)
+            where TEntity : InstitutionAcademicEntity
+        {
+            modelBuilder.Entity<TEntity>(entity =>
+            {
+                entity.ToTable(tableName, "skolenza");
+                entity.HasIndex(item => new { item.InstitutionId, item.Code }).IsUnique();
             });
         }
       

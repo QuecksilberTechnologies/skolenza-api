@@ -2,7 +2,7 @@
 
 **Status:** PROPOSED — analysis and design only; no database/API/UI implementation is claimed.  
 **Prepared:** 12 October 2026  
-**Scope:** School and college staff management, with the first implementation slice focused on staff. Student and parent workflows are considered only where staff assignments need future-safe references.
+**Scope:** School, college and coaching-center staff management, with the first implementation slice focused on staff. Student and parent workflows are considered only where staff assignments need future-safe references.
 
 ## 1. Executive decision
 
@@ -188,8 +188,8 @@ Catalogues are maintained once in persistence and exposed by authenticated optio
 | Table | Important columns and constraints |
 | --- | --- |
 | `AcademicSession` | institution/campus, code, name, start/end, parent session, type (year/term/semester); unique institution + code |
-| `AcademicProgramme` | school stream/college programme; code, name, level |
-| `AcademicGroup` | generic grade/batch/cohort; programme, academic session, code/name |
+| `AcademicProgramme` | school stream, college programme or coaching course; code, name, level |
+| `AcademicGroup` | generic grade, semester, batch, class or cohort; programme, academic session, code/name |
 | `ClassSection` | academic group, section name/code, campus, capacity |
 | `Subject` | institution/board code, name, subject type (academic/sports/arts/vocational) |
 | `CourseOffering` | academic session, academic group/programme, subject, curriculum version, required periods |
@@ -204,7 +204,10 @@ Catalogues are maintained once in persistence and exposed by authenticated optio
 | `LeaveAssignmentImpact` | leave request + affected timetable/duty reference + resolution status |
 | `SubstituteAssignment` | impact, original staff, substitute staff, approver, acknowledgement, reason |
 
-`AcademicGroup` and `AcademicProgramme` make the same foundation work for school grades/sections and college programmes/semesters/batches without duplicating staff assignment logic.
+`AcademicGroup` and `AcademicProgramme` make the same foundation work for school
+grades/sections, college programmes/semesters/batches and coaching courses/batches
+without duplicating staff assignment logic. Institution type controls applicable
+levels and display terminology; catalogue values remain database-owned.
 
 ### 7.4 Innovation and professional development
 
@@ -309,7 +312,7 @@ For every phase: migration → entity/configuration → repository/handler → A
 2. Should `Technical` remain a top-level category, or be a job family under Non-Teaching/Support?
 3. Does `Administrative` overlap Non-Teaching in reporting, or must it stay independently reportable?
 4. What do current `FunctionalId` and `ReferalId` values mean in production data?
-5. For colleges, should the first academic slice include programme/semester/batch immediately, or launch school grade/section first using the common `AcademicGroup` abstraction?
+5. **Resolved 2026-10-13:** the first academic slice supports School, College and Coaching Center through the common `AcademicProgramme`/`AcademicGroup` abstraction.
 6. Who may approve substitutions: Principal, Vice Principal, HOD, timetable coordinator, or configurable approval policy?
 7. Which broadcast channels are initially required: in-app only, email, push, SMS/WhatsApp integration?
 

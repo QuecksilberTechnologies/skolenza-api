@@ -1,0 +1,11 @@
+BEGIN;
+DROP TABLE IF EXISTS skolenza."ClassTeacherAssignment";
+DROP TABLE IF EXISTS skolenza."StaffTeachingAssignment";
+DROP TABLE IF EXISTS skolenza."CourseOfferingMaster";
+DROP TABLE IF EXISTS skolenza."SubjectMaster";
+DROP TABLE IF EXISTS skolenza."ClassSectionMaster";
+DROP TABLE IF EXISTS skolenza."AcademicGroupMaster";
+DROP TABLE IF EXISTS skolenza."AcademicProgrammeMaster";
+DROP TABLE IF EXISTS skolenza."AcademicSessionMaster";
+DROP TABLE IF EXISTS skolenza."TeachingAssignmentTypeMaster";
+COMMIT;
