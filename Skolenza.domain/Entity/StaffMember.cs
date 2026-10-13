@@ -41,10 +41,6 @@ public partial class StaffMember
 
     public bool IsActive { get; set; }
 
-    public int? FunctionalId { get; set; }
-
-    public int? ReferalId { get; set; }
-
     public string? Remark { get; set; }
 
     public bool IsEditAllowed { get; set; }

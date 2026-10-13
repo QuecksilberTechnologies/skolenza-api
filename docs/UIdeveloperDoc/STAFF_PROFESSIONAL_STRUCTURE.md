@@ -87,6 +87,8 @@ capability verification state and active duties.
 
 ## Status
 
-Implemented locally on 2026-10-12. Backend and Angular development builds pass.
-The idempotent SQL was applied twice to the local database. Render deployment
-has not been run in this change.
+Implemented across DB, API and Angular. The professional-structure migration is
+reconciled on local and Render databases. On 2026-10-13 the unused legacy
+`FunctionalId` and `ReferalId` fields were removed from persistence and consumer
+contracts after both databases confirmed that they contained no values. Clients
+must use the canonical position, capability and duty assignment contracts.

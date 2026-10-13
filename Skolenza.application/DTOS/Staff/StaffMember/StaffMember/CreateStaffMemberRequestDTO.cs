@@ -76,7 +76,6 @@ namespace skolenza.application.DTOS.Staff.BaseStaffMember
         public int RoleId { get; set; }
 
 
-        public int? ReferalId { get; set; }
 
 
 

@@ -31,7 +31,7 @@ The user explicitly waived a new database backup on 2026-10-12 because a backup 
 | 1B | Job families, positions, capabilities and duties | COMPLETE | COMPLETE | COMPLETE | COMPLETE |
 | 1C | Effective-dated staff assignments | COMPLETE | COMPLETE | COMPLETE | COMPLETE |
 | 2 | Academic structure and teaching assignments | COMPLETE | COMPLETE | COMPLETE | COMPLETE |
-| 3 | Curriculum, lesson planning and syllabus progress | COMPLETE | COMPLETE LOCALLY | COMPLETE LOCALLY | WIP — deployed acceptance pending |
+| 3 | Curriculum, lesson planning and syllabus progress | COMPLETE | COMPLETE | COMPLETE | COMPLETE |
 | 4 | Timetable, leave impact and substitute coverage | PENDING | PENDING | PENDING | PENDING |
 | 5 | Staff queries, direct messages and broadcasts | PENDING | PENDING | PENDING | PENDING |
 | 6 | Feedback, innovation and professional development | PENDING | PENDING | PENDING | PENDING |
@@ -56,7 +56,7 @@ Confirmed gaps:
 - No job-family, capability, duty, position or staff-duty assignment model exists.
 - No academic session, class/section, subject, teaching assignment, curriculum, timetable or substitution model exists.
 - `ThreadMessage` belongs to ticketing and is not general staff communication.
-- `FunctionalId` and `ReferalId` are ambiguous and cannot be migrated safely yet.
+- Legacy `FunctionalId` and `ReferalId` had no defined owner, persisted values or active workflow. They were removed through the guarded Phase 1C retirement migration after both databases were verified empty.
 
 Phase 0 exits after current schema/API/UI/seed ownership is mapped, all affected locked pre-change gates pass, and every remaining ambiguity has a decision owner.
 
@@ -143,12 +143,18 @@ and staff form catalogue consumption are synchronized. See
 - Reuse Department, Designation, Manager, Location and Employment Type FKs.
 - Enforce approved overlap and primary-assignment rules.
 - Staff onboarding and profile history consume canonical option/assignment contracts.
-- Do not repurpose `FunctionalId` or `ReferalId` before decision D-02 defines their meanings and mappings.
+- Keep professional identity in the canonical position, capability and duty assignments; the unused legacy `FunctionalId` and `ReferalId` columns/contracts are retired and must not be reintroduced as generic identifiers.
 
 Completed 2026-10-12: staff creation and institution registration create the
 primary assignment and generated capability/duty assignments; official updates
 replace the primary position with effective dating; Overview reads the same
 canonical profile and authorized capability approval persists its audit.
+
+Legacy cleanup completed 2026-10-13: local and Render databases contained zero
+non-null `FunctionalId`/`ReferalId` values. The guarded idempotent migration
+removed both columns, and the corresponding API and Angular contract members
+were removed in the same slice. The rollback restores nullable compatibility
+columns without inventing lost business meaning.
 
 ## Phase 2 — academic structure and teaching assignments
 
@@ -169,7 +175,7 @@ master data and must not be hardcoded in Angular.
 
 ## Phase 3 — curriculum and delivery
 
-Implementation status (2026-10-13): the local DB/API/Angular slice is complete. The same idempotent migration ran twice against local and Render Skolenza databases; both expose all eight Phase 3 tables and six active workflow statuses. Framework/unit/topic CRUD, dependency-safe soft deletion, valid approval transitions, lesson planning, reviewed delivery and calculated progress are integrated through the existing `STAFF_DIRECTORY` permission pipeline and Angular full-page workspace. Release API build, Angular production build, 16 focused regressions and the authenticated local curriculum-to-progress flow passed. The phase remains WIP only until the new commits deploy and authenticated live API/browser acceptance is recorded.
+Implementation status (2026-10-13): Phase 3 is complete across DB/API/Angular. The same idempotent migration ran twice against local and Render Skolenza databases; both expose all eight Phase 3 tables and six active workflow statuses. Framework/unit/topic CRUD, dependency-safe soft deletion, valid approval transitions, lesson planning, reviewed delivery and calculated progress are integrated through the existing `STAFF_DIRECTORY` permission pipeline and Angular full-page workspace. Release API build, Angular production build, focused regressions and the authenticated local curriculum-to-progress flow passed. Render deployed the Phase 3 build; live Swagger exposes all curriculum routes and unauthenticated mutation probes return 401. Authenticated deployed browser acceptance remains tracked separately from implementation completeness.
 
 - Add `Curriculum`, `CurriculumUnit`, `LessonPlan`, `LessonDelivery` and `SyllabusProgress` with session, subject and class scope.
 - Keep planned and delivered work separate and preserve progress history.
@@ -217,7 +223,7 @@ Update this file, the relevant `docs/UIdeveloperDoc` handoff, a dated `docs/test
 | --- | --- | --- |
 | D-00 | Proposed ID mapping approved and applied locally on 2026-10-12 | RESOLVED |
 | D-01 | Platform templates copied into institution-owned capability/duty masters | RESOLVED on 2026-10-12 |
-| D-02 | Meaning and mapping of `FunctionalId` and `ReferalId` | Phase 1C cleanup |
+| D-02 | Retire unused `FunctionalId` and `ReferalId`; canonical professional assignments own this information | RESOLVED on 2026-10-13 |
 | D-03 | First academic model supports School + College + Coaching Center through the shared academic hierarchy | RESOLVED on 2026-10-13 |
 | D-04 | Substitute approval and acceptance workflow | Phase 4 |
 | D-05 | Broadcast channels and retention | Phase 5 |

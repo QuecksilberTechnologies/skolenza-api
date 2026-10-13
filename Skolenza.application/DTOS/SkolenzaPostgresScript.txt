@@ -1610,8 +1610,6 @@ CREATE TABLE skolenza."StaffMember" (
 	"OfficialEmail" varchar(255)  NULL,
 	"HasPermanent" boolean DEFAULT false NOT NULL,
 	"IsActive" boolean DEFAULT true NOT NULL,
-	"FunctionalId" int NULL,
-	"ReferalId" int NULL,
 	"Remark" varchar(200)  NULL,
 	"IsEditAllowed" boolean NULL,
 	"IsInfoVerified" boolean NULL,

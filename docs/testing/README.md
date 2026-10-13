@@ -58,3 +58,4 @@ test run.
 - [Local to Render full schema and data synchronization (2026-10-13)](database/local-to-render-full-sync/2026-10-13.md)
 
 - [Staff curriculum and lesson delivery (2026-10-13)](staff/curriculum-delivery/2026-10-13.md)
+- [Staff legacy identifier retirement (2026-10-13)](staff/legacy-identifiers/2026-10-13.md)

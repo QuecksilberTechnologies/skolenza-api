@@ -24,8 +24,6 @@ namespace skolenza.application.DTOs.Staff.AccessResponse
         public FieldWithAccess<string> OfficialEmail { get; set; } = new();
         public FieldWithAccess<bool> HasPermanent { get; set; } = new();
         public FieldWithAccess<bool> IsActive { get; set; } = new();
-        public FieldWithAccess<int> FunctionalId { get; set; } = new();
-        public FieldWithAccess<long?> ReferalId { get; set; } = new();
         public FieldWithAccess<string?> Remark { get; set; } = new();
 
         // Audit Fields
