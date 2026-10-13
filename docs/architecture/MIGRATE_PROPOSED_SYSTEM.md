@@ -31,7 +31,7 @@ The user explicitly waived a new database backup on 2026-10-12 because a backup 
 | 1B | Job families, positions, capabilities and duties | COMPLETE | COMPLETE | COMPLETE | COMPLETE |
 | 1C | Effective-dated staff assignments | COMPLETE | COMPLETE | COMPLETE | COMPLETE |
 | 2 | Academic structure and teaching assignments | COMPLETE | COMPLETE | COMPLETE | COMPLETE |
-| 3 | Curriculum, lesson planning and syllabus progress | PENDING | PENDING | PENDING | PENDING |
+| 3 | Curriculum, lesson planning and syllabus progress | COMPLETE | COMPLETE LOCALLY | COMPLETE LOCALLY | WIP — deployed acceptance pending |
 | 4 | Timetable, leave impact and substitute coverage | PENDING | PENDING | PENDING | PENDING |
 | 5 | Staff queries, direct messages and broadcasts | PENDING | PENDING | PENDING | PENDING |
 | 6 | Feedback, innovation and professional development | PENDING | PENDING | PENDING | PENDING |
@@ -168,6 +168,8 @@ duplicating teaching-assignment logic. Exact hierarchy rows remain institution-o
 master data and must not be hardcoded in Angular.
 
 ## Phase 3 — curriculum and delivery
+
+Implementation status (2026-10-13): the local DB/API/Angular slice is complete. The same idempotent migration ran twice against local and Render Skolenza databases; both expose all eight Phase 3 tables and six active workflow statuses. Framework/unit/topic CRUD, dependency-safe soft deletion, valid approval transitions, lesson planning, reviewed delivery and calculated progress are integrated through the existing `STAFF_DIRECTORY` permission pipeline and Angular full-page workspace. Release API build, Angular production build, 16 focused regressions and the authenticated local curriculum-to-progress flow passed. The phase remains WIP only until the new commits deploy and authenticated live API/browser acceptance is recorded.
 
 - Add `Curriculum`, `CurriculumUnit`, `LessonPlan`, `LessonDelivery` and `SyllabusProgress` with session, subject and class scope.
 - Keep planned and delivered work separate and preserve progress history.

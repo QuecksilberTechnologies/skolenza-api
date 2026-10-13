@@ -237,6 +237,89 @@ public sealed partial class StaffAcademicStructureRepository
         return units.Select(row => { var unitTopics = topics.Where(item => item.CurriculumUnitId == row.unit.Id).ToList(); var completed = unitTopics.Select(topic => coverage.Where(item => item.CurriculumTopicId == topic.Id).Select(item => item.CompletionPercent).DefaultIfEmpty(0).Max()).ToList(); return new SyllabusProgressResponseDTO { CurriculumFrameworkId = row.framework.Id, CurriculumFrameworkName = row.framework.Name, CourseOfferingId = row.offering.Id, CourseOfferingName = row.offering.Name, CurriculumUnitId = row.unit.Id, CurriculumUnitName = row.unit.Name, TopicCount = unitTopics.Count, CompletionPercent = completed.Count == 0 ? 0 : Math.Round(completed.Average(), 2) }; }).ToList();
     }
 
+    public async Task DeleteCurriculumFrameworkAsync(long id, long institutionId, long actorId, CancellationToken cancellationToken = default)
+    {
+        var entity = await context.CurriculumFrameworks.SingleOrDefaultAsync(
+            item => item.Id == id && item.InstitutionId == institutionId && !item.IsSoftDeleted,
+            cancellationToken) ?? throw new KeyNotFoundException("Curriculum framework was not found.");
+        await EnsureDraftAsync(entity.WorkflowStatusId, cancellationToken);
+        if (await context.CurriculumUnits.AnyAsync(item => item.CurriculumFrameworkId == id && !item.IsSoftDeleted, cancellationToken))
+        {
+            throw new ConflictException("Remove the framework's curriculum units before deleting it.");
+        }
+        entity.IsActive = false;
+        entity.IsSoftDeleted = true;
+        entity.UpdatedById = actorId;
+        entity.UpdatedDateTime = DateTime.UtcNow;
+        await context.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task DeleteCurriculumUnitAsync(long id, long institutionId, long actorId, CancellationToken cancellationToken = default)
+    {
+        var entity = await context.CurriculumUnits.SingleOrDefaultAsync(
+            item => item.Id == id && item.InstitutionId == institutionId && !item.IsSoftDeleted,
+            cancellationToken) ?? throw new KeyNotFoundException("Curriculum unit was not found.");
+        var hasDependencies = await context.CurriculumUnits.AnyAsync(item => item.ParentCurriculumUnitId == id && !item.IsSoftDeleted, cancellationToken) ||
+            await context.CurriculumTopics.AnyAsync(item => item.CurriculumUnitId == id && !item.IsSoftDeleted, cancellationToken);
+        if (hasDependencies)
+        {
+            throw new ConflictException("Remove child units and topics before deleting this curriculum unit.");
+        }
+        entity.IsActive = false;
+        entity.IsSoftDeleted = true;
+        entity.UpdatedById = actorId;
+        entity.UpdatedDateTime = DateTime.UtcNow;
+        await context.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task DeleteCurriculumTopicAsync(long id, long institutionId, long actorId, CancellationToken cancellationToken = default)
+    {
+        var entity = await context.CurriculumTopics.SingleOrDefaultAsync(
+            item => item.Id == id && item.InstitutionId == institutionId && !item.IsSoftDeleted,
+            cancellationToken) ?? throw new KeyNotFoundException("Curriculum topic was not found.");
+        var hasDependencies = await context.LessonPlanCurriculumTopics.AnyAsync(item => item.CurriculumTopicId == id, cancellationToken) ||
+            await context.LessonDeliveryCoverages.AnyAsync(item => item.CurriculumTopicId == id, cancellationToken);
+        if (hasDependencies)
+        {
+            throw new ConflictException("This topic is used by a lesson plan or delivery and cannot be deleted.");
+        }
+        entity.IsActive = false;
+        entity.IsSoftDeleted = true;
+        entity.UpdatedById = actorId;
+        entity.UpdatedDateTime = DateTime.UtcNow;
+        await context.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task DeleteLessonPlanAsync(long id, long institutionId, long actorId, CancellationToken cancellationToken = default)
+    {
+        var entity = await context.LessonPlans.SingleOrDefaultAsync(
+            item => item.Id == id && item.InstitutionId == institutionId && !item.IsSoftDeleted,
+            cancellationToken) ?? throw new KeyNotFoundException("Lesson plan was not found.");
+        await EnsureDraftAsync(entity.WorkflowStatusId, cancellationToken);
+        if (await context.LessonDeliveryLogs.AnyAsync(item => item.LessonPlanId == id && !item.IsSoftDeleted, cancellationToken))
+        {
+            throw new ConflictException("Remove lesson delivery records before deleting this lesson plan.");
+        }
+        entity.IsActive = false;
+        entity.IsSoftDeleted = true;
+        entity.UpdatedById = actorId;
+        entity.UpdatedDateTime = DateTime.UtcNow;
+        await context.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task DeleteLessonDeliveryAsync(long id, long institutionId, long actorId, CancellationToken cancellationToken = default)
+    {
+        var entity = await context.LessonDeliveryLogs.SingleOrDefaultAsync(
+            item => item.Id == id && item.InstitutionId == institutionId && !item.IsSoftDeleted,
+            cancellationToken) ?? throw new KeyNotFoundException("Lesson delivery was not found.");
+        await EnsureDraftAsync(entity.WorkflowStatusId, cancellationToken);
+        entity.IsActive = false;
+        entity.IsSoftDeleted = true;
+        entity.UpdatedById = actorId;
+        entity.UpdatedDateTime = DateTime.UtcNow;
+        await context.SaveChangesAsync(cancellationToken);
+    }
+
     private IQueryable<CurriculumFrameworkResponseDTO> ProjectFrameworks(IQueryable<CurriculumFrameworkMaster> source) => from item in source join session in context.AcademicSessions.AsNoTracking() on item.AcademicSessionId equals session.Id join status in context.AcademicWorkflowStatuses.AsNoTracking() on item.WorkflowStatusId equals status.Id orderby item.Name select new CurriculumFrameworkResponseDTO { Id = item.Id, AcademicSessionId = item.AcademicSessionId, AcademicSessionName = session.Name, Code = item.Code, Name = item.Name, AuthorityName = item.AuthorityName, Version = item.Version, EffectiveFrom = item.EffectiveFrom, EffectiveTo = item.EffectiveTo, WorkflowStatusId = item.WorkflowStatusId, WorkflowStatusName = status.Name, IsActive = item.IsActive };
     private IQueryable<LessonPlanResponseDTO> ProjectPlans(long institutionId) => from plan in context.LessonPlans.AsNoTracking() join assignment in context.StaffTeachingAssignments.AsNoTracking() on plan.StaffTeachingAssignmentId equals assignment.Id join staff in context.StaffMembers.AsNoTracking() on assignment.StaffMemberId equals staff.Id join offering in context.CourseOfferings.AsNoTracking() on assignment.CourseOfferingId equals offering.Id join status in context.AcademicWorkflowStatuses.AsNoTracking() on plan.WorkflowStatusId equals status.Id where plan.InstitutionId == institutionId && !plan.IsSoftDeleted orderby plan.PlannedDate descending select new LessonPlanResponseDTO { Id = plan.Id, StaffTeachingAssignmentId = plan.StaffTeachingAssignmentId, StaffMemberName = ((staff.FirstName ?? "") + " " + (staff.LastName ?? "")).Trim(), CourseOfferingName = offering.Name, PlannedDate = plan.PlannedDate, PeriodReference = plan.PeriodReference, Objectives = plan.Objectives, TeachingMethod = plan.TeachingMethod, Resources = plan.Resources, Activities = plan.Activities, Assessment = plan.Assessment, Homework = plan.Homework, WorkflowStatusId = plan.WorkflowStatusId, WorkflowStatusName = status.Name, IsActive = plan.IsActive, Topics = (from link in context.LessonPlanCurriculumTopics.AsNoTracking() join topic in context.CurriculumTopics.AsNoTracking() on link.CurriculumTopicId equals topic.Id where link.LessonPlanId == plan.Id select Topic(topic)).ToList() };
     private static CurriculumTopicResponseDTO Topic(CurriculumTopic item) => new() { Id = item.Id, CurriculumUnitId = item.CurriculumUnitId, Code = item.Code, Name = item.Name, Description = item.Description, Sequence = item.Sequence, PlannedPeriods = item.PlannedPeriods, LearningOutcome = item.LearningOutcome, IsActive = item.IsActive };

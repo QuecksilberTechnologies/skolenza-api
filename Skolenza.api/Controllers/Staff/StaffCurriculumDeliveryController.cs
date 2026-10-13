@@ -26,16 +26,40 @@ public sealed class StaffCurriculumDeliveryController(IMediator mediator) : Cont
         dto.Id = id;
         return Ok(await mediator.Send(new ReviewCurriculumFrameworkCommand(dto), token));
     }
+    [HttpDelete("frameworks/{id:long}")]
+    public async Task<IActionResult> DeleteFramework(
+        long id,
+        [FromQuery] CurriculumDeliveryPermissionRequestDTO dto,
+        CancellationToken token)
+    {
+        return Ok(await mediator.Send(new DeleteCurriculumFrameworkCommand(id, dto), token));
+    }
     [HttpGet("frameworks/{frameworkId:long}/units")]
     public async Task<IActionResult> GetUnits(long frameworkId, [FromQuery] CurriculumDeliveryPermissionRequestDTO dto, CancellationToken token) => Ok(await mediator.Send(new GetCurriculumUnitsQuery(frameworkId, dto), token));
     [HttpPost("units")]
     public async Task<IActionResult> CreateUnit([FromBody] CurriculumUnitRequestDTO dto, CancellationToken token) => Ok(await mediator.Send(new SaveCurriculumUnitCommand(dto), token));
     [HttpPut("units/{id:long}")]
     public async Task<IActionResult> UpdateUnit(long id, [FromBody] CurriculumUnitRequestDTO dto, CancellationToken token) { dto.Id = id; return Ok(await mediator.Send(new SaveCurriculumUnitCommand(dto), token)); }
+    [HttpDelete("units/{id:long}")]
+    public async Task<IActionResult> DeleteUnit(
+        long id,
+        [FromQuery] CurriculumDeliveryPermissionRequestDTO dto,
+        CancellationToken token)
+    {
+        return Ok(await mediator.Send(new DeleteCurriculumUnitCommand(id, dto), token));
+    }
     [HttpPost("topics")]
     public async Task<IActionResult> CreateTopic([FromBody] CurriculumTopicRequestDTO dto, CancellationToken token) => Ok(await mediator.Send(new SaveCurriculumTopicCommand(dto), token));
     [HttpPut("topics/{id:long}")]
     public async Task<IActionResult> UpdateTopic(long id, [FromBody] CurriculumTopicRequestDTO dto, CancellationToken token) { dto.Id = id; return Ok(await mediator.Send(new SaveCurriculumTopicCommand(dto), token)); }
+    [HttpDelete("topics/{id:long}")]
+    public async Task<IActionResult> DeleteTopic(
+        long id,
+        [FromQuery] CurriculumDeliveryPermissionRequestDTO dto,
+        CancellationToken token)
+    {
+        return Ok(await mediator.Send(new DeleteCurriculumTopicCommand(id, dto), token));
+    }
     [HttpGet("lesson-plans")]
     public async Task<IActionResult> GetLessonPlans([FromQuery] CurriculumDeliveryPermissionRequestDTO dto, CancellationToken token) => Ok(await mediator.Send(new GetLessonPlansQuery(dto), token));
     [HttpGet("teaching-assignments")]
@@ -46,6 +70,14 @@ public sealed class StaffCurriculumDeliveryController(IMediator mediator) : Cont
     public async Task<IActionResult> UpdateLessonPlan(long id, [FromBody] LessonPlanRequestDTO dto, CancellationToken token) { dto.Id = id; return Ok(await mediator.Send(new SaveLessonPlanCommand(dto), token)); }
     [HttpPut("lesson-plans/{id:long}/review")]
     public async Task<IActionResult> ReviewLessonPlan(long id, [FromBody] WorkflowReviewRequestDTO dto, CancellationToken token) { dto.Id = id; return Ok(await mediator.Send(new ReviewLessonPlanCommand(dto), token)); }
+    [HttpDelete("lesson-plans/{id:long}")]
+    public async Task<IActionResult> DeleteLessonPlan(
+        long id,
+        [FromQuery] CurriculumDeliveryPermissionRequestDTO dto,
+        CancellationToken token)
+    {
+        return Ok(await mediator.Send(new DeleteLessonPlanCommand(id, dto), token));
+    }
     [HttpGet("lesson-deliveries")]
     public async Task<IActionResult> GetLessonDeliveries([FromQuery] CurriculumDeliveryPermissionRequestDTO dto, CancellationToken token) => Ok(await mediator.Send(new GetLessonDeliveriesQuery(dto), token));
     [HttpPost("lesson-deliveries")]
@@ -54,6 +86,14 @@ public sealed class StaffCurriculumDeliveryController(IMediator mediator) : Cont
     public async Task<IActionResult> UpdateLessonDelivery(long id, [FromBody] LessonDeliveryRequestDTO dto, CancellationToken token) { dto.Id = id; return Ok(await mediator.Send(new SaveLessonDeliveryCommand(dto), token)); }
     [HttpPut("lesson-deliveries/{id:long}/review")]
     public async Task<IActionResult> ReviewLessonDelivery(long id, [FromBody] WorkflowReviewRequestDTO dto, CancellationToken token) { dto.Id = id; return Ok(await mediator.Send(new ReviewLessonDeliveryCommand(dto), token)); }
+    [HttpDelete("lesson-deliveries/{id:long}")]
+    public async Task<IActionResult> DeleteLessonDelivery(
+        long id,
+        [FromQuery] CurriculumDeliveryPermissionRequestDTO dto,
+        CancellationToken token)
+    {
+        return Ok(await mediator.Send(new DeleteLessonDeliveryCommand(id, dto), token));
+    }
     [HttpGet("syllabus-progress")]
     public async Task<IActionResult> GetSyllabusProgress([FromQuery] long? courseOfferingId, [FromQuery] CurriculumDeliveryPermissionRequestDTO dto, CancellationToken token) => Ok(await mediator.Send(new GetSyllabusProgressQuery(courseOfferingId, dto), token));
 }

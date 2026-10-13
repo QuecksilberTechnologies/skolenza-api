@@ -46,6 +46,11 @@ public sealed class StaffCurriculumDeliveryTests
             Assert.That(methods, Does.Contain("CreateLessonDelivery"));
             Assert.That(methods, Does.Contain("ReviewLessonDelivery"));
             Assert.That(methods, Does.Contain("GetSyllabusProgress"));
+            Assert.That(methods, Does.Contain("DeleteFramework"));
+            Assert.That(methods, Does.Contain("DeleteUnit"));
+            Assert.That(methods, Does.Contain("DeleteTopic"));
+            Assert.That(methods, Does.Contain("DeleteLessonPlan"));
+            Assert.That(methods, Does.Contain("DeleteLessonDelivery"));
         });
     }
 
@@ -78,6 +83,8 @@ public sealed class StaffCurriculumDeliveryTests
             Assert.That(source, Does.Contain("Coverage contains a topic outside the approved lesson plan."));
             Assert.That(source, Does.Contain("Delivery can be recorded only for an approved lesson plan."));
             Assert.That(source, Does.Not.Contain("SyllabusProgressMaster"));
+            Assert.That(source, Does.Contain("Remove child units and topics before deleting this curriculum unit."));
+            Assert.That(source, Does.Contain("Only draft or rejected records can be edited."));
         });
     }
 }

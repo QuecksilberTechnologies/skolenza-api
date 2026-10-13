@@ -56,3 +56,5 @@ test run.
 - [Staff professional structure Phase 1B/1C (2026-10-12)](staff/professional-structure/2026-10-12.md)
 - [Staff academic structure and assignments Phase 2 (2026-10-13)](staff/academic-structure/2026-10-13.md)
 - [Local to Render full schema and data synchronization (2026-10-13)](database/local-to-render-full-sync/2026-10-13.md)
+
+- [Staff curriculum and lesson delivery (2026-10-13)](staff/curriculum-delivery/2026-10-13.md)

@@ -12,16 +12,21 @@ public sealed record GetAcademicWorkflowStatusesQuery(CurriculumDeliveryPermissi
 public sealed record GetCurriculumFrameworksQuery(CurriculumDeliveryPermissionRequestDTO DTO) : IRequest<ApiResponse<List<CurriculumFrameworkResponseDTO>>>;
 public sealed record SaveCurriculumFrameworkCommand(CurriculumFrameworkRequestDTO DTO) : IRequest<ApiResponse<CurriculumFrameworkResponseDTO>>;
 public sealed record ReviewCurriculumFrameworkCommand(WorkflowReviewRequestDTO DTO) : IRequest<ApiResponse<CurriculumFrameworkResponseDTO>>;
+public sealed record DeleteCurriculumFrameworkCommand(long Id, CurriculumDeliveryPermissionRequestDTO DTO) : IRequest<ApiResponse<bool>>;
 public sealed record GetCurriculumUnitsQuery(long FrameworkId, CurriculumDeliveryPermissionRequestDTO DTO) : IRequest<ApiResponse<List<CurriculumUnitResponseDTO>>>;
 public sealed record SaveCurriculumUnitCommand(CurriculumUnitRequestDTO DTO) : IRequest<ApiResponse<CurriculumUnitResponseDTO>>;
+public sealed record DeleteCurriculumUnitCommand(long Id, CurriculumDeliveryPermissionRequestDTO DTO) : IRequest<ApiResponse<bool>>;
 public sealed record SaveCurriculumTopicCommand(CurriculumTopicRequestDTO DTO) : IRequest<ApiResponse<CurriculumTopicResponseDTO>>;
+public sealed record DeleteCurriculumTopicCommand(long Id, CurriculumDeliveryPermissionRequestDTO DTO) : IRequest<ApiResponse<bool>>;
 public sealed record GetLessonPlansQuery(CurriculumDeliveryPermissionRequestDTO DTO) : IRequest<ApiResponse<List<LessonPlanResponseDTO>>>;
 public sealed record GetCurriculumTeachingAssignmentsQuery(CurriculumDeliveryPermissionRequestDTO DTO) : IRequest<ApiResponse<List<StaffTeachingAssignmentResponseDTO>>>;
 public sealed record SaveLessonPlanCommand(LessonPlanRequestDTO DTO) : IRequest<ApiResponse<LessonPlanResponseDTO>>;
 public sealed record ReviewLessonPlanCommand(WorkflowReviewRequestDTO DTO) : IRequest<ApiResponse<LessonPlanResponseDTO>>;
+public sealed record DeleteLessonPlanCommand(long Id, CurriculumDeliveryPermissionRequestDTO DTO) : IRequest<ApiResponse<bool>>;
 public sealed record GetLessonDeliveriesQuery(CurriculumDeliveryPermissionRequestDTO DTO) : IRequest<ApiResponse<List<LessonDeliveryResponseDTO>>>;
 public sealed record SaveLessonDeliveryCommand(LessonDeliveryRequestDTO DTO) : IRequest<ApiResponse<LessonDeliveryResponseDTO>>;
 public sealed record ReviewLessonDeliveryCommand(WorkflowReviewRequestDTO DTO) : IRequest<ApiResponse<LessonDeliveryResponseDTO>>;
+public sealed record DeleteLessonDeliveryCommand(long Id, CurriculumDeliveryPermissionRequestDTO DTO) : IRequest<ApiResponse<bool>>;
 public sealed record GetSyllabusProgressQuery(long? CourseOfferingId, CurriculumDeliveryPermissionRequestDTO DTO) : IRequest<ApiResponse<List<SyllabusProgressResponseDTO>>>;
 
 #endregion
@@ -251,6 +256,71 @@ public sealed class GetSyllabusProgressQueryHandler(
         var actor = await CurriculumDeliveryContext.ResolveAsync(common);
         var data = await unit.StaffAcademicStructureRepository.GetSyllabusProgressAsync(actor.InstitutionId, request.CourseOfferingId, token);
         return ApiResponse<List<SyllabusProgressResponseDTO>>.Success(data, "Syllabus progress retrieved successfully.");
+    }
+}
+
+public sealed class DeleteCurriculumFrameworkCommandHandler(
+    IUnitOfWork unit,
+    ICommonRequestService common)
+    : IRequestHandler<DeleteCurriculumFrameworkCommand, ApiResponse<bool>>
+{
+    public async Task<ApiResponse<bool>> Handle(DeleteCurriculumFrameworkCommand request, CancellationToken token)
+    {
+        var actor = await CurriculumDeliveryContext.ResolveAsync(common);
+        await unit.StaffAcademicStructureRepository.DeleteCurriculumFrameworkAsync(request.Id, actor.InstitutionId, actor.StaffMemberId, token);
+        return ApiResponse<bool>.Success(true, "Curriculum framework deleted successfully.");
+    }
+}
+
+public sealed class DeleteCurriculumUnitCommandHandler(
+    IUnitOfWork unit,
+    ICommonRequestService common)
+    : IRequestHandler<DeleteCurriculumUnitCommand, ApiResponse<bool>>
+{
+    public async Task<ApiResponse<bool>> Handle(DeleteCurriculumUnitCommand request, CancellationToken token)
+    {
+        var actor = await CurriculumDeliveryContext.ResolveAsync(common);
+        await unit.StaffAcademicStructureRepository.DeleteCurriculumUnitAsync(request.Id, actor.InstitutionId, actor.StaffMemberId, token);
+        return ApiResponse<bool>.Success(true, "Curriculum unit deleted successfully.");
+    }
+}
+
+public sealed class DeleteCurriculumTopicCommandHandler(
+    IUnitOfWork unit,
+    ICommonRequestService common)
+    : IRequestHandler<DeleteCurriculumTopicCommand, ApiResponse<bool>>
+{
+    public async Task<ApiResponse<bool>> Handle(DeleteCurriculumTopicCommand request, CancellationToken token)
+    {
+        var actor = await CurriculumDeliveryContext.ResolveAsync(common);
+        await unit.StaffAcademicStructureRepository.DeleteCurriculumTopicAsync(request.Id, actor.InstitutionId, actor.StaffMemberId, token);
+        return ApiResponse<bool>.Success(true, "Curriculum topic deleted successfully.");
+    }
+}
+
+public sealed class DeleteLessonPlanCommandHandler(
+    IUnitOfWork unit,
+    ICommonRequestService common)
+    : IRequestHandler<DeleteLessonPlanCommand, ApiResponse<bool>>
+{
+    public async Task<ApiResponse<bool>> Handle(DeleteLessonPlanCommand request, CancellationToken token)
+    {
+        var actor = await CurriculumDeliveryContext.ResolveAsync(common);
+        await unit.StaffAcademicStructureRepository.DeleteLessonPlanAsync(request.Id, actor.InstitutionId, actor.StaffMemberId, token);
+        return ApiResponse<bool>.Success(true, "Lesson plan deleted successfully.");
+    }
+}
+
+public sealed class DeleteLessonDeliveryCommandHandler(
+    IUnitOfWork unit,
+    ICommonRequestService common)
+    : IRequestHandler<DeleteLessonDeliveryCommand, ApiResponse<bool>>
+{
+    public async Task<ApiResponse<bool>> Handle(DeleteLessonDeliveryCommand request, CancellationToken token)
+    {
+        var actor = await CurriculumDeliveryContext.ResolveAsync(common);
+        await unit.StaffAcademicStructureRepository.DeleteLessonDeliveryAsync(request.Id, actor.InstitutionId, actor.StaffMemberId, token);
+        return ApiResponse<bool>.Success(true, "Lesson delivery deleted successfully.");
     }
 }
 #endregion
