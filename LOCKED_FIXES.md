@@ -119,7 +119,7 @@ Every entry must include:
 | `LOCK-POLICY-DRAFT-SAVE-015` | Atomic replacement of Draft policy rules and targets | LOCKED | Backend 49/49; Release build | API DEPLOYMENT PENDING | [2026-10-09](docs/testing/policy/draft-replacement-save/2026-10-09_old.md) |
 | `LOCK-EMP-PROFILE-COMPLETION-016` | Mandatory-aware Employee profile completion consistency | LOCKED | Employee/contact 52/52; Bank 1/1; locality 9/9; tenant 14/14 + DB rollback 2/2; Role 20/20; Release build | API DEPLOYMENT PENDING | [2026-10-10](docs/testing/employee/profile-completion-consistency/2026-10-10_old.md) |
 | `LOCK-STAFF-PROFESSIONAL-MODEL-017` | Runtime-valid professional master mapping | LOCKED | Staff professional 4/4; API startup/EF model/Swagger/runtime probes | PENDING | [2026-10-12](docs/testing/staff/professional-structure/2026-10-12.md) |
-| `LOCK-STAFF-ACADEMIC-018` | Tenant-owned academic hierarchy and effective staff teaching responsibility | LOCKED | Staff combined 12/12; tenant rollback 2/2; Release API and Angular production builds; authenticated local CRUD/conflict/isolation | DB APPLIED; API/UI PENDING | [2026-10-13](docs/testing/staff/academic-structure/2026-10-13.md) |
+| `LOCK-STAFF-ACADEMIC-018` | Tenant-owned academic hierarchy and effective staff teaching responsibility | LOCKED | Staff combined 12/12; tenant rollback 2/2; Release API and Angular production builds; authenticated local CRUD/conflict/isolation | DB/API LIVE; AUTHENTICATED UI PENDING | [2026-10-13](docs/testing/staff/academic-structure/2026-10-13.md) |
 
 ## LOCK-TENANT-REG-001: Tenant registration transaction and actionable errors
 
@@ -839,8 +839,8 @@ bun run build -- --configuration production
 Expected: 12 focused Staff tests and 2 rollback probes pass with zero failures/skips; API Release
 and Angular production builds succeed; API starts against PostgreSQL. Authenticated local CRUD,
 read-back, HTTP 409 overlap and cross-institution denial remain part of the acceptance baseline.
-Evidence: [2026-10-13](docs/testing/staff/academic-structure/2026-10-13.md). Deployed acceptance is
-pending and must be recorded separately.
+Evidence: [2026-10-13](docs/testing/staff/academic-structure/2026-10-13.md). Render DB and API
+deployment passed; authenticated deployed browser acceptance remains separate.
 
 ## Adding the next lock
 
