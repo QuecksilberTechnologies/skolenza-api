@@ -1,0 +1,16 @@
+BEGIN;
+DROP TABLE IF EXISTS skolenza."StaffBroadcastAudience";
+DROP TABLE IF EXISTS skolenza."StaffMessageAttachment";
+DROP TABLE IF EXISTS skolenza."StaffConversationMessage";
+DROP TABLE IF EXISTS skolenza."StaffConversationParticipant";
+DROP TABLE IF EXISTS skolenza."StaffConversation";
+DROP TABLE IF EXISTS skolenza."StaffQueryCategoryMaster";
+DROP TABLE IF EXISTS skolenza."InstitutionCommunicationSetting";
+DROP TABLE IF EXISTS skolenza."SubstituteApprovalHistory";
+DROP TABLE IF EXISTS skolenza."SubstituteAssignment";
+DROP TABLE IF EXISTS skolenza."StaffAbsenceImpact";
+DROP TABLE IF EXISTS skolenza."SubstituteWorkflowStep";
+DROP TABLE IF EXISTS skolenza."SubstituteWorkflowMaster";
+DROP TABLE IF EXISTS skolenza."TimetableEntry";
+DROP TABLE IF EXISTS skolenza."TimetablePeriodMaster";
+COMMIT;

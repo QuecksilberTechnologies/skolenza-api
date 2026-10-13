@@ -4,6 +4,28 @@ namespace skolenza.application.Interfaces.IRepositories;
 
 public interface IStaffAcademicStructureRepository
 {
+    Task<StaffOperationsOptionsResponseDTO> GetStaffOperationsOptionsAsync(long institutionId, CancellationToken token);
+    Task<List<TimetablePeriodResponseDTO>> GetTimetablePeriodsAsync(long institutionId, CancellationToken token);
+    Task<TimetablePeriodResponseDTO> SaveTimetablePeriodAsync(TimetablePeriodRequestDTO request, long institutionId, long actorId, CancellationToken token);
+    Task<List<TimetableEntryResponseDTO>> GetTimetableEntriesAsync(long institutionId, CancellationToken token);
+    Task<TimetableEntryResponseDTO> SaveTimetableEntryAsync(TimetableEntryRequestDTO request, long institutionId, long actorId, CancellationToken token);
+    Task<List<SubstituteWorkflowResponseDTO>> GetSubstituteWorkflowsAsync(long institutionId, CancellationToken token);
+    Task<SubstituteWorkflowResponseDTO> SaveSubstituteWorkflowAsync(SubstituteWorkflowRequestDTO request, long institutionId, long actorId, CancellationToken token);
+    Task<List<StaffAbsenceImpactResponseDTO>> GetAbsenceImpactsAsync(long institutionId, CancellationToken token);
+    Task<List<StaffAbsenceImpactResponseDTO>> SynchronizeLeaveImpactsAsync(long leaveRequestId, long institutionId, long actorId, CancellationToken token);
+    Task<StaffAbsenceImpactResponseDTO> AssignSubstituteAsync(SubstituteAssignmentRequestDTO request, long institutionId, long actorId, CancellationToken token);
+    Task<StaffAbsenceImpactResponseDTO> ActOnSubstituteAsync(long assignmentId, SubstituteActionRequestDTO request, long institutionId, long actorId, CancellationToken token);
+    Task<CommunicationSettingDTO> GetCommunicationSettingAsync(long institutionId, CancellationToken token);
+    Task<CommunicationSettingDTO> SaveCommunicationSettingAsync(CommunicationSettingDTO request, long institutionId, long actorId, CancellationToken token);
+    Task<List<StaffQueryCategoryResponseDTO>> GetQueryCategoriesAsync(long institutionId, bool activeOnly, CancellationToken token);
+    Task<StaffQueryCategoryResponseDTO> SaveQueryCategoryAsync(StaffQueryCategoryRequestDTO request, long institutionId, long actorId, CancellationToken token);
+    Task DeactivateQueryCategoryAsync(long id, long institutionId, long actorId, CancellationToken token);
+    Task<List<StaffConversationResponseDTO>> GetConversationsAsync(long institutionId, long actorId, CancellationToken token);
+    Task<StaffConversationDetailResponseDTO> GetConversationAsync(long conversationId, long institutionId, long actorId, CancellationToken token);
+    Task<StaffConversationResponseDTO> CreateConversationAsync(StaffConversationRequestDTO request, long institutionId, long actorId, CancellationToken token);
+    Task<StaffConversationResponseDTO> AddMessageAsync(long conversationId, StaffMessageRequestDTO request, long institutionId, long actorId, CancellationToken token);
+    Task<StaffConversationDetailResponseDTO> MarkConversationReadAsync(long conversationId, long institutionId, long actorId, CancellationToken token);
+    Task<StaffConversationDetailResponseDTO> CloseConversationAsync(long conversationId, long institutionId, long actorId, CancellationToken token);
     Task<List<TeachingAssignmentTypeOptionDTO>> GetTeachingAssignmentTypesAsync(CancellationToken cancellationToken = default);
     Task<List<AcademicMasterResponseDTO>> GetMastersAsync(AcademicMasterType type, long institutionId, bool activeOnly, CancellationToken cancellationToken = default);
     Task<AcademicMasterResponseDTO> SaveMasterAsync(AcademicMasterType type, AcademicMasterRequestDTO request, long institutionId, long actorStaffMemberId, CancellationToken cancellationToken = default);
