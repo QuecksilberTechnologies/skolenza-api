@@ -32,8 +32,8 @@ The user explicitly waived a new database backup on 2026-10-12 because a backup 
 | 1C | Effective-dated staff assignments | COMPLETE | COMPLETE | COMPLETE | COMPLETE |
 | 2 | Academic structure and teaching assignments | COMPLETE | COMPLETE | COMPLETE | COMPLETE |
 | 3 | Curriculum, lesson planning and syllabus progress | COMPLETE | COMPLETE | COMPLETE | COMPLETE |
-| 4 | Timetable, leave impact and substitute coverage | PENDING | PENDING | PENDING | PENDING |
-| 5 | Staff queries, direct messages and broadcasts | PENDING | PENDING | PENDING | PENDING |
+| 4 | Timetable, leave impact and substitute coverage | COMPLETE (local) | COMPLETE (local) | COMPLETE (local) | Render acceptance pending |
+| 5 | Staff queries, direct messages and broadcasts | COMPLETE (local) | COMPLETE (local) | COMPLETE (local) | Render acceptance pending |
 | 6 | Feedback, innovation and professional development | PENDING | PENDING | PENDING | PENDING |
 | 7 | Legacy removal, cutover and deployed acceptance | PENDING | PENDING | PENDING | PENDING |
 

@@ -62,3 +62,6 @@ test run.
 
 - [Staff professional category hierarchy (2026-10-13)](staff/professional-category-hierarchy/2026-10-13.md)
 - [Development S3 storage prefix and connectivity (2026-10-13)](storage/development-s3-prefix/2026-10-13.md)
+# Staff operations
+
+- [Phase 4 timetable/coverage and Phase 5 communication — 2026-10-14](staff-operations/phase-4-5/2026-10-14.md)

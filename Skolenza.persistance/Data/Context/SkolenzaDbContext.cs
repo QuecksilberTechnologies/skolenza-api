@@ -214,6 +214,20 @@ namespace skolenza.persistance.Data.Context
         public virtual DbSet<LessonPlanCurriculumTopic> LessonPlanCurriculumTopics { get; set; }
         public virtual DbSet<LessonDeliveryLog> LessonDeliveryLogs { get; set; }
         public virtual DbSet<LessonDeliveryCoverage> LessonDeliveryCoverages { get; set; }
+        public virtual DbSet<TimetablePeriodMaster> TimetablePeriodMasters { get; set; }
+        public virtual DbSet<TimetableEntry> TimetableEntries { get; set; }
+        public virtual DbSet<SubstituteWorkflowMaster> SubstituteWorkflowMasters { get; set; }
+        public virtual DbSet<SubstituteWorkflowStep> SubstituteWorkflowSteps { get; set; }
+        public virtual DbSet<StaffAbsenceImpact> StaffAbsenceImpacts { get; set; }
+        public virtual DbSet<SubstituteAssignment> SubstituteAssignments { get; set; }
+        public virtual DbSet<SubstituteApprovalHistory> SubstituteApprovalHistories { get; set; }
+        public virtual DbSet<InstitutionCommunicationSetting> InstitutionCommunicationSettings { get; set; }
+        public virtual DbSet<StaffQueryCategoryMaster> StaffQueryCategoryMasters { get; set; }
+        public virtual DbSet<StaffConversation> StaffConversations { get; set; }
+        public virtual DbSet<StaffConversationParticipant> StaffConversationParticipants { get; set; }
+        public virtual DbSet<StaffConversationMessage> StaffConversationMessages { get; set; }
+        public virtual DbSet<StaffMessageAttachment> StaffMessageAttachments { get; set; }
+        public virtual DbSet<StaffBroadcastAudience> StaffBroadcastAudiences { get; set; }
 
         public virtual DbSet<StaffEmploymentTypeBasicMenu> StaffEmploymentTypeBasicMenus { get; set; }
 
@@ -3182,6 +3196,92 @@ namespace skolenza.persistance.Data.Context
                 entity.HasKey(item => item.Id);
                 entity.Property(item => item.CompletionPercent).HasPrecision(5, 2);
                 entity.HasIndex(item => new { item.LessonDeliveryLogId, item.CurriculumTopicId }).IsUnique();
+            });
+
+            ConfigureAcademicEntity<TimetablePeriodMaster>(modelBuilder, "TimetablePeriodMaster");
+            ConfigureAcademicEntity<SubstituteWorkflowMaster>(modelBuilder, "SubstituteWorkflowMaster");
+            ConfigureAcademicEntity<StaffQueryCategoryMaster>(modelBuilder, "StaffQueryCategoryMaster");
+            modelBuilder.Entity<TimetableEntry>(entity =>
+            {
+                entity.ToTable("TimetableEntry", "skolenza");
+                entity.HasKey(item => item.Id);
+                entity.Property(item => item.RoomReference).HasMaxLength(100);
+                entity.HasIndex(item => new { item.InstitutionId, item.StaffTeachingAssignmentId, item.DayOfWeek, item.TimetablePeriodMasterId, item.EffectiveFrom });
+                entity.HasIndex(item => new { item.InstitutionId, item.ClassSectionId, item.DayOfWeek, item.TimetablePeriodMasterId, item.EffectiveFrom });
+            });
+            modelBuilder.Entity<SubstituteWorkflowStep>(entity =>
+            {
+                entity.ToTable("SubstituteWorkflowStep", "skolenza");
+                entity.HasKey(item => item.Id);
+                entity.Property(item => item.ApproverTypeCode).HasMaxLength(40);
+                entity.HasIndex(item => new { item.SubstituteWorkflowMasterId, item.Sequence }).IsUnique();
+            });
+            modelBuilder.Entity<StaffAbsenceImpact>(entity =>
+            {
+                entity.ToTable("StaffAbsenceImpact", "skolenza");
+                entity.HasKey(item => item.Id);
+                entity.Property(item => item.StatusCode).HasMaxLength(40);
+                entity.HasIndex(item => new { item.InstitutionId, item.LeaveRequestId, item.TimetableEntryId, item.ImpactDate }).IsUnique();
+            });
+            modelBuilder.Entity<SubstituteAssignment>(entity =>
+            {
+                entity.ToTable("SubstituteAssignment", "skolenza");
+                entity.HasKey(item => item.Id);
+                entity.Property(item => item.StatusCode).HasMaxLength(40);
+                entity.Property(item => item.Remark).HasMaxLength(500);
+                entity.HasIndex(item => item.StaffAbsenceImpactId).IsUnique();
+            });
+            modelBuilder.Entity<SubstituteApprovalHistory>(entity =>
+            {
+                entity.ToTable("SubstituteApprovalHistory", "skolenza");
+                entity.HasKey(item => item.Id);
+                entity.Property(item => item.ActionCode).HasMaxLength(40);
+                entity.Property(item => item.Remark).HasMaxLength(500);
+                entity.HasIndex(item => new { item.SubstituteAssignmentId, item.Sequence });
+            });
+            modelBuilder.Entity<InstitutionCommunicationSetting>(entity =>
+            {
+                entity.ToTable("InstitutionCommunicationSetting", "skolenza");
+                entity.HasKey(item => item.Id);
+                entity.HasIndex(item => item.InstitutionId).IsUnique();
+            });
+            modelBuilder.Entity<StaffConversation>(entity =>
+            {
+                entity.ToTable("StaffConversation", "skolenza");
+                entity.HasKey(item => item.Id);
+                entity.Property(item => item.ConversationTypeCode).HasMaxLength(40);
+                entity.Property(item => item.Subject).HasMaxLength(300);
+                entity.Property(item => item.StatusCode).HasMaxLength(40);
+                entity.HasIndex(item => new { item.InstitutionId, item.CreatedDateTime });
+            });
+            modelBuilder.Entity<StaffConversationParticipant>(entity =>
+            {
+                entity.ToTable("StaffConversationParticipant", "skolenza");
+                entity.HasKey(item => item.Id);
+                entity.Property(item => item.ParticipantRoleCode).HasMaxLength(40);
+                entity.HasIndex(item => new { item.StaffConversationId, item.StaffMemberId }).IsUnique();
+            });
+            modelBuilder.Entity<StaffConversationMessage>(entity =>
+            {
+                entity.ToTable("StaffConversationMessage", "skolenza");
+                entity.HasKey(item => item.Id);
+                entity.Property(item => item.Body).HasMaxLength(10000);
+                entity.HasIndex(item => new { item.StaffConversationId, item.SentDateTime });
+            });
+            modelBuilder.Entity<StaffMessageAttachment>(entity =>
+            {
+                entity.ToTable("StaffMessageAttachment", "skolenza");
+                entity.HasKey(item => item.Id);
+                entity.Property(item => item.FileName).HasMaxLength(255);
+                entity.Property(item => item.ContentType).HasMaxLength(100);
+                entity.Property(item => item.StorageObjectKey).HasMaxLength(1000);
+            });
+            modelBuilder.Entity<StaffBroadcastAudience>(entity =>
+            {
+                entity.ToTable("StaffBroadcastAudience", "skolenza");
+                entity.HasKey(item => item.Id);
+                entity.Property(item => item.AudienceTypeCode).HasMaxLength(40);
+                entity.HasIndex(item => new { item.StaffConversationId, item.AudienceTypeCode, item.TargetId }).IsUnique();
             });
 
             #endregion
