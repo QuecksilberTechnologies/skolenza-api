@@ -83,4 +83,27 @@ public sealed class StaffCategoryCatalogueTests
                 "Both staff creation response projections must return the persisted category.");
         });
     }
+
+    [Test]
+    public void Host_catalogue_endpoints_and_seed_use_the_persisted_permission_pipeline()
+    {
+        var root = TestContext.CurrentContext.TestDirectory;
+        var repositoryRoot = Path.GetFullPath(Path.Combine(root, "..", "..", "..", ".."));
+        var controller = File.ReadAllText(Path.Combine(repositoryRoot, "Skolenza.api", "Controllers", "Staff", "StaffCategoryController.cs"));
+        var handler = File.ReadAllText(Path.Combine(repositoryRoot, "Skolenza.application", "Features", "HostStaffCategoryCmd", "Handlers", "HostStaffCategoryHandlers.cs"));
+        var seed = File.ReadAllText(Path.Combine(repositoryRoot, "database-scripts", "SeedHostInstitutionMasterData.sql"));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(controller, Does.Contain("HttpGet(\"host\")"));
+            Assert.That(controller, Does.Contain("HttpPost(\"host\")"));
+            Assert.That(controller, Does.Contain("HttpPut(\"host/{id}\")"));
+            Assert.That(handler, Does.Contain("HostRuntimePermissionValidator.ValidateAsync"));
+            Assert.That(handler, Does.Contain("Features.HostStaffCategoryCmd.Handlers"));
+            Assert.That(seed, Does.Contain("'HOST_INSTITUTION_MASTER_DATA'"));
+            Assert.That(seed, Does.Contain("'HOST_STAFF_CATEGORY_CATALOGUE'"));
+            Assert.That(seed, Does.Contain("\"ModuleScope\"=2"));
+            Assert.That(seed, Does.Contain("HostRoleModuleAndPermission"));
+        });
+    }
 }

@@ -41,8 +41,9 @@ $stages = @(
     [pscustomobject]@{ Order = 4; Name = 'geography'; Script = '03-geography/001-four-country-postal-catalog.sql' },
     [pscustomobject]@{ Order = 5; Name = 'country-regulatory-master'; Script = '03-geography/002-country-regulatory-master.sql' },
     [pscustomobject]@{ Order = 6; Name = 'access-and-host'; Script = '04-access-and-host/001-modules-operations-two-host-admins.sql' },
-    [pscustomobject]@{ Order = 7; Name = 'dependent-master'; Script = '05-dependent-master/001-employee-identity-catalog.sql' },
-    [pscustomobject]@{ Order = 8; Name = 'verification'; Script = '99-verification/001-verify-canonical-seed.sql' }
+    [pscustomobject]@{ Order = 7; Name = 'host-institution-master-data'; Script = '../SeedHostInstitutionMasterData.sql' },
+    [pscustomobject]@{ Order = 8; Name = 'dependent-master'; Script = '05-dependent-master/001-employee-identity-catalog.sql' },
+    [pscustomobject]@{ Order = 9; Name = 'verification'; Script = '99-verification/001-verify-canonical-seed.sql' }
 )
 
 function Read-ConnectionSetting([string] $path) {

@@ -66,3 +66,7 @@ test run.
 # Staff operations
 
 - [Phase 4 timetable/coverage and Phase 5 communication — 2026-10-14](staff-operations/phase-4-5/2026-10-14.md)
+# Current scenario reports
+
+- [Host Staff Category Catalogue — 2026-10-14](staff/host-staff-category-catalogue/2026-10-14.md)
+

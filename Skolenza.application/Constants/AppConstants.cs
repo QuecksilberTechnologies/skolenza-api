@@ -89,6 +89,7 @@ namespace skolenza.application.Constants
 
         public static class StaffCategories
         {
+        public const string HostModuleCode = "HOST_STAFF_CATEGORY_CATALOGUE";
             public const short Administrative = 1;
             public const short Teaching = 2;
             public const short NonTeaching = 3;
