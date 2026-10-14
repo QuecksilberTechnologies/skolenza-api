@@ -120,6 +120,7 @@ Every entry must include:
 | `LOCK-EMP-PROFILE-COMPLETION-016` | Mandatory-aware Employee profile completion consistency | LOCKED | Employee/contact 52/52; Bank 1/1; locality 9/9; tenant 14/14 + DB rollback 2/2; Role 20/20; Release build | API DEPLOYMENT PENDING | [2026-10-10](docs/testing/employee/profile-completion-consistency/2026-10-10_old.md) |
 | `LOCK-STAFF-PROFESSIONAL-MODEL-017` | Runtime-valid professional master mapping | LOCKED | Staff professional 4/4; API startup/EF model/Swagger/runtime probes | PENDING | [2026-10-12](docs/testing/staff/professional-structure/2026-10-12.md) |
 | `LOCK-STAFF-ACADEMIC-018` | Tenant-owned academic hierarchy and effective staff teaching responsibility | LOCKED | Staff combined 12/12; tenant rollback 2/2; Release API and Angular production builds; authenticated local CRUD/conflict/isolation | DB/API LIVE; AUTHENTICATED UI PENDING | [2026-10-13](docs/testing/staff/academic-structure/2026-10-13.md) |
+| `LOCK-HOST-STAFF-CATEGORY-CATALOGUE-021` | Host-owned Staff Category catalogue and permission-scoped institution setup | LOCKED | Staff gates 14/14; Angular catalogue/interceptor 67/67; backend Release and Angular production builds | Render DB seed PASS; API/UI deployment and authenticated browser acceptance PENDING | [2026-10-14](docs/testing/staff/host-staff-category-catalogue/2026-10-14.md) |
 
 ## LOCK-TENANT-REG-001: Tenant registration transaction and actionable errors
 
@@ -900,3 +901,43 @@ dotnet build .\Skolenza.sln -c Release --no-restore --nologo
 ```
 
 Expected: Release build succeeds with zero errors. The sanitized development probe uploads below `skolenza/`, downloads the same content through a signed URL and deletes the probe object. Credentials and signed URLs must never be committed or recorded in evidence. Evidence: [2026-10-13](docs/testing/storage/development-s3-prefix/2026-10-13.md).
+
+## LOCK-HOST-STAFF-CATEGORY-CATALOGUE-021: Host-owned Staff Category catalogue
+
+### Locked behavior
+
+- Host administrators manage the central Staff Category catalogue through the existing Host permission pipeline and Host-only module scope (`ModuleScope=2`).
+- Institution administrators consume active central categories and configure institution-owned category mappings, Job Families, Capabilities, Duties and Positions using the existing tenant-scoped professional-structure API and UI.
+- List, create and update authorization resolves through existing module operations (`View`, `Add`, `Update`); no permission bypass or consumer-side hardcoded catalogue is introduced.
+- The central catalogue seed is repeatable and preserves existing `StaffCategory` rows while enabling generated IDs for future API creates.
+- Removing a central category from use is deactivation, not cross-tenant destructive deletion; institution configuration and history remain tenant-owned.
+
+### Protected areas and gate
+
+- Host catalogue seed and canonical production seed runner stage 7.
+- Host Staff Category API/controller, handlers, repository, DTOs and authorization behavior.
+- Angular Host-only route/menu, `StaffCategoriesAPI`, permission-operation interceptor mapping and Signal Forms catalogue page.
+- Host module/operation mappings and Host-Super-Admin grants in local and Render `skolenza` databases.
+- Existing institution professional structure and academic staff behavior covered by the combined Staff gates.
+
+```powershell
+dotnet test .\skolenza.automationtests\skolenza.automationtests.csproj -c Release --no-build --no-restore --filter "TestCategory=StaffAcademicStructure|TestCategory=StaffProfessionalStructure|TestCategory=StaffCategoryCatalogue" --logger "console;verbosity=minimal"
+dotnet build .\Skolenza.sln -c Release --no-restore --nologo
+bun run test -- --include src/app/features/host/institution-master-data/staff-category-catalogue.spec.ts --include src/app/core/interceptors/module-operation-routes.spec.ts --watch=false
+bun run build -- --configuration production
+```
+
+Expected: 14 focused backend Staff tests and 67 Angular component/interceptor tests pass with zero failures or skips; Release API and Angular production builds succeed. Re-running `database-scripts/SeedHostInstitutionMasterData.sql` must keep counts at one Host parent, one child, three active operation mappings and three active Host grants in both local and Render databases.
+
+Evidence: [2026-10-14 scenario](docs/testing/staff/host-staff-category-catalogue/2026-10-14.md).
+
+### Acceptance state
+
+- Local catalogue contract and protected Staff regression tests: PASS, 14/14.
+- Angular catalogue and permission-route tests: PASS, 67/67.
+- Backend Release build: PASS, zero errors; existing dependency vulnerability warnings remain.
+- Angular production build: PASS.
+- Local and Render `skolenza` database seed/repeat reconciliation: PASS.
+- Local authenticated Host create/list and Institution dependent configuration: PASS.
+- Cross-Institution isolation comparison: PENDING.
+- Render API route/deployment and authenticated browser acceptance: PENDING; live OpenAPI did not yet expose the new route.
