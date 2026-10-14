@@ -24,7 +24,8 @@ public sealed class StaffTimetableAndCommunicationTests
             [typeof(StaffAbsenceImpact)] = "StaffAbsenceImpact", [typeof(SubstituteAssignment)] = "SubstituteAssignment",
             [typeof(InstitutionCommunicationSetting)] = "InstitutionCommunicationSetting", [typeof(StaffQueryCategoryMaster)] = "StaffQueryCategoryMaster",
             [typeof(StaffConversation)] = "StaffConversation", [typeof(StaffConversationParticipant)] = "StaffConversationParticipant",
-            [typeof(StaffConversationMessage)] = "StaffConversationMessage", [typeof(StaffBroadcastAudience)] = "StaffBroadcastAudience"
+            [typeof(StaffConversationMessage)] = "StaffConversationMessage", [typeof(StaffMessageAttachment)] = "StaffMessageAttachment",
+            [typeof(StaffBroadcastAudience)] = "StaffBroadcastAudience"
         };
         Assert.Multiple(() => { foreach (var item in types) Assert.That(context.Model.FindEntityType(item.Key)?.GetTableName(), Is.EqualTo(item.Value)); });
     }
@@ -56,9 +57,22 @@ public sealed class StaffTimetableAndCommunicationTests
             Assert.That(methods, Does.Contain("CreateConversation"));
             Assert.That(methods, Does.Contain("GetConversation"));
             Assert.That(methods, Does.Contain("AddMessage"));
+            Assert.That(methods, Does.Contain("UploadMessageAttachment"));
             Assert.That(methods, Does.Contain("MarkConversationRead"));
             Assert.That(methods, Does.Contain("CloseConversation"));
         });
+    }
+
+    [Test]
+    public void Timetable_actions_are_projected_for_the_current_actor()
+    {
+        var method = typeof(skolenza.application.Interfaces.IRepositories.IStaffAcademicStructureRepository)
+            .GetMethod("GetTimetableEntriesAsync");
+        Assert.That(method, Is.Not.Null);
+        Assert.That(method!.GetParameters().Select(x => x.Name), Is.EqualTo(new[]
+        {
+            "institutionId", "actorId", "token"
+        }));
     }
 
     [Test]

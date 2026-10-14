@@ -7,7 +7,7 @@ public interface IStaffAcademicStructureRepository
     Task<StaffOperationsOptionsResponseDTO> GetStaffOperationsOptionsAsync(long institutionId, CancellationToken token);
     Task<List<TimetablePeriodResponseDTO>> GetTimetablePeriodsAsync(long institutionId, CancellationToken token);
     Task<TimetablePeriodResponseDTO> SaveTimetablePeriodAsync(TimetablePeriodRequestDTO request, long institutionId, long actorId, CancellationToken token);
-    Task<List<TimetableEntryResponseDTO>> GetTimetableEntriesAsync(long institutionId, CancellationToken token);
+    Task<List<TimetableEntryResponseDTO>> GetTimetableEntriesAsync(long institutionId, long actorId, CancellationToken token);
     Task<TimetableEntryResponseDTO> SaveTimetableEntryAsync(TimetableEntryRequestDTO request, long institutionId, long actorId, CancellationToken token);
     Task<List<TimetableWorkflowResponseDTO>> GetTimetableWorkflowsAsync(long institutionId, CancellationToken token);
     Task<TimetableWorkflowResponseDTO> SaveTimetableWorkflowAsync(TimetableWorkflowRequestDTO request, long institutionId, long actorId, CancellationToken token);
@@ -30,6 +30,7 @@ public interface IStaffAcademicStructureRepository
     Task<StaffConversationDetailResponseDTO> GetConversationAsync(long conversationId, long institutionId, long actorId, CancellationToken token);
     Task<StaffConversationResponseDTO> CreateConversationAsync(StaffConversationRequestDTO request, long institutionId, long actorId, CancellationToken token);
     Task<StaffConversationResponseDTO> AddMessageAsync(long conversationId, StaffMessageRequestDTO request, long institutionId, long actorId, CancellationToken token);
+    Task<StaffMessageAttachmentResponseDTO> AddMessageAttachmentAsync(long messageId, StaffMessageAttachmentResponseDTO attachment, long institutionId, long actorId, CancellationToken token);
     Task<StaffConversationDetailResponseDTO> MarkConversationReadAsync(long conversationId, long institutionId, long actorId, CancellationToken token);
     Task<StaffConversationDetailResponseDTO> CloseConversationAsync(long conversationId, long institutionId, long actorId, CancellationToken token);
     Task<List<TeachingAssignmentTypeOptionDTO>> GetTeachingAssignmentTypesAsync(CancellationToken cancellationToken = default);

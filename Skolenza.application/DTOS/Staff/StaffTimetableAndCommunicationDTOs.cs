@@ -1,4 +1,6 @@
 using skolenza.application.DTOs.BaseDTO;
+using Microsoft.AspNetCore.Http;
+using System.Text.Json.Serialization;
 
 namespace skolenza.application.DTOS.Staff;
 
@@ -18,6 +20,7 @@ public sealed class StaffOperationsOptionsResponseDTO
     public List<StaffOperationsOptionDTO> StaffCategories { get; set; } = [];
     public List<StaffOperationsOptionDTO> AccessRoles { get; set; } = [];
     public List<StaffOperationsOptionDTO> StaffPositions { get; set; } = [];
+    public List<StaffOperationsOptionDTO> ApprovedLeaveRequests { get; set; } = [];
 }
 
 public sealed class TimetablePeriodRequestDTO : StaffOperationsPermissionRequestDTO
@@ -240,6 +243,24 @@ public sealed class StaffConversationMessageResponseDTO
     public string SenderName { get; set; } = string.Empty;
     public string Body { get; set; } = string.Empty;
     public DateTime SentDateTime { get; set; }
+    public bool CanAttach { get; set; }
+    public List<StaffMessageAttachmentResponseDTO> Attachments { get; set; } = [];
+}
+
+public sealed class StaffMessageAttachmentUploadDTO : StaffOperationsPermissionRequestDTO
+{
+    public IFormFile File { get; set; } = null!;
+}
+
+public sealed class StaffMessageAttachmentResponseDTO
+{
+    public long Id { get; set; }
+    public string FileName { get; set; } = string.Empty;
+    public string ContentType { get; set; } = string.Empty;
+    public long FileSize { get; set; }
+    public string FileUrl { get; set; } = string.Empty;
+    [JsonIgnore]
+    public string StorageObjectKey { get; set; } = string.Empty;
 }
 
 public sealed class StaffConversationDetailResponseDTO : StaffConversationResponseDTO
