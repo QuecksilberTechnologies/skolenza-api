@@ -67,3 +67,7 @@ Authorization: Bearer {token}
 FormData field: `file` (required, non-empty, maximum 10 MB). The response is the standard `ApiDataResponse<StaffMessageAttachmentResponseDTO>` with `id`, `fileName`, `contentType`, `fileSize`, and a time-limited `fileUrl`. Conversation message responses include `attachments[]` and `canAttach`. The server sets `canAttach` only for the message sender while the tenant-owned conversation is open. Object storage is written before metadata; if metadata persistence fails, the uploaded object is deleted.
 
 The route uses the existing authenticated module-operation discovery and interceptor mapping. Numeric permission IDs must be resolved from the navigation contract and never copied from examples. Local contract/tests/build passed on 2026-10-14. Render deployment of this extension is pending.
+
+## Functional walkthrough
+
+Complete institution example aur Phase 1–5 relationship: [Staff Phase 1–5 Complete Functional Flow — Hinglish Guide](STAFF_PHASE_1_TO_5_COMPLETE_FLOW_HINGLISH.md).

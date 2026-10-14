@@ -71,3 +71,7 @@ The numeric role above is illustrative. Resolve the institution's active role fr
 ## Actor-specific action projection
 
 Each timetable row returns `canReview` and `canPublish` for the authenticated actor. The server resolves these flags from the current workflow step and validates them again when an action is posted. The UI must render Approve/Reject only for `canReview=true` and Publish only for `canPublish=true`; status alone never grants an action. Local focused tests and the Angular production build passed on 2026-10-14. Deployment acceptance remains pending.
+
+## Functional walkthrough
+
+Professional structure se timetable approval, substitute aur communication tak complete flow: [Staff Phase 1–5 Complete Functional Flow — Hinglish Guide](STAFF_PHASE_1_TO_5_COMPLETE_FLOW_HINGLISH.md).

@@ -54,3 +54,7 @@ All routes require the bearer token. The Angular interceptor sends `ModuleId` an
 The additive migration creates catalogue tables `AcademicSessionMaster`, `AcademicProgrammeMaster`, `AcademicGroupMaster`, `ClassSectionMaster`, `SubjectMaster`, `CourseOfferingMaster`, `TeachingAssignmentTypeMaster` and operational tables `StaffTeachingAssignment`, `ClassTeacherAssignment`. The Angular implementation provides full-page catalogue and staff assignment routes, API-backed teaching-role selection, edit/delete operations and assignment display on Staff Overview.
 
 Local migration, API compilation/startup, Angular production build, 12 focused regressions, authenticated hierarchy CRUD, assignment read-back/update/delete, HTTP 409 conflict handling and cross-institution HTTP 403 verification passed on 2026-10-13. The Render PostgreSQL migration is applied and reconciled. Render API commit `3115a53` is Live; deployed OpenAPI exposes every route above and an unauthenticated lookup returns HTTP 401. Authenticated deployed browser acceptance remains pending.
+
+## Functional walkthrough
+
+Business users aur developers ke liye complete Phase 1–5 real-time example: [Staff Phase 1–5 Complete Functional Flow — Hinglish Guide](STAFF_PHASE_1_TO_5_COMPLETE_FLOW_HINGLISH.md).
