@@ -65,3 +65,5 @@ Staff create and official update use `institutionStaffCategoryMasterId` plus `st
 ## Persistence and rollout
 
 Migration: `database-scripts/migrations/20261013_AddInstitutionStaffCategoryHierarchy.sql`. It is idempotent, seeds local copies from platform templates, derives current mappings, and backfills Staff and Position local category references. Rollback is available under `database-scripts/rollback`. The migration ran on local and Render databases on 2026-10-13; API/UI deployment still requires the corresponding commits to be published before browser acceptance.
+
+For a business-user explanation with screenshots and current Red Rose setup evidence, see [Staff and Academic Setup — Hinglish Walkthrough](STAFF_AND_ACADEMIC_SETUP_WALKTHROUGH_HINGLISH.md).

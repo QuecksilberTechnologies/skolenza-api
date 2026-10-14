@@ -12,6 +12,7 @@
 
 - [Institution self-registration reconstruction — 2026-10-11](reconstruction/institution-self-registration/2026-10-11.md)
 - [Staff naming alignment — 2026-10-11](staff/naming-alignment/2026-10-11.md)
+- [Staff phases 0–5 consolidated local smoke — 2026-10-14](staff/phases-0-5-consolidated-smoke/2026-10-14.md)
 
 Only current Skolenza reports are indexed here. AxionPro reports are retained as
 `*_old.md` reference files and must not be updated.
@@ -55,6 +56,7 @@ test run.
 
 - [Staff Category catalogue migration (2026-10-12)](staff/staff-category-catalogue/2026-10-12.md)
 - [Staff professional structure Phase 1B/1C (2026-10-12)](staff/professional-structure/2026-10-12.md)
+- [Staff professional structure inactive dependency lifecycle (2026-10-15)](staff/professional-structure-inactive-dependencies/2026-10-15.md)
 - [Staff academic structure and assignments Phase 2 (2026-10-13)](staff/academic-structure/2026-10-13.md)
 - [Local to Render full schema and data synchronization (2026-10-13)](database/local-to-render-full-sync/2026-10-13.md)
 

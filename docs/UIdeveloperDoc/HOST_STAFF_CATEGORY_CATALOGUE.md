@@ -47,4 +47,6 @@ Run `database-scripts/SeedHostInstitutionMasterData.sql`. It is idempotent and i
 
 ## Verification status
 
-Local automated contract tests and Angular route-permission tests passed on 2026-10-14. Live Host → Institution browser acceptance is recorded in the corresponding scenario report after execution; local evidence must not be treated as Render acceptance.
+Local automated contract tests and Angular route-permission tests passed on 2026-10-14. Fresh local Host and Institution API login/read-back also passed and is recorded in the scenario report. No new authenticated browser session was captured in that run; the attached screenshots came from the user. Render API/UI acceptance remains separate and pending.
+
+Business-user setup walkthrough with supplied screenshots and the current local Host/Institution API read-backs: [Staff and Academic Setup — Hinglish Walkthrough](STAFF_AND_ACADEMIC_SETUP_WALKTHROUGH_HINGLISH.md).

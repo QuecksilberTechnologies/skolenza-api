@@ -1,4 +1,5 @@
 using NUnit.Framework;
+using System.Text.RegularExpressions;
 
 namespace skolenza.automationtests.Unit;
 
@@ -36,7 +37,10 @@ public sealed class UnusedPersistenceCleanupTests
 
         var references = RetiredEntities
             .SelectMany(entity => files
-                .Where(path => File.ReadAllText(path).Contains(entity, StringComparison.Ordinal))
+                .Where(path => Regex.IsMatch(
+                    File.ReadAllText(path),
+                    $@"\b{Regex.Escape(entity)}\b",
+                    RegexOptions.CultureInvariant))
                 .Select(path => $"{entity}: {path}"))
             .ToArray();
 

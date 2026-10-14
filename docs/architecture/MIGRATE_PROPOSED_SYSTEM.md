@@ -187,7 +187,13 @@ Implementation status (2026-10-13): Phase 3 is complete across DB/API/Angular. T
 - Integrate approved leave with impacted work without altering the locked leave workflow.
 - APIs detect conflicts and uncovered work; Angular supports proposed substitute, approval and status views.
 
-Decision D-04: confirm substitute approval hierarchy and whether substitute acceptance is mandatory.
+Decision D-04 resolved on 2026-10-14: every institution configures its own
+substitute workflow. Steps can target the reporting manager, an access role, a
+position or a named staff member. `RequiresSubstituteAcceptance`,
+`AllowSelfNomination` and `AutoApproveWhenNoSteps` are institution-owned settings,
+so acceptance is mandatory only when that institution enables it. Timetable draft
+approval is configured separately by campus, section or institution default and
+can allow teacher proposals plus automatic publication after the final approval.
 
 ## Phase 5 — queries and communication
 
@@ -195,7 +201,13 @@ Decision D-04: confirm substitute approval hierarchy and whether substitute acce
 - Model participants, messages, attachments, read receipts and audiences by institution, campus, department, category, role or explicit staff.
 - Staff can raise a structured query; permitted principals/heads can message one person or broadcast to an authorized audience.
 
-Decision D-05: confirm in-app-only versus email/SMS/push delivery and retention policy.
+Decision D-05 resolved on 2026-10-14: each institution owns one communication
+setting that independently enables in-app, email, SMS and push channels and sets
+retention days. In-app storage remains the canonical conversation record;
+enabling an external channel does not replace the institution-scoped participant,
+audience, message, attachment and read-receipt records. The local implementation
+supports direct participants and audiences by campus, department, staff category,
+access role or named staff member.
 
 ## Phase 6 — feedback and professional development
 
@@ -225,8 +237,8 @@ Update this file, the relevant `docs/UIdeveloperDoc` handoff, a dated `docs/test
 | D-01 | Platform templates copied into institution-owned capability/duty masters | RESOLVED on 2026-10-12 |
 | D-02 | Retire unused `FunctionalId` and `ReferalId`; canonical professional assignments own this information | RESOLVED on 2026-10-13 |
 | D-03 | First academic model supports School + College + Coaching Center through the shared academic hierarchy | RESOLVED on 2026-10-13 |
-| D-04 | Substitute approval and acceptance workflow | Phase 4 |
-| D-05 | Broadcast channels and retention | Phase 5 |
+| D-04 | Institution-configured timetable/substitute approval; substitute acceptance is a workflow setting | RESOLVED on 2026-10-14 |
+| D-05 | Institution-configured channels and retention; in-app conversation remains canonical | RESOLVED on 2026-10-14 |
 | D-06 | New seed-bearing master tables use the `Master` suffix | RESOLVED on 2026-10-12 |
 
 ## Immediate execution order

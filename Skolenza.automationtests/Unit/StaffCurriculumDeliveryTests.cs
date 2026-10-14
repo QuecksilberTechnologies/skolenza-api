@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using NUnit.Framework;
 using skolenza.api.Controllers.Staff;
+using skolenza.application.DTOS.Staff;
 using skolenza.domain.Entity;
 using skolenza.persistance.Data.Context;
 
@@ -52,6 +53,14 @@ public sealed class StaffCurriculumDeliveryTests
             Assert.That(methods, Does.Contain("DeleteLessonPlan"));
             Assert.That(methods, Does.Contain("DeleteLessonDelivery"));
         });
+    }
+
+    [Test]
+    public void Teaching_assignment_option_identifies_the_assigned_staff_member()
+    {
+        Assert.That(
+            typeof(StaffTeachingAssignmentResponseDTO).GetProperty(nameof(StaffTeachingAssignmentResponseDTO.StaffMemberName)),
+            Is.Not.Null);
     }
 
     [Test]

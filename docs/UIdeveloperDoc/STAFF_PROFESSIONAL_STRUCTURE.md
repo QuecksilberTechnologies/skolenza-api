@@ -85,6 +85,31 @@ isolated. The Angular routes are `/app/staff/new`,
 Create/edit is a full page, not a dialog. Overview shows position, job family,
 capability verification state and active duties.
 
+### Configuration order and inactive dependency behaviour
+
+The UI presents the institution configuration in dependency order: **Job
+Families → Staff Categories → Capabilities → Duties → Positions**. An
+Institution Administrator first creates the reusable job families, then maps
+the permitted families to each institution category. Capabilities and duties
+are defined before a position so the position can select its requirements in
+one save.
+
+Every dependency selector follows the same lifecycle rule. While adding a new
+record it offers active dependencies only. While editing an existing record,
+an inactive dependency that is already assigned remains visible but disabled;
+this preserves the historical relationship without permitting a new inactive
+selection. For example, after **Head Mistress** is deactivated it is absent
+from a new Position category list. A Position that already references Head
+Mistress continues to display that value in disabled form until the user
+chooses an active replacement.
+
+The status filter defaults to **All**, so inactive institution categories,
+masters and positions remain recoverable. Activate and Deactivate use the
+shared confirmation dialog. **Proceed** performs the requested status change;
+**Cancel** closes the dialog without calling the API. These status changes are
+institution isolated and do not alter the host catalogue or another
+institution's records.
+
 ## Status
 
 Implemented across DB, API and Angular. The professional-structure migration is
@@ -92,3 +117,6 @@ reconciled on local and Render databases. On 2026-10-13 the unused legacy
 `FunctionalId` and `ReferalId` fields were removed from persistence and consumer
 contracts after both databases confirmed that they contained no values. Clients
 must use the canonical position, capability and duty assignment contracts.
+The dependency-order, inactive-option and reactivation behaviour was updated
+and locally regression-tested on 2026-10-15. Deployment/browser acceptance is
+tracked separately and is not implied by the local test result.

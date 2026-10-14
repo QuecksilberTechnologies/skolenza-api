@@ -1,5 +1,7 @@
 # Staff Phase 1–5 Complete Functional Flow — Hinglish Guide
 
+> Consolidated client training, proposed-vs-implemented comparison, screenshots and 2026-10-14 local verification: [SKOLENZA_PHASE_0_TO_5_CONSOLIDATED_AUDIT_REPORT_HINGLISH.docx](SKOLENZA_PHASE_0_TO_5_CONSOLIDATED_AUDIT_REPORT_HINGLISH.docx). Scenario evidence: [phases 0–5 consolidated local smoke](../testing/staff/phases-0-5-consolidated-smoke/2026-10-14.md).
+
 ## Document purpose
 
 Yeh document Institution Administrator, academic coordinator, timetable manager, teacher aur UI/API developers ko samjhata hai ki Staff Phase 1 se Phase 5 tak ek connected operational flow kaise kaam karta hai. Example institution `Sunrise International School` hai aur example teacher `Ananya Sharma` hai.
@@ -311,6 +313,7 @@ Isliye pehle wala flow cancel nahi hua; ab wo complete governance aur daily-oper
 
 ## Related implementation documents
 
+- [Staff and Academic Setup — screenshot walkthrough in Hinglish](STAFF_AND_ACADEMIC_SETUP_WALKTHROUGH_HINGLISH.md)
 - [Academic structure and teaching assignments](ACADEMIC_STRUCTURE_AND_TEACHING_ASSIGNMENTS.md)
 - [Curriculum and lesson delivery](CURRICULUM_LESSON_DELIVERY.md)
 - [Dynamic timetable approval](DYNAMIC_TIMETABLE_APPROVAL.md)

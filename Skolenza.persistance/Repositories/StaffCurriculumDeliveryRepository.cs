@@ -131,6 +131,7 @@ public sealed partial class StaffAcademicStructureRepository
 
     public Task<List<StaffTeachingAssignmentResponseDTO>> GetTeachingAssignmentsAsync(long institutionId, CancellationToken cancellationToken = default) =>
         (from assignment in context.StaffTeachingAssignments.AsNoTracking()
+         join staff in context.StaffMembers.AsNoTracking() on assignment.StaffMemberId equals staff.Id
          join offering in context.CourseOfferings.AsNoTracking() on assignment.CourseOfferingId equals offering.Id
          join assignmentType in context.TeachingAssignmentTypes.AsNoTracking() on assignment.AssignmentType equals assignmentType.Id
          join subject in context.Subjects.AsNoTracking() on offering.SubjectId equals subject.Id
@@ -141,6 +142,7 @@ public sealed partial class StaffAcademicStructureRepository
          select new StaffTeachingAssignmentResponseDTO
          {
              Id = assignment.Id,
+             StaffMemberName = ((staff.FirstName ?? "") + " " + (staff.LastName ?? "")).Trim(),
              CourseOfferingId = offering.Id,
              CourseOfferingName = offering.Name,
              SubjectName = subject.Name,

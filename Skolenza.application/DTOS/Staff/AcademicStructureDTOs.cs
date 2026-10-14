@@ -108,6 +108,7 @@ public sealed class ClassTeacherAssignmentRequestDTO : PermissionRequestDTO
 public sealed class StaffTeachingAssignmentResponseDTO
 {
     public long Id { get; set; }
+    public string StaffMemberName { get; set; } = string.Empty;
     public long CourseOfferingId { get; set; }
     public string CourseOfferingName { get; set; } = string.Empty;
     public string SubjectName { get; set; } = string.Empty;

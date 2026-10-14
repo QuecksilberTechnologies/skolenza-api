@@ -4,6 +4,7 @@ using skolenza.application.Features.StaffEmploymentTypeCmd.Handlers;
 using skolenza.application.Common.Models.Security;
 using skolenza.application.Common.Enums;
 using skolenza.application.Common.Helpers;
+using skolenza.application.Constants;
 using skolenza.application.DTOs.Department;
 using skolenza.application.DTOS.Pagination;
 using skolenza.application.DTOS.Common;
@@ -257,10 +258,10 @@ public sealed class BulkImportPermissionTests
     {
         var moduleCode = master switch
         {
-            "Department" => "DEPARTMENT",
-            "Designation" => "STAFF_DESIGNATIONS",
-            "StaffEmploymentType" => "STAFF_EMPLOYMENT_TYPES",
-            _ => "ACCESS_ROLES"
+            "Department" => BulkImportConstants.DepartmentModuleCode,
+            "Designation" => BulkImportConstants.DesignationModuleCode,
+            "StaffEmploymentType" => BulkImportConstants.StaffEmploymentTypeModuleCode,
+            _ => BulkImportConstants.RoleModuleCode
         };
         var checks = 0;
         var store = Proxy<IStoreProcedureRepository>((method, args) =>
