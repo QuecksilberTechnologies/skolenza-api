@@ -1890,6 +1890,18 @@ The earlier mapper-only status above is superseded by this section.
 
 ### Tenant policy durable imports — implemented locally (2026-09-16)
 
+### 2026-10-14 — Worker host-shutdown cancellation regression
+
+- The durable worker now handles cancellation both while waiting for its next
+  `PeriodicTimer` tick and while processing a batch. Normal API shutdown no longer
+  propagates `OperationCanceledException` from the idle wait.
+- Focused Release verification passed 1/1 with zero failures/skips. The full
+  Release solution build completed with zero errors, and a local start/poll/stop
+  runtime cycle produced no worker cancellation exception.
+- Local fix status is COMPLETE. Render publication and deployed shutdown
+  verification were not run. Evidence:
+  `docs/testing/bulk/worker-graceful-shutdown/2026-10-14.md`.
+
 2026-10-03 live acceptance update: created twelve realistic Policy Definitions through the
 existing authenticated durable import UI. Preview passed 12/12; completion was 12 imported,
 0 skipped and 0 failed. Render read-only reconciliation confirms 12 Draft version-1 policies,

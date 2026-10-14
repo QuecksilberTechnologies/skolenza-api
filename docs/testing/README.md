@@ -1,4 +1,5 @@
 - [Bulk canonical template fields and module permissions — 2026-10-11](bulk/canonical-template-fields/2026-10-11.md)
+- [Bulk import worker graceful host shutdown — 2026-10-14](bulk/worker-graceful-shutdown/2026-10-14.md)
 # Skolenza scenario test reports
 
 - [Employee email and institution onboarding — 2026-10-12](email/employee-and-institution-onboarding/2026-10-12.md)

@@ -21,25 +21,32 @@ public sealed class BulkImportWorker(
             return;
         }
         using var timer = new PeriodicTimer(TimeSpan.FromSeconds(options.Value.PollIntervalSeconds));
-        while (await timer.WaitForNextTickAsync(stoppingToken))
+        try
         {
-            using var batchCancellation = CancellationTokenSource.CreateLinkedTokenSource(stoppingToken);
-            batchCancellation.CancelAfter(TimeSpan.FromSeconds(options.Value.BatchTimeoutSeconds));
-            try
+            while (await timer.WaitForNextTickAsync(stoppingToken))
             {
-                using var scope = scopeFactory.CreateScope();
-                await scope.ServiceProvider.GetRequiredService<IBulkImportRepository>()
-                    .ProcessNextBatchAsync(batchCancellation.Token);
+                using var batchCancellation = CancellationTokenSource.CreateLinkedTokenSource(stoppingToken);
+                batchCancellation.CancelAfter(TimeSpan.FromSeconds(options.Value.BatchTimeoutSeconds));
+                try
+                {
+                    using var scope = scopeFactory.CreateScope();
+                    await scope.ServiceProvider.GetRequiredService<IBulkImportRepository>()
+                        .ProcessNextBatchAsync(batchCancellation.Token);
+                }
+                catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+                {
+                    return;
+                }
+                catch (Exception error)
+                {
+                    // No cursor/business inserts commit on an interrupted batch. A fresh scope retries next tick.
+                    logger.LogError(error, "Bulk import batch interrupted; durable uncommitted work will be retried.");
+                }
             }
-            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
-            {
-                return;
-            }
-            catch (Exception error)
-            {
-                // No cursor/business inserts commit on an interrupted batch. A fresh scope retries next tick.
-                logger.LogError(error, "Bulk import batch interrupted; durable uncommitted work will be retried.");
-            }
+        }
+        catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+        {
+            // Normal host shutdown can cancel while the worker is waiting for the next poll.
         }
     }
 }
