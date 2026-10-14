@@ -1,7 +1,9 @@
 using MediatR;
 using skolenza.application.DTOS.Staff;
+using skolenza.application.Exceptions;
 using skolenza.application.Interfaces;
 using skolenza.application.Interfaces.ICommonRequest;
+using skolenza.application.Interfaces.IFileStorage;
 using skolenza.application.Wrappers;
 
 namespace skolenza.application.Features.StaffMemberCmd.ProfessionalStructure.Academic;
@@ -32,6 +34,7 @@ public sealed record GetStaffConversationsQuery(StaffOperationsPermissionRequest
 public sealed record GetStaffConversationQuery(long ConversationId, StaffOperationsPermissionRequestDTO DTO) : IRequest<ApiResponse<StaffConversationDetailResponseDTO>>;
 public sealed record CreateStaffConversationCommand(StaffConversationRequestDTO DTO) : IRequest<ApiResponse<StaffConversationResponseDTO>>;
 public sealed record AddStaffConversationMessageCommand(long ConversationId, StaffMessageRequestDTO DTO) : IRequest<ApiResponse<StaffConversationResponseDTO>>;
+public sealed record UploadStaffMessageAttachmentCommand(long MessageId, StaffMessageAttachmentUploadDTO DTO) : IRequest<ApiResponse<StaffMessageAttachmentResponseDTO>>;
 public sealed record MarkStaffConversationReadCommand(long ConversationId, StaffOperationsPermissionRequestDTO DTO) : IRequest<ApiResponse<StaffConversationDetailResponseDTO>>;
 public sealed record CloseStaffConversationCommand(long ConversationId, StaffOperationsPermissionRequestDTO DTO) : IRequest<ApiResponse<StaffConversationDetailResponseDTO>>;
 
@@ -69,7 +72,19 @@ public sealed class SaveTimetablePeriodCommandHandler(IUnitOfWork unit, ICommonR
 }
 public sealed class GetTimetableEntriesQueryHandler(IUnitOfWork unit, ICommonRequestService common) : IRequestHandler<GetTimetableEntriesQuery, ApiResponse<List<TimetableEntryResponseDTO>>>
 {
-    public async Task<ApiResponse<List<TimetableEntryResponseDTO>>> Handle(GetTimetableEntriesQuery request, CancellationToken token) { var actor = await StaffOperationsContext.ResolveAsync(common); return ApiResponse<List<TimetableEntryResponseDTO>>.Success(await unit.StaffAcademicStructureRepository.GetTimetableEntriesAsync(actor.InstitutionId, token), "Timetable entries retrieved successfully."); }
+    public async Task<ApiResponse<List<TimetableEntryResponseDTO>>> Handle(
+        GetTimetableEntriesQuery request,
+        CancellationToken token)
+    {
+        var actor = await StaffOperationsContext.ResolveAsync(common);
+        var entries = await unit.StaffAcademicStructureRepository.GetTimetableEntriesAsync(
+            actor.InstitutionId,
+            actor.StaffMemberId,
+            token);
+        return ApiResponse<List<TimetableEntryResponseDTO>>.Success(
+            entries,
+            "Timetable entries retrieved successfully.");
+    }
 }
 public sealed class SaveTimetableEntryCommandHandler(IUnitOfWork unit, ICommonRequestService common) : IRequestHandler<SaveTimetableEntryCommand, ApiResponse<TimetableEntryResponseDTO>>
 {
@@ -288,7 +303,8 @@ public sealed class GetStaffConversationsQueryHandler(IUnitOfWork unit, ICommonR
 }
 public sealed class GetStaffConversationQueryHandler(
     IUnitOfWork unit,
-    ICommonRequestService common)
+    ICommonRequestService common,
+    IFileStorageService fileStorageService)
     : IRequestHandler<GetStaffConversationQuery, ApiResponse<StaffConversationDetailResponseDTO>>
 {
     public async Task<ApiResponse<StaffConversationDetailResponseDTO>> Handle(
@@ -301,9 +317,61 @@ public sealed class GetStaffConversationQueryHandler(
             actor.InstitutionId,
             actor.StaffMemberId,
             token);
+        foreach (var attachment in conversation.Messages.SelectMany(x => x.Attachments))
+        {
+            attachment.FileUrl = fileStorageService.GetFileUrl(attachment.StorageObjectKey);
+        }
         return ApiResponse<StaffConversationDetailResponseDTO>.Success(
             conversation,
             "Staff conversation retrieved successfully.");
+    }
+}
+public sealed class UploadStaffMessageAttachmentCommandHandler(
+    IUnitOfWork unit,
+    ICommonRequestService common,
+    IFileStorageService fileStorageService)
+    : IRequestHandler<UploadStaffMessageAttachmentCommand, ApiResponse<StaffMessageAttachmentResponseDTO>>
+{
+    public async Task<ApiResponse<StaffMessageAttachmentResponseDTO>> Handle(
+        UploadStaffMessageAttachmentCommand request,
+        CancellationToken token)
+    {
+        var actor = await StaffOperationsContext.ResolveAsync(common);
+        var file = request.DTO.File;
+        if (file.Length is <= 0 or > 10_485_760)
+        {
+            throw new ValidationErrorException("Message attachment must be between 1 byte and 10 MB.");
+        }
+
+        var storedName = Guid.NewGuid().ToString("N");
+        var key = await fileStorageService.UploadFileAsync(
+            file,
+            $"institution-{actor.InstitutionId}/staff-communication/message-{request.MessageId}",
+            storedName);
+        try
+        {
+            var attachment = await unit.StaffAcademicStructureRepository.AddMessageAttachmentAsync(
+                request.MessageId,
+                new StaffMessageAttachmentResponseDTO
+                {
+                    FileName = Path.GetFileName(file.FileName),
+                    ContentType = file.ContentType,
+                    FileSize = file.Length,
+                    StorageObjectKey = key
+                },
+                actor.InstitutionId,
+                actor.StaffMemberId,
+                token);
+            attachment.FileUrl = fileStorageService.GetFileUrl(key);
+            return ApiResponse<StaffMessageAttachmentResponseDTO>.Success(
+                attachment,
+                "Message attachment uploaded successfully.");
+        }
+        catch
+        {
+            await fileStorageService.DeleteFileAsync(key);
+            throw;
+        }
     }
 }
 public sealed class CreateStaffConversationCommandHandler(IUnitOfWork unit, ICommonRequestService common) : IRequestHandler<CreateStaffConversationCommand, ApiResponse<StaffConversationResponseDTO>>

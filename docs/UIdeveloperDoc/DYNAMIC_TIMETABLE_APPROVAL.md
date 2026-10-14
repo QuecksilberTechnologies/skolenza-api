@@ -67,3 +67,7 @@ The numeric role above is illustrative. Resolve the institution's active role fr
 - Angular route regression and production build: passed.
 - Render database migration and seed: passed.
 - Deployed API/UI acceptance: pending deployment of the new commits.
+
+## Actor-specific action projection
+
+Each timetable row returns `canReview` and `canPublish` for the authenticated actor. The server resolves these flags from the current workflow step and validates them again when an action is posted. The UI must render Approve/Reject only for `canReview=true` and Publish only for `canPublish=true`; status alone never grants an action. Local focused tests and the Angular production build passed on 2026-10-14. Deployment acceptance remains pending.

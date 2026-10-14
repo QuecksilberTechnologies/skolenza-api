@@ -178,6 +178,13 @@ public sealed class StaffTimetableAndCommunicationController(IMediator mediator)
         [FromBody] StaffMessageRequestDTO dto,
         CancellationToken token) =>
         Ok(await mediator.Send(new AddStaffConversationMessageCommand(id, dto), token));
+    [HttpPost("communication/messages/{id:long}/attachments")]
+    [Consumes("multipart/form-data")]
+    public async Task<IActionResult> UploadMessageAttachment(
+        long id,
+        [FromForm] StaffMessageAttachmentUploadDTO dto,
+        CancellationToken token) =>
+        Ok(await mediator.Send(new UploadStaffMessageAttachmentCommand(id, dto), token));
     [HttpPost("communication/conversations/{id:long}/read")]
     public async Task<IActionResult> MarkConversationRead(
         long id,

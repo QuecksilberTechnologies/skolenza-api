@@ -73,7 +73,21 @@ public sealed partial class StaffAcademicStructureRepository
                 {
                     Id = item.Id,
                     Name = item.Name
-                }).ToListAsync(token)
+                }).ToListAsync(token),
+            ApprovedLeaveRequests = await (from leave in context.LeaveRequests.AsNoTracking()
+                                           join staff in context.StaffMembers.AsNoTracking()
+                                               on leave.StaffMemberId equals staff.Id
+                                           where leave.InstitutionId == institutionId
+                                              && leave.ApprovedById.HasValue
+                                              && !leave.CancellationDate.HasValue
+                                           orderby leave.FromDate descending
+                                           select new StaffOperationsOptionDTO
+                                           {
+                                               Id = leave.Id,
+                                               Name = (staff.FirstName + " " + staff.LastName).Trim()
+                                                   + " · " + leave.FromDate
+                                                   + " to " + leave.ToDate
+                                           }).ToListAsync(token)
         };
     }
 
@@ -107,8 +121,12 @@ public sealed partial class StaffAcademicStructureRepository
         return new TimetablePeriodResponseDTO { Id = entity.Id, AcademicSessionId = entity.AcademicSessionId, AcademicSessionName = session.Name, CampusId = entity.CampusId, Code = entity.Code, Name = entity.Name, Description = entity.Description, Sequence = entity.Sequence, StartTime = entity.StartTime, EndTime = entity.EndTime, IsActive = entity.IsActive };
     }
 
-    public async Task<List<TimetableEntryResponseDTO>> GetTimetableEntriesAsync(long institutionId, CancellationToken token) =>
-        await (from entry in context.TimetableEntries.AsNoTracking()
+    public async Task<List<TimetableEntryResponseDTO>> GetTimetableEntriesAsync(
+        long institutionId,
+        long actorId,
+        CancellationToken token)
+    {
+        var entries = await (from entry in context.TimetableEntries.AsNoTracking()
                join section in context.ClassSections.AsNoTracking() on entry.ClassSectionId equals section.Id
                join offering in context.CourseOfferings.AsNoTracking() on entry.CourseOfferingId equals offering.Id
                join period in context.TimetablePeriodMasters.AsNoTracking() on entry.TimetablePeriodMasterId equals period.Id
@@ -116,7 +134,40 @@ public sealed partial class StaffAcademicStructureRepository
                join staff in context.StaffMembers.AsNoTracking() on assignment.StaffMemberId equals staff.Id
                where entry.InstitutionId == institutionId && !entry.IsSoftDeleted
                orderby entry.DayOfWeek, period.Sequence
-               select new TimetableEntryResponseDTO { Id = entry.Id, AcademicSessionId = entry.AcademicSessionId, ClassSectionId = entry.ClassSectionId, CourseOfferingId = entry.CourseOfferingId, TimetablePeriodMasterId = entry.TimetablePeriodMasterId, StaffTeachingAssignmentId = entry.StaffTeachingAssignmentId, DayOfWeek = entry.DayOfWeek, RoomReference = entry.RoomReference, EffectiveFrom = entry.EffectiveFrom, EffectiveTo = entry.EffectiveTo, IsActive = entry.IsActive, SectionName = section.Name, CourseOfferingName = offering.Name, PeriodName = period.Name, TeacherName = (staff.FirstName + " " + staff.LastName).Trim(), StatusCode = entry.StatusCode, RevisionNumber = entry.RevisionNumber, CurrentApprovalSequence = entry.CurrentApprovalSequence, CanEdit = entry.StatusCode == "DRAFT" || entry.StatusCode == "REJECTED", CanSubmit = entry.StatusCode == "DRAFT" || entry.StatusCode == "REJECTED", CanPublish = entry.StatusCode == "APPROVED", ReviewRemark = entry.ReviewRemark }).ToListAsync(token);
+               select new TimetableEntryResponseDTO { Id = entry.Id, AcademicSessionId = entry.AcademicSessionId, ClassSectionId = entry.ClassSectionId, CourseOfferingId = entry.CourseOfferingId, TimetablePeriodMasterId = entry.TimetablePeriodMasterId, StaffTeachingAssignmentId = entry.StaffTeachingAssignmentId, DayOfWeek = entry.DayOfWeek, RoomReference = entry.RoomReference, EffectiveFrom = entry.EffectiveFrom, EffectiveTo = entry.EffectiveTo, IsActive = entry.IsActive, SectionName = section.Name, CourseOfferingName = offering.Name, PeriodName = period.Name, TeacherName = (staff.FirstName + " " + staff.LastName).Trim(), StatusCode = entry.StatusCode, RevisionNumber = entry.RevisionNumber, CurrentApprovalSequence = entry.CurrentApprovalSequence, CanEdit = entry.StatusCode == "DRAFT" || entry.StatusCode == "REJECTED", CanSubmit = entry.StatusCode == "DRAFT" || entry.StatusCode == "REJECTED", ReviewRemark = entry.ReviewRemark }).ToListAsync(token);
+
+        foreach (var entry in entries.Where(x => x.StatusCode is "SUBMITTED" or "APPROVED"))
+        {
+            var workflowStep = await context.TimetableWorkflowSteps
+                .AsNoTracking()
+                .Where(x => x.TimetableWorkflowMasterId == context.TimetableEntries
+                    .Where(e => e.Id == entry.Id)
+                    .Select(e => e.TimetableWorkflowMasterId)
+                    .FirstOrDefault()
+                    && x.Sequence == entry.CurrentApprovalSequence
+                    && x.IsActive)
+                .SingleOrDefaultAsync(token);
+
+            if (workflowStep is null)
+            {
+                continue;
+            }
+
+            var timetableEntry = await context.TimetableEntries
+                .AsNoTracking()
+                .SingleAsync(x => x.Id == entry.Id && x.InstitutionId == institutionId, token);
+            var canAct = await IsTimetableApproverAsync(
+                workflowStep,
+                timetableEntry,
+                actorId,
+                institutionId,
+                token);
+            entry.CanReview = entry.StatusCode == "SUBMITTED" && canAct;
+            entry.CanPublish = entry.StatusCode == "APPROVED" && canAct;
+        }
+
+        return entries;
+    }
 
     public async Task<TimetableEntryResponseDTO> SaveTimetableEntryAsync(TimetableEntryRequestDTO request, long institutionId, long actorId, CancellationToken token)
     {
@@ -132,7 +183,7 @@ public sealed partial class StaffAcademicStructureRepository
         entity.TimetableWorkflowMasterId = workflow.Id; entity.StatusCode = "DRAFT"; entity.CurrentApprovalSequence = 0; entity.ReviewRemark = null;
         if (entity.Id == 0) context.TimetableEntries.Add(entity); else { entity.UpdatedById = actorId; entity.UpdatedDateTime = DateTime.UtcNow; }
         await context.SaveChangesAsync(token);
-        return (await GetTimetableEntriesAsync(institutionId, token)).Single(x => x.Id == entity.Id);
+        return (await GetTimetableEntriesAsync(institutionId, actorId, token)).Single(x => x.Id == entity.Id);
     }
 
     public async Task<List<TimetableWorkflowResponseDTO>> GetTimetableWorkflowsAsync(long institutionId, CancellationToken token)
@@ -169,14 +220,42 @@ public sealed partial class StaffAcademicStructureRepository
         entry.UpdatedById = actorId; entry.UpdatedDateTime = DateTime.UtcNow;
         AddTimetableHistory(entry, actorId, "SUBMIT", null);
         await context.SaveChangesAsync(token);
-        return (await GetTimetableEntriesAsync(institutionId, token)).Single(x => x.Id == entry.Id);
+        return (await GetTimetableEntriesAsync(institutionId, actorId, token)).Single(x => x.Id == entry.Id);
     }
 
     public async Task<TimetableEntryResponseDTO> ActOnTimetableEntryAsync(long entryId, TimetableActionRequestDTO request, long institutionId, long actorId, CancellationToken token)
     {
         var entry = await context.TimetableEntries.SingleOrDefaultAsync(x => x.Id == entryId && x.InstitutionId == institutionId && !x.IsSoftDeleted, token) ?? throw new KeyNotFoundException("Timetable entry was not found.");
         var action = request.ActionCode.Trim().ToUpperInvariant();
-        if (action == "PUBLISH") { if (entry.StatusCode != "APPROVED") throw new ConflictException("Only an approved timetable entry can be published."); await EnsureNoPublishedConflictAsync(entry, token); await ArchivePreviousRevisionAsync(entry, actorId, token); entry.StatusCode = "PUBLISHED"; entry.PublishedDateTime = DateTime.UtcNow; }
+        if (action == "PUBLISH")
+        {
+            if (entry.StatusCode != "APPROVED")
+            {
+                throw new ConflictException("Only an approved timetable entry can be published.");
+            }
+
+            var finalStep = await context.TimetableWorkflowSteps
+                .SingleOrDefaultAsync(
+                    x => x.TimetableWorkflowMasterId == entry.TimetableWorkflowMasterId
+                        && x.Sequence == entry.CurrentApprovalSequence
+                        && x.IsActive,
+                    token);
+            if (finalStep is null || !await IsTimetableApproverAsync(
+                    finalStep,
+                    entry,
+                    actorId,
+                    institutionId,
+                    token))
+            {
+                throw new ValidationErrorException(
+                    "The current StaffMember is not configured to publish this timetable entry.");
+            }
+
+            await EnsureNoPublishedConflictAsync(entry, token);
+            await ArchivePreviousRevisionAsync(entry, actorId, token);
+            entry.StatusCode = "PUBLISHED";
+            entry.PublishedDateTime = DateTime.UtcNow;
+        }
         else
         {
             if (entry.StatusCode != "SUBMITTED") throw new ConflictException("This timetable entry is not awaiting approval.");
@@ -191,14 +270,14 @@ public sealed partial class StaffAcademicStructureRepository
             else throw new ValidationErrorException("Action must be APPROVE, REJECT or PUBLISH.");
         }
         entry.UpdatedById = actorId; entry.UpdatedDateTime = DateTime.UtcNow; AddTimetableHistory(entry, actorId, action, request.Remark); await context.SaveChangesAsync(token);
-        return (await GetTimetableEntriesAsync(institutionId, token)).Single(x => x.Id == entry.Id);
+        return (await GetTimetableEntriesAsync(institutionId, actorId, token)).Single(x => x.Id == entry.Id);
     }
 
     public async Task<TimetableEntryResponseDTO> CreateTimetableRevisionAsync(long entryId, long institutionId, long actorId, CancellationToken token)
     {
         var source = await context.TimetableEntries.AsNoTracking().SingleOrDefaultAsync(x => x.Id == entryId && x.InstitutionId == institutionId && x.StatusCode == "PUBLISHED", token) ?? throw new ConflictException("Only a published timetable entry can be revised.");
         var revision = new TimetableEntry { InstitutionId = institutionId, AcademicSessionId = source.AcademicSessionId, ClassSectionId = source.ClassSectionId, CourseOfferingId = source.CourseOfferingId, TimetablePeriodMasterId = source.TimetablePeriodMasterId, StaffTeachingAssignmentId = source.StaffTeachingAssignmentId, DayOfWeek = source.DayOfWeek, RoomReference = source.RoomReference, EffectiveFrom = source.EffectiveFrom, EffectiveTo = source.EffectiveTo, IsActive = source.IsActive, TimetableWorkflowMasterId = source.TimetableWorkflowMasterId, ParentTimetableEntryId = source.ParentTimetableEntryId ?? source.Id, RevisionNumber = source.RevisionNumber + 1, StatusCode = "DRAFT", AddedById = actorId, AddedDateTime = DateTime.UtcNow };
-        context.TimetableEntries.Add(revision); await context.SaveChangesAsync(token); return (await GetTimetableEntriesAsync(institutionId, token)).Single(x => x.Id == revision.Id);
+        context.TimetableEntries.Add(revision); await context.SaveChangesAsync(token); return (await GetTimetableEntriesAsync(institutionId, actorId, token)).Single(x => x.Id == revision.Id);
     }
 
     public async Task<List<TimetableApprovalHistoryResponseDTO>> GetTimetableHistoryAsync(long entryId, long institutionId, CancellationToken token) => await (from h in context.TimetableApprovalHistories.AsNoTracking() join s in context.StaffMembers.AsNoTracking() on h.ActionByStaffMemberId equals s.Id where h.TimetableEntryId == entryId && h.InstitutionId == institutionId orderby h.ActionDateTime select new TimetableApprovalHistoryResponseDTO { Id = h.Id, Sequence = h.Sequence, ActionByStaffMemberId = h.ActionByStaffMemberId, ActionByName = (s.FirstName + " " + s.LastName).Trim(), ActionCode = h.ActionCode, Remark = h.Remark, ActionDateTime = h.ActionDateTime }).ToListAsync(token);
@@ -471,6 +550,52 @@ public sealed partial class StaffAcademicStructureRepository
         return (await GetConversationsAsync(institutionId, actorId, token)).Single(x => x.Id == conversationId);
     }
 
+    public async Task<StaffMessageAttachmentResponseDTO> AddMessageAttachmentAsync(
+        long messageId,
+        StaffMessageAttachmentResponseDTO attachment,
+        long institutionId,
+        long actorId,
+        CancellationToken token)
+    {
+        var message = await context.StaffConversationMessages
+            .AsNoTracking()
+            .SingleOrDefaultAsync(
+                x => x.Id == messageId
+                    && x.InstitutionId == institutionId
+                    && x.SenderStaffMemberId == actorId
+                    && !x.IsSoftDeleted,
+                token)
+            ?? throw new KeyNotFoundException("The conversation message was not found.");
+        var canAttach = await context.StaffConversations.AnyAsync(
+            conversation => conversation.Id == message.StaffConversationId
+                && conversation.InstitutionId == institutionId
+                && !conversation.IsClosed
+                && context.StaffConversationParticipants.Any(participant =>
+                    participant.StaffConversationId == conversation.Id
+                    && participant.InstitutionId == institutionId
+                    && participant.StaffMemberId == actorId
+                    && participant.IsActive),
+            token);
+        if (!canAttach)
+        {
+            throw new KeyNotFoundException("The conversation message was not found for this StaffMember.");
+        }
+
+        var entity = new StaffMessageAttachment
+        {
+            InstitutionId = institutionId,
+            StaffConversationMessageId = messageId,
+            FileName = attachment.FileName,
+            ContentType = attachment.ContentType,
+            StorageObjectKey = attachment.StorageObjectKey,
+            FileSize = attachment.FileSize
+        };
+        context.StaffMessageAttachments.Add(entity);
+        await context.SaveChangesAsync(token);
+        attachment.Id = entity.Id;
+        return attachment;
+    }
+
     public async Task<StaffConversationDetailResponseDTO> GetConversationAsync(
         long conversationId,
         long institutionId,
@@ -519,8 +644,35 @@ public sealed partial class StaffAcademicStructureRepository
                                            SenderStaffMemberId = message.SenderStaffMemberId,
                                            SenderName = (sender.FirstName + " " + sender.LastName).Trim(),
                                            Body = message.Body,
-                                           SentDateTime = message.SentDateTime
+                                           SentDateTime = message.SentDateTime,
+                                           CanAttach = message.SenderStaffMemberId == actorId
+                                               && !conversation.IsClosed
                                        }).ToListAsync(token);
+        var messageIds = conversation.Messages.Select(x => x.Id).ToArray();
+        var attachments = await context.StaffMessageAttachments
+            .AsNoTracking()
+            .Where(x => x.InstitutionId == institutionId
+                && messageIds.Contains(x.StaffConversationMessageId))
+            .Select(x => new
+            {
+                x.StaffConversationMessageId,
+                Attachment = new StaffMessageAttachmentResponseDTO
+                {
+                    Id = x.Id,
+                    FileName = x.FileName,
+                    ContentType = x.ContentType,
+                    FileSize = x.FileSize,
+                    StorageObjectKey = x.StorageObjectKey
+                }
+            })
+            .ToListAsync(token);
+        foreach (var message in conversation.Messages)
+        {
+            message.Attachments = attachments
+                .Where(x => x.StaffConversationMessageId == message.Id)
+                .Select(x => x.Attachment)
+                .ToList();
+        }
         return conversation;
     }
 
