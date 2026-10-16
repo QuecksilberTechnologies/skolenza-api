@@ -134,7 +134,6 @@ public sealed class StaffEmploymentTypeDatabaseTests
                 Columns = new() { "TypeName", "Description", "Remark" },
                 Rows = new() { new() { RowNumber = 2, Values = new() { _name, new string('a', length), new string('b', length) } } }
             }, Array.Empty<skolenza.application.DTOs.Department.GetDepartmentResponseDTO>(),
-            Array.Empty<skolenza.application.DTOs.Designation.GetDesignationResponseDTO>(),
             Array.Empty<skolenza.application.DTOs.Role.GetRoleResponseDTO>());
         Assert.That(preview.IsValid, Is.EqualTo(valid));
     }

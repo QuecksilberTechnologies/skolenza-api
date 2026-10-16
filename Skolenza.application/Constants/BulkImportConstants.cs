@@ -4,7 +4,7 @@ namespace skolenza.application.Constants;
 public static class BulkImportConstants
 {
     public const string DepartmentModuleCode = "INSTITUTION_DEPARTMENTS";
-    public const string DesignationModuleCode = "INSTITUTION_STAFF_DESIGNATIONS";
+    public const string RetiredWorkTitleMessage = "This work-title import has been retired. Use Staff Professional Structure > Positions.";
     public const string RoleModuleCode = "INSTITUTION_ACCESS";
     public const string HostDeviceBulkModuleCode = "HOST_DEVICE_SETUP";
     public const string HostCardBulkModuleCode = "HOST_INSTITUTION_RFID_MANAGEMENT";
@@ -18,7 +18,6 @@ public static class BulkImportConstants
     public const int MaxColumns = 64;
     public const int MaxCellLength = 4000;
     public const string DepartmentName = "DepartmentName";
-    public const string DesignationName = "DesignationName";
     public const string RoleName = "RoleName";
     public const string RoleType = "RoleType";
     public const string TypeName = "TypeName"; 
@@ -35,10 +34,6 @@ public static class BulkImportConstants
     [
         DepartmentName, Description, Remark, IsActive
     ];
-    public static readonly string[] DesignationColumns =
-    [
-        DesignationName, DepartmentName, Description, IsActive
-    ];
     public static readonly string[] RoleColumns =
     [
         RoleName, RoleType, Remark, IsActive
@@ -50,10 +45,15 @@ public static class BulkImportConstants
     public static readonly string[] StaffMemberColumns =
     [
         StaffMemberCode, "FirstName", "LastName", "OfficialEmail", "DateOfBirth", "DateOfOnBoarding",
-        "GenderId", "CountryId", "DepartmentId", "DesignationId", "StaffEmploymentTypeId", "RoleId",
+        "GenderId", "CountryId", "DepartmentId", "InstitutionStaffCategoryMasterId", "StaffPositionMasterId", "StaffEmploymentTypeId", "RoleId",
         "HasPermanent", IsActive, "MiddleName", "MobileNumber", "ContactName", "ContactNumber",
         "AlternateNumber", "ContactEmail", "ContactCountryId", "StateId", "DistrictId",
         "HouseNo", "Street", "LandMark", "Address"
+    ];
+    public static readonly string[] StaffMemberContactColumns =
+    [
+        "ContactName", "ContactNumber", "AlternateNumber", "ContactEmail", "ContactCountryId",
+        "StateId", "DistrictId", "HouseNo", "Street", "LandMark", "Address"
     ];
     public const string Description = "Description";
     public const string Remark = "Remark";

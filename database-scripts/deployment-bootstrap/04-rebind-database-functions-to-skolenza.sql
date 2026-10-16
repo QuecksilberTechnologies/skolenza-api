@@ -1335,9 +1335,6 @@ BEGIN
     IF TG_TABLE_NAME='StaffMembersChangedTypeHistory' THEN
         SELECT "InstitutionId" INTO institution_id FROM skolenza."StaffMember" WHERE "Id"=NEW."StaffMemberId";
         type_ids := ARRAY[NEW."OldStaffEmploymentTypeId",NEW."NewStaffEmploymentTypeId"];
-    ELSIF TG_TABLE_NAME IN ('AccoumndationAllowancePolicyByDesignation','MealAllowancePolicyByDesignation','TravelAllowancePolicyByDesignation') THEN
-        SELECT "InstitutionId" INTO institution_id FROM skolenza."Designation" WHERE "Id"=NEW."DesignationId";
-        type_ids := ARRAY[NEW."StaffEmploymentTypeId"];
     ELSE
         institution_id := NEW."InstitutionId";
         type_ids := ARRAY[NEW."StaffEmploymentTypeId"];

@@ -52,7 +52,6 @@ public partial class Institution
 
     public virtual ICollection<Department> Department { get; set; } = new List<Department>();
 
-    public virtual ICollection<Designation> Designation { get; set; } = new List<Designation>();
 
     public virtual ICollection<StaffMember> StaffMember { get; set; } = new List<StaffMember>();
 

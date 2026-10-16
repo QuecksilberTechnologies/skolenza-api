@@ -62,7 +62,6 @@ public sealed class StaffPositionMaster : InstitutionMasterEntity
     public int? InstitutionStaffCategoryMasterId { get; set; }
     public short StaffCategoryId { get; set; }
     public int? DepartmentId { get; set; }
-    public int? DesignationId { get; set; }
 }
 
 public sealed class StaffPositionCapability

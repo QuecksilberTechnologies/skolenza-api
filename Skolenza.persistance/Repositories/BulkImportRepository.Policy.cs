@@ -258,14 +258,13 @@ public sealed partial class BulkImportRepository
             {
                 row.Errors.Add("ApplicabilityJson contains an invalid DepartmentId for this institution.");
             }
-            if (scope.DesignationId.HasValue)
+
+            if (scope.StaffPositionMasterId.HasValue && !await context.StaffPositionMasters.AsNoTracking()
+                .AnyAsync(position => position.Id == scope.StaffPositionMasterId &&
+                    position.InstitutionId == institutionId && position.IsActive && !position.IsSoftDeleted &&
+                    (!scope.DepartmentId.HasValue || !position.DepartmentId.HasValue || position.DepartmentId == scope.DepartmentId), token))
             {
-                var designation = await context.Designations.AsNoTracking().FirstOrDefaultAsync(
-                    x => x.Id == scope.DesignationId && x.InstitutionId == institutionId && !x.IsSoftDeleted, token);
-                if (designation == null || scope.DepartmentId.HasValue && designation.DepartmentId != scope.DepartmentId)
-                {
-                    row.Errors.Add("ApplicabilityJson contains an invalid DesignationId hierarchy for this institution.");
-                }
+                row.Errors.Add("ApplicabilityJson contains a Position outside the institution or selected department, or an inactive Position.");
             }
             if (scope.StaffMemberId.HasValue && !await context.StaffMembers.AsNoTracking().AnyAsync(
                 x => x.Id == scope.StaffMemberId && x.InstitutionId == institutionId, token))
@@ -535,7 +534,7 @@ public sealed partial class BulkImportRepository
             CampusId = x.CampusId,
             StaffEmploymentTypeId = x.StaffEmploymentTypeId,
             DepartmentId = x.DepartmentId,
-            DesignationId = x.DesignationId,
+            StaffPositionMasterId = x.StaffPositionMasterId,
             StaffMemberId = x.StaffMemberId,
             GenderId = x.GenderId,
             WorkArrangementType = x.WorkArrangementType,

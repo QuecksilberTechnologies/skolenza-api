@@ -22,7 +22,6 @@ namespace skolenza.application
             services.AddTransient(typeof(MediatR.IPipelineBehavior<,>), typeof(Features.StaffEmploymentTypeCmd.StaffEmploymentTypePermissionBehavior<,>));
             services.AddTransient(typeof(MediatR.IPipelineBehavior<,>), typeof(Features.GenericPolicyCmd.GenericPolicyPermissionBehavior<,>));
             services.AddTransient(typeof(MediatR.IPipelineBehavior<,>), typeof(Features.HolidayCmd.HolidayPermissionBehavior<,>));
-            services.AddTransient(typeof(MediatR.IPipelineBehavior<,>), typeof(Features.DesignationCmd.DesignationPermissionBehavior<,>));
             services.AddTransient(typeof(MediatR.IPipelineBehavior<,>), typeof(Features.RoleCmd.RolePermissionBehavior<,>));
             services.AddTransient(typeof(MediatR.IPipelineBehavior<,>), typeof(Features.InstitutionManagementCmd.InstitutionManagementPermissionBehavior<,>));
             services.AddTransient(typeof(MediatR.IPipelineBehavior<,>), typeof(Features.InstitutionConfigurationCmd.InstitutionLocationPermissionBehavior<,>));

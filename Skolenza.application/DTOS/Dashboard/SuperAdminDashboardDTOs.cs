@@ -2,7 +2,7 @@ namespace skolenza.application.DTOS.Dashboard;
 
 public sealed record DashboardSummaryDTO(int TotalStaffMembers, int NewHiresThisMonth, int OpenPositions, int PendingApprovals);
 public sealed record StaffMemberOverviewDTO(int Total, int Active, int Inactive, int OnLeave);
-public sealed record DashboardStaffMemberDTO(string StaffMemberId, string StaffMemberName, string? DepartmentName, string? DesignationName, string? RoleName, DateTime? Date);
+public sealed record DashboardStaffMemberDTO(string StaffMemberId, string StaffMemberName, string? DepartmentName, string? PositionName, string? RoleName, DateTime? Date);
 public sealed record DashboardLeaveDTO(string StaffMemberId, string StaffMemberName, string? DepartmentName, DateOnly FromDate, DateOnly ToDate, string? MobileNumber);
 public sealed record DashboardLocationDTO(long Id, string Code, string Name, short LocationType, bool IsHeadOffice, bool IsActive);
 public sealed record LocationOverviewDTO(int Total, int Active, int HeadOffice, IReadOnlyList<DashboardLocationDTO> Locations);
@@ -35,14 +35,14 @@ public sealed record RecentExitedStaffMemberDTO(
     string StaffMemberId,
     string StaffMemberName,
     string? DepartmentName,
-    string? DesignationName,
+    string? PositionName,
     DateTime DateOfExit);
 
 public sealed record NoticePeriodStaffMemberDTO(
     string Code,
     string StaffMemberName,
     string? DepartmentName,
-    string? DesignationName,
+    string? PositionName,
     DateOnly ExpectedLastWorkingDate,
     int NoticeDaysRemaining,
     string Status);

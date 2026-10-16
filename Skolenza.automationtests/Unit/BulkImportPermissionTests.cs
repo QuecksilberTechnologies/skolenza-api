@@ -12,8 +12,6 @@ using skolenza.application.DTOS.RoleModulePermission;
 using skolenza.application.Exceptions;
 using skolenza.application.Features.DepartmentCmd;
 using skolenza.application.Features.DepartmentCmd.Handlers;
-using skolenza.application.Features.DesignationCmd;
-using skolenza.application.Features.DesignationCmd.Handlers;
 using skolenza.application.Features.RoleCmd;
 using skolenza.application.Features.RoleCmd.Handlers;
 using skolenza.application.Interfaces;
@@ -33,7 +31,6 @@ namespace skolenza.automationtests.Unit;
 public sealed class BulkImportPermissionTests
 {
     [TestCase(BulkImportMaster.Department, "DepartmentName,Description,Remark,IsActive")]
-    [TestCase(BulkImportMaster.Designation, "DesignationName,DepartmentName,Description,IsActive")]
     [TestCase(BulkImportMaster.Role, "RoleName,RoleType,Remark,IsActive")]
     [TestCase(BulkImportMaster.StaffEmploymentType, "TypeName,Description,Remark,IsActive")]
     public async Task Granted_view_downloads_the_correct_template_without_writing_jobs(
@@ -129,7 +126,6 @@ public sealed class BulkImportPermissionTests
     }
 
     [TestCase(typeof(skolenza.api.Controllers.Department.DepartmentController))]
-    [TestCase(typeof(skolenza.api.Controllers.Designation.DesignationController))]
     [TestCase(typeof(skolenza.api.Controllers.Role.RoleController))]
     [TestCase(typeof(skolenza.api.Controllers.StaffEmploymentType.StaffEmploymentTypeController))]
     public void Every_durable_route_is_explicit_and_authenticated(Type controller)
@@ -213,7 +209,6 @@ public sealed class BulkImportPermissionTests
     }
 
     [TestCase("Department")]
-    [TestCase("Designation")]
     [TestCase("Role")]
     [TestCase("StaffEmploymentType")]
     public async Task Existing_pipeline_allows_granted_preview(string master)
@@ -222,7 +217,6 @@ public sealed class BulkImportPermissionTests
     }
 
     [TestCase("Department")]
-    [TestCase("Designation")]
     [TestCase("Role")]
     [TestCase("StaffEmploymentType")]
     public async Task Wrong_module_never_reaches_preview(string master)
@@ -231,7 +225,6 @@ public sealed class BulkImportPermissionTests
     }
 
     [TestCase("Department")]
-    [TestCase("Designation")]
     [TestCase("Role")]
     [TestCase("StaffEmploymentType")]
     public async Task Denied_permission_never_reaches_preview(string master)
@@ -240,7 +233,6 @@ public sealed class BulkImportPermissionTests
     }
 
     [TestCase(typeof(skolenza.api.Controllers.Department.DepartmentController))]
-    [TestCase(typeof(skolenza.api.Controllers.Designation.DesignationController))]
     [TestCase(typeof(skolenza.api.Controllers.Role.RoleController))]
     [TestCase(typeof(skolenza.api.Controllers.StaffEmploymentType.StaffEmploymentTypeController))]
     public void Preview_route_requires_authentication_and_multipart_input(Type controller)
@@ -259,7 +251,6 @@ public sealed class BulkImportPermissionTests
         var moduleCode = master switch
         {
             "Department" => BulkImportConstants.DepartmentModuleCode,
-            "Designation" => BulkImportConstants.DesignationModuleCode,
             "StaffEmploymentType" => BulkImportConstants.StaffEmploymentTypeModuleCode,
             _ => BulkImportConstants.RoleModuleCode
         };
@@ -303,9 +294,6 @@ public sealed class BulkImportPermissionTests
                 "Department" => new DepartmentPermissionBehavior<PreviewDepartmentImportQuery, ApiResponse<BulkImportPreviewResponseDTO>>(
                     unit, common, NullLogger<DepartmentPermissionBehavior<PreviewDepartmentImportQuery, ApiResponse<BulkImportPreviewResponseDTO>>>.Instance)
                     .Handle(new PreviewDepartmentImportQuery(dto), Next, CancellationToken.None),
-                "Designation" => new DesignationPermissionBehavior<PreviewDesignationImportQuery, ApiResponse<BulkImportPreviewResponseDTO>>(
-                    unit, common, NullLogger<DesignationPermissionBehavior<PreviewDesignationImportQuery, ApiResponse<BulkImportPreviewResponseDTO>>>.Instance)
-                    .Handle(new PreviewDesignationImportQuery(dto), Next, CancellationToken.None),
                 "StaffEmploymentType" => new StaffEmploymentTypePermissionBehavior<PreviewStaffEmploymentTypeImportQuery, ApiResponse<BulkImportPreviewResponseDTO>>(
                     unit, common, NullLogger<StaffEmploymentTypePermissionBehavior<PreviewStaffEmploymentTypeImportQuery, ApiResponse<BulkImportPreviewResponseDTO>>>.Instance)
                     .Handle(new PreviewStaffEmploymentTypeImportQuery(dto), Next, CancellationToken.None),

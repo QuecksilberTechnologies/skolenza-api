@@ -564,12 +564,12 @@ public sealed class GetPolicyAssignmentCandidatesQueryHandler(
             staffMember.StaffEmploymentTypeName,
             staffMember.DepartmentId,
             staffMember.DepartmentName,
-            staffMember.DesignationId,
-            staffMember.DesignationName,
+            staffMember.StaffPositionMasterId,
+            staffMember.PositionName,
             staffMember.IsAssigned)).ToList();
         var response = new PolicyAssignmentCandidatePageDTO(data.PolicyId, data.PolicyVersionId,
             data.PolicyCode, data.PolicyName, data.VersionNumber, data.EffectiveDate, data.TotalRecords,
-            staffMembers, data.StaffEmploymentTypes, data.Departments, data.Designations);
+            staffMembers, data.StaffEmploymentTypes, data.Departments, data.Positions);
         return ApiResponse<PolicyAssignmentCandidatePageDTO>.Success(response,
             "Eligible policy-assignment staffMembers retrieved successfully.");
     }
@@ -595,12 +595,12 @@ public sealed class ExportPolicyAssignmentsQueryHandler(
             return $"\"{safe.Replace("\"", "\"\"")}\"";
         }
         var output = new System.Text.StringBuilder();
-        output.AppendLine("AssignmentId,StaffMemberCode,StaffMemberName,StaffEmploymentType,Department,Designation,AssignmentSource,EffectiveFrom,EffectiveTo,IsMandatory,IsActive,IsEffective,StateReason");
+        output.AppendLine("AssignmentId,StaffMemberCode,StaffMemberName,StaffEmploymentType,Department,Position,AssignmentSource,EffectiveFrom,EffectiveTo,IsMandatory,IsActive,IsEffective,StateReason");
         foreach (var row in rows)
         {
             output.Append(row.AssignmentId).Append(',').Append(Csv(row.StaffMemberCode)).Append(',')
                 .Append(Csv(row.StaffMemberName)).Append(',').Append(Csv(row.StaffEmploymentTypeName)).Append(',')
-                .Append(Csv(row.DepartmentName)).Append(',').Append(Csv(row.DesignationName)).Append(',')
+                .Append(Csv(row.DepartmentName)).Append(',').Append(Csv(row.PositionName)).Append(',')
                 .Append(row.AssignmentSource).Append(',').Append(row.EffectiveFrom.ToString("yyyy-MM-dd")).Append(',')
                 .Append(row.EffectiveTo?.ToString("yyyy-MM-dd") ?? string.Empty).Append(',')
                 .Append(row.IsMandatory).Append(',').Append(row.IsActive).Append(',')

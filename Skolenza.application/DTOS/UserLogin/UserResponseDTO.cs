@@ -32,7 +32,7 @@ namespace skolenza.application.DTOS.UserLogin
         public long? InstitutionId { get; set; }
         public string? InstitutionName { get; set; }
         public bool? IsPasswordChangeRequired { get; set; }
-        public int? DesignationId { get; set; }
+        public int? StaffPositionMasterId { get; set; }
         public int? DepartmentId { get; set; }
         public int StaffEmploymentTypeId { get; set; }
         public string? OfficialEmail { get; set; }

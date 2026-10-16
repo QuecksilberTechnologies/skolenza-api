@@ -1,4 +1,5 @@
 using skolenza.application.Common.Enums;
+using skolenza.application.Constants;
 using skolenza.application.DTOS.Staff;
 using skolenza.application.Exceptions;
 using skolenza.application.Interfaces.IRepositories;
@@ -12,6 +13,27 @@ namespace skolenza.persistance.Repositories;
 public sealed class StaffProfessionalStructureRepository(SkolenzaDbContext context)
     : IStaffProfessionalStructureRepository
 {
+    /// <summary>Resolves current job identity once from effective primary assignments, without legacy title joins.</summary>
+    public static IQueryable<StaffPositionIdentityReadModel> CurrentPositionIdentities(
+        SkolenzaDbContext context,
+        DateOnly effectiveDate)
+    {
+        return from assignment in context.StaffPositionAssignments.AsNoTracking()
+               join position in context.StaffPositionMasters.AsNoTracking()
+                   on assignment.StaffPositionMasterId equals position.Id
+               where assignment.InstitutionId == position.InstitutionId &&
+                   assignment.IsPrimary && assignment.IsActive &&
+                   assignment.EffectiveFrom <= effectiveDate &&
+                   (!assignment.EffectiveTo.HasValue || assignment.EffectiveTo >= effectiveDate)
+               select new StaffPositionIdentityReadModel
+               {
+                   InstitutionId = assignment.InstitutionId,
+                   StaffMemberId = assignment.StaffMemberId,
+                   StaffPositionMasterId = position.Id,
+                   PositionName = position.Name
+               };
+    }
+
     public Task SeedInstitutionMastersAsync(
         long institutionId,
         long? actorStaffMemberId,
@@ -335,12 +357,6 @@ public sealed class StaffProfessionalStructureRepository(SkolenzaDbContext conte
         {
             throw new ValidationErrorException("The selected department is unavailable.");
         }
-        if (request.DesignationId.HasValue && !await context.Designations.AnyAsync(
-                item => item.Id == request.DesignationId && item.InstitutionId == institutionId && item.IsActive && item.IsSoftDeleted != true,
-                cancellationToken))
-        {
-            throw new ValidationErrorException("The selected designation is unavailable.");
-        }
 
         var capabilities = request.Capabilities.GroupBy(item => item.Id).Select(group => group.First()).ToList();
         var duties = request.Duties.GroupBy(item => item.Id).Select(group => group.First()).ToList();
@@ -378,6 +394,7 @@ public sealed class StaffProfessionalStructureRepository(SkolenzaDbContext conte
         }
 
         string code = NormalizeCode(request.Code);
+
         if (await context.StaffPositionMasters.AnyAsync(
                 item => item.InstitutionId == institutionId && item.Id != entity.Id && !item.IsSoftDeleted && item.Code.ToLower() == code.ToLower(),
                 cancellationToken))
@@ -392,7 +409,7 @@ public sealed class StaffProfessionalStructureRepository(SkolenzaDbContext conte
         entity.InstitutionStaffCategoryMasterId = institutionCategory!.Id;
         entity.StaffCategoryId = institutionCategory.StaffCategoryTypeId;
         entity.DepartmentId = request.DepartmentId;
-        entity.DesignationId = request.DesignationId;
+        // Preserve the legacy reference for historical consumers; Position is the editable identity.
         entity.DisplayOrder = request.DisplayOrder;
         entity.IsActive = request.IsActive;
         await context.SaveChangesAsync(cancellationToken);
@@ -481,8 +498,9 @@ public sealed class StaffProfessionalStructureRepository(SkolenzaDbContext conte
         }
         if (current is not null)
         {
-            current.IsActive = false;
             current.EffectiveTo = effectiveFrom > current.EffectiveFrom ? effectiveFrom.AddDays(-1) : current.EffectiveFrom;
+            current.IsActive = effectiveFrom > current.EffectiveFrom &&
+                current.EffectiveTo >= DateOnly.FromDateTime(DateTime.UtcNow);
             current.UpdatedById = actorStaffMemberId;
             current.UpdatedDateTime = DateTime.UtcNow;
             var capabilityAssignments = await context.StaffCapabilityAssignments.Where(item => item.SourcePositionAssignmentId == current.Id && item.EffectiveTo == null).ToListAsync(cancellationToken);
@@ -496,7 +514,7 @@ public sealed class StaffProfessionalStructureRepository(SkolenzaDbContext conte
             foreach (var duty in dutyAssignments)
             {
                 duty.EffectiveTo = current.EffectiveTo;
-                duty.IsActive = false;
+                duty.IsActive = current.IsActive;
                 duty.UpdatedById = actorStaffMemberId;
                 duty.UpdatedDateTime = DateTime.UtcNow;
             }
@@ -510,8 +528,11 @@ public sealed class StaffProfessionalStructureRepository(SkolenzaDbContext conte
         long staffMemberId,
         CancellationToken cancellationToken = default)
     {
+        var effectiveDate = DateOnly.FromDateTime(DateTime.UtcNow);
         var assignment = await context.StaffPositionAssignments.AsNoTracking()
-            .Where(item => item.InstitutionId == institutionId && item.StaffMemberId == staffMemberId && item.IsPrimary && item.IsActive)
+            .Where(item => item.InstitutionId == institutionId && item.StaffMemberId == staffMemberId &&
+                item.IsPrimary && item.IsActive && item.EffectiveFrom <= effectiveDate &&
+                (!item.EffectiveTo.HasValue || item.EffectiveTo >= effectiveDate))
             .OrderByDescending(item => item.EffectiveFrom)
             .FirstOrDefaultAsync(cancellationToken);
         if (assignment is null)
@@ -607,6 +628,10 @@ public sealed class StaffProfessionalStructureRepository(SkolenzaDbContext conte
         {
             throw new ValidationErrorException("The selected position is not available for the StaffMember category.");
         }
+        if (position.DepartmentId.HasValue && position.DepartmentId != staffMember.DepartmentId)
+        {
+            throw new ValidationErrorException("The selected position is not available for the StaffMember department.");
+        }
 
         var assignment = new StaffPositionAssignment
         {
@@ -686,7 +711,6 @@ public sealed class StaffProfessionalStructureRepository(SkolenzaDbContext conte
             StaffCategoryName = position.InstitutionStaffCategoryMasterId.HasValue && categories.TryGetValue(position.InstitutionStaffCategoryMasterId.Value, out var category)
                 ? category.Name : string.Empty,
             DepartmentId = position.DepartmentId,
-            DesignationId = position.DesignationId,
             Code = position.Code,
             Name = position.Name,
             Description = position.Description,

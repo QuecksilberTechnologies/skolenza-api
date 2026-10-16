@@ -148,7 +148,8 @@ public sealed partial class BulkImportRepository
 
     private sealed record StaffMemberSnapshot(
         long InstitutionId, StaffMemberCodePattern? Pattern, List<StaffMember> StaffMembers, List<LoginCredential> Logins,
-        List<Department> Departments, List<Designation> Designations, List<StaffEmploymentType> Types,
+        List<Department> Departments, List<InstitutionStaffCategoryMaster> Categories,
+        List<StaffPositionMaster> Positions, List<StaffEmploymentType> Types,
         List<Role> Roles, List<Country> Countries, List<Gender> Genders, List<State> States,
         List<District> Districts, int AvailableSeats);
 
@@ -162,7 +163,10 @@ public sealed partial class BulkImportRepository
         var logins = await context.LoginCredentials.AsNoTracking().Where(item => emails.Contains(item.LoginId.ToUpper()))
             .Select(item => new LoginCredential { StaffMemberId = item.StaffMemberId, InstitutionId = item.InstitutionId, LoginId = item.LoginId, IsSoftDeleted = item.IsSoftDeleted }).ToListAsync(token);
         var departments = await context.Departments.AsNoTracking().Where(item => item.InstitutionId == institutionId && item.IsActive == true && item.IsSoftDeleted != true).ToListAsync(token);
-        var designations = await context.Designations.AsNoTracking().Where(item => item.InstitutionId == institutionId && item.IsActive == true && item.IsSoftDeleted != true).ToListAsync(token);
+        var categories = await context.InstitutionStaffCategoryMasters.AsNoTracking()
+            .Where(item => item.InstitutionId == institutionId && item.IsActive && !item.IsSoftDeleted).ToListAsync(token);
+        var positions = await context.StaffPositionMasters.AsNoTracking()
+            .Where(item => item.InstitutionId == institutionId && item.IsActive && !item.IsSoftDeleted).ToListAsync(token);
         var types = await context.StaffEmploymentTypes.AsNoTracking().Where(item => item.InstitutionId == institutionId && item.IsActive == true && item.IsSoftDeleted != true).ToListAsync(token);
         var roles = await context.Roles.AsNoTracking().Where(item => item.InstitutionId == institutionId && item.IsActive && item.IsSoftDeleted != true).ToListAsync(token);
         var countries = await context.Countries.AsNoTracking().Where(item => item.IsActive == true).ToListAsync(token);
@@ -171,7 +175,7 @@ public sealed partial class BulkImportRepository
         var districts = await context.Districts.AsNoTracking().Where(item => item.IsActive).ToListAsync(token);
         var available = await StaffMemberCapacityGuard.AvailableSeatsAsync(context, institutionId, token);
         return new StaffMemberSnapshot(institutionId, patterns.Count == 1 ? patterns[0] : null, staffMembers, logins,
-            departments, designations, types, roles, countries, genders, states, districts, available);
+            departments, categories, positions, types, roles, countries, genders, states, districts, available);
     }
 
     private void ValidateStaffMemberRow(BulkImportPreviewRowDTO row, StaffMemberSnapshot snapshot, bool excel = false, bool date1904 = false)
@@ -183,8 +187,12 @@ public sealed partial class BulkImportRepository
         }
         if (!snapshot.Departments.Any(item => item.Id == dto.DepartmentId))
             row.Errors.Add("DepartmentId must be active in this institution.");
-        if (!snapshot.Designations.Any(item => item.Id == dto.DesignationId && item.DepartmentId == dto.DepartmentId))
-            row.Errors.Add("DesignationId must be active in this institution and belong to DepartmentId.");
+        if (!snapshot.Categories.Any(item => item.Id == dto.InstitutionStaffCategoryMasterId))
+            row.Errors.Add("InstitutionStaffCategoryMasterId must be active in this institution.");
+        if (!snapshot.Positions.Any(item => item.Id == dto.StaffPositionMasterId &&
+            item.InstitutionStaffCategoryMasterId == dto.InstitutionStaffCategoryMasterId &&
+            (!item.DepartmentId.HasValue || item.DepartmentId == dto.DepartmentId)))
+            row.Errors.Add("StaffPositionMasterId must be active in this institution and match the category and department.");
         if (!snapshot.Types.Any(item => item.Id == dto.StaffEmploymentTypeId))
             row.Errors.Add("StaffEmploymentTypeId must be active in this institution.");
         if (dto.RoleId == 0)
@@ -279,7 +287,7 @@ public sealed partial class BulkImportRepository
     private async Task ProcessStaffMemberBatchAsync(BulkImportJob job, BulkImportPreviewResponseDTO preview, CancellationToken token)
     {
         await LockStaffMemberCodesAsync(job.InstitutionId, token);
-        foreach (var table in new[] { "Department", "Designation", "StaffEmploymentType", "Role" })
+        foreach (var table in new[] { "Department", "StaffEmploymentType", "Role" })
         {
             // Table names are the fixed existing master tables, never request data.
             await context.Database.ExecuteSqlRawAsync(
@@ -352,6 +360,11 @@ public sealed partial class BulkImportRepository
         var (dto, contactDto) = StaffMemberImportRowMapper.Map(row);
         var staffMember = mapper.Map<StaffMember>(dto);
         staffMember.InstitutionId = job.InstitutionId;
+        var category = await context.InstitutionStaffCategoryMasters.AsNoTracking()
+            .SingleAsync(item => item.Id == dto.InstitutionStaffCategoryMasterId &&
+                item.InstitutionId == job.InstitutionId && item.IsActive && !item.IsSoftDeleted, token);
+        staffMember.StaffCategoryId = category.StaffCategoryTypeId;
+        staffMember.InstitutionStaffCategoryMasterId = category.Id;
         staffMember.EmployementCode = row.ProposedStaffMemberCode;
         staffMember.MobileNumber = row.Values.GetValueOrDefault(nameof(StaffMember.MobileNumber));
         staffMember.AddedById = job.ActorId;
@@ -384,6 +397,10 @@ public sealed partial class BulkImportRepository
         };
         await (staffMemberRepository ?? throw new InvalidOperationException("StaffMember repository is not configured."))
             .CreateStaffMemberAsync(staffMember, login, role);
+        // Reuse the canonical graph inside the worker's existing row transaction.
+        await new StaffProfessionalStructureRepository(context).AssignPrimaryPositionAsync(
+            job.InstitutionId, staffMember.Id, dto.StaffPositionMasterId,
+            DateOnly.FromDateTime(dto.DateOfOnBoarding!.Value), job.ActorId, token);
         row.ImportedStaffMemberId = staffMember.Id;
         row.InvitationStatus = BulkImportInvitationStatus.Pending;
         token.ThrowIfCancellationRequested();

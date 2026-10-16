@@ -58,12 +58,13 @@ public sealed class StaffMemberImportDatabaseTests
             _actor.RoleId, _module, _operation)).ResultCode, Is.EqualTo(1), "Fixture needs a real EMP_LIST Add grant.");
         _plan = await context.InstitutionSubscriptions.AsNoTracking().Where(item => item.InstitutionId == _actor.InstitutionId && item.IsActive)
             .Select(item => item.SubscriptionPlan).SingleAsync();
-        var designation = await context.Designations.Where(item => item.InstitutionId == _actor.InstitutionId && item.IsActive == true && item.IsSoftDeleted != true).FirstAsync();
+        var position = await context.StaffPositionMasters.Where(item => item.InstitutionId == _actor.InstitutionId && item.IsActive && !item.IsSoftDeleted && item.DepartmentId != null).FirstAsync();
         var staffEmploymentType = await context.StaffEmploymentTypes.Where(item => item.InstitutionId == _actor.InstitutionId && item.IsActive == true && item.IsSoftDeleted != true).FirstAsync();
         _values = StaffMemberImportTests.ValidRow().Values;
         _values["OfficialEmail"] = _prefix + "@example.invalid";
-        _values["DesignationId"] = designation.Id.ToString();
-        _values["DepartmentId"] = designation.DepartmentId.ToString();
+        _values["StaffPositionMasterId"] = position.Id.ToString();
+        _values["InstitutionStaffCategoryMasterId"] = position.InstitutionStaffCategoryMasterId.ToString()!;
+        _values["DepartmentId"] = position.DepartmentId.ToString();
         _values["StaffEmploymentTypeId"] = staffEmploymentType.Id.ToString();
         _values["CountryId"] = (await context.Countries.Where(item => item.IsActive == true).Select(item => item.Id).FirstAsync()).ToString();
         _values["GenderId"] = (await context.Genders.Select(item => item.Id).FirstAsync()).ToString();

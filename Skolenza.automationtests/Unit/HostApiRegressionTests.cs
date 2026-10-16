@@ -371,6 +371,8 @@ public sealed class HostApiRegressionTests
         {
             Assert.That(calls.Count(c => c == "BulkInsertAsync"), Is.EqualTo(1));
             Assert.That(calls, Does.Not.Contain("AutoCreatePolicyTypesAsync"));
+            Assert.That(calls, Does.Not.Contain("AutoCreateDesignationAsync"));
+            Assert.That(calls.Count(c => c == "AssignPrimaryPositionAsync"), Is.EqualTo(1));
             Assert.That(calls.IndexOf("SendTemplatedEmailUsingHostConfigAsync"), Is.GreaterThan(calls.IndexOf("CommitTransactionAsync")));
             Assert.That(result.Data.EmailSent, Is.EqualTo(scenario != "email-failure"));
             Assert.That(stagedInitialLocation, Is.Not.Null);
@@ -380,6 +382,7 @@ public sealed class HostApiRegressionTests
                 Assert.That(
                     stagedAdministrator!.StaffCategoryId,
                     Is.EqualTo(AppConstants.StaffCategories.Administrative));
+                Assert.That(typeof(StaffMember).GetProperty("DesignationId"), Is.Null);
                 Assert.That(stagedInitialLocation!.InstitutionId, Is.EqualTo(501));
                 Assert.That(stagedInitialLocation.CountryId, Is.EqualTo(1));
                 Assert.That(

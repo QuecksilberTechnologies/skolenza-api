@@ -115,7 +115,6 @@ namespace skolenza.persistance.Data.Context
         public virtual DbSet<TaxSlab> TaxSlab { get; set; }
 
         public virtual DbSet<TaxSystemMaster> TaxSystemMaster { get; set; }
-        public virtual DbSet<Designation> Designations { get; set; }
 
         public virtual DbSet<EmailQueue> EmailQueues { get; set; }
 
@@ -882,25 +881,7 @@ namespace skolenza.persistance.Data.Context
                 .HasConstraintName("FK_Department_Institution");
         });
 
-        modelBuilder.Entity<Designation>(entity =>
-        {
-            entity.HasKey(e => e.Id).HasName("PK__Designat__3214EC07F9FF4C75");
 
-            entity.ToTable("Designation", "skolenza");
-
-            entity.Property(e => e.Description).HasMaxLength(500);
-            entity.Property(e => e.DesignationName).HasMaxLength(255);
-
-            entity.HasOne(d => d.Department).WithMany(p => p.Designation)
-                .HasForeignKey(d => d.DepartmentId)
-                .OnDelete(DeleteBehavior.Restrict)
-                .HasConstraintName("FK_Designation_Department");
-
-            entity.HasOne(d => d.Institution).WithMany(p => p.Designation)
-                .HasForeignKey(d => d.InstitutionId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_Designation_Institution");
-        });
 
         modelBuilder.Entity<DeviceCommand>(entity =>
         {
@@ -1181,10 +1162,7 @@ namespace skolenza.persistance.Data.Context
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_StaffMember_Country");
 
-            entity.HasOne(d => d.Designation).WithMany(p => p.StaffMember)
-                .HasForeignKey(d => d.DesignationId)
-                .OnDelete(DeleteBehavior.Restrict)
-                .HasConstraintName("FK_StaffMember_Designation");
+
 
             entity.HasOne(d => d.Department).WithMany(p => p.StaffMember)
                 .HasForeignKey(d => d.DepartmentId)
@@ -1394,13 +1372,13 @@ namespace skolenza.persistance.Data.Context
             entity.ToTable("StaffMemberExperience", "skolenza");
 
             entity.Property(e => e.ColleagueContactNumber).HasMaxLength(20);
-            entity.Property(e => e.ColleagueDesignation).HasMaxLength(100);
+            entity.Property(e => e.ColleaguePositionTitle).HasMaxLength(100);
             entity.Property(e => e.ColleagueName).HasMaxLength(100);
             entity.Property(e => e.CompanyName).HasMaxLength(100);
             entity.Property(e => e.Ctc)
                 .HasPrecision(18, 2)
                 .HasColumnName("CTC");
-            entity.Property(e => e.Designation).HasMaxLength(100);
+            entity.Property(e => e.PreviousPositionTitle).HasMaxLength(100);
             entity.Property(e => e.StaffMemberIdOfCompany).HasMaxLength(100);
             entity.Property(e => e.IsActive).HasDefaultValue(true);
             entity.Property(e => e.IsAnyGap).HasDefaultValue(false);
@@ -1496,9 +1474,9 @@ namespace skolenza.persistance.Data.Context
                 .HasForeignKey(d => d.DepartmentId)
                 .HasConstraintName("FK_StaffMemberManagerMapping_Department");
 
-            entity.HasOne(d => d.Designation).WithMany(p => p.StaffMemberManagerMapping)
-                .HasForeignKey(d => d.DesignationId)
-                .HasConstraintName("FK_StaffMemberManagerMapping_Designation");
+            entity.HasOne(d => d.StaffPositionMaster).WithMany()
+                .HasForeignKey(d => d.StaffPositionMasterId)
+                .HasConstraintName("FK_StaffMemberManagerMapping_StaffPositionMaster");
 
             entity.HasOne(d => d.StaffMember).WithMany(p => p.StaffMemberManagerMappingStaffMember)
                 .HasForeignKey(d => d.StaffMemberId)
@@ -1649,7 +1627,7 @@ namespace skolenza.persistance.Data.Context
             entity.Property(e => e.Ctc)
                 .HasPrecision(18, 2)
                 .HasColumnName("CTC");
-            entity.Property(e => e.Designation).HasMaxLength(150);
+            entity.Property(e => e.PreviousPositionTitle).HasMaxLength(150);
             entity.Property(e => e.IsActive).HasDefaultValue(true);
             entity.Property(e => e.IsEditAllowed).HasDefaultValue(true);
             entity.Property(e => e.IsWfh).HasColumnName("IsWFH");

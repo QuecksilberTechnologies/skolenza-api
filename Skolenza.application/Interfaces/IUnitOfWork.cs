@@ -54,7 +54,6 @@ namespace skolenza.application.Interfaces
         IRefreshTokenRepository RefreshTokenRepository { get; }
         IAssetRepository AssetRepository { get; }
         IOperationRepository OperationRepository { get; }
-        IDesignationRepository DesignationRepository { get; }
         IBaseStaffMemberRepository StaffMembers { get; }
         IStaffMemberContactRepository StaffMemberContactRepository { get; }
         IStaffMemberBankRepository StaffMemberBankRepository { get; }

@@ -36,7 +36,7 @@ namespace skolenza.application.DTOS.Staff.BaseStaffMember
         public int? StaffEmploymentTypeId { get; set; }   
         
         public int? GenderId { get; set; }
-        public int  DesignationId { get; set; }
+        public int? StaffPositionMasterId { get; set; }
         public int? DepartmentId { get; set; }
         public string? EmailId { get; set; }
 

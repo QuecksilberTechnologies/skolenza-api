@@ -31,7 +31,7 @@ public static class StaffMemberProfileCompletionCalculator
             0);
     }
 
-    public static double CalculateOverviewRow(StaffMember staffMember, bool hasPrimaryImage)
+    public static double CalculateOverviewRow(StaffMember staffMember, bool hasPrimaryImage, bool hasPosition = false)
     {
         ArgumentNullException.ThrowIfNull(staffMember);
 
@@ -40,10 +40,10 @@ public static class StaffMemberProfileCompletionCalculator
             staffMember.LastName,
             staffMember.DateOfBirth,
             staffMember.DateOfOnBoarding,
-            staffMember.DesignationId,
             staffMember.DepartmentId,
             staffMember.OfficialEmail,
-            hasPrimaryImage);
+            hasPrimaryImage,
+            hasPosition);
     }
 
     public static double CalculateOverviewRow(
@@ -51,16 +51,16 @@ public static class StaffMemberProfileCompletionCalculator
         string? lastName,
         DateTime? dateOfBirth,
         DateTime? dateOfOnboarding,
-        int? designationId,
         int? departmentId,
         string? officialEmail,
-        bool hasPrimaryImage) =>
+        bool hasPrimaryImage,
+        bool hasPosition = false) =>
         CalculateRowPercentage(
             !string.IsNullOrWhiteSpace(firstName),
             !string.IsNullOrWhiteSpace(lastName),
             dateOfBirth.HasValue,
             dateOfOnboarding.HasValue,
-            designationId > 0,
+            hasPosition,
             departmentId > 0,
             !string.IsNullOrWhiteSpace(officialEmail),
             hasPrimaryImage);
@@ -99,7 +99,7 @@ public static class StaffMemberProfileCompletionCalculator
 
         return CalculateRowPercentage(
             !string.IsNullOrWhiteSpace(experience.CompanyName),
-            !string.IsNullOrWhiteSpace(experience.Designation),
+            !string.IsNullOrWhiteSpace(experience.PreviousPositionTitle),
             experience.StartDate.HasValue,
             experience.EndDate.HasValue);
     }

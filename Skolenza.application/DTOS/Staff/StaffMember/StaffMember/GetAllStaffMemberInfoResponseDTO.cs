@@ -28,8 +28,8 @@ namespace skolenza.application.DTOS.Staff.BaseStaffMember
             public string? DateOfOnBoarding { get; set; }
             public int DepartmentId { get; set; }
             public string? DepartmentName { get; set; }
-            public int DesignationId { get; set; }
-            public string? DesignationName { get; set; }
+            public int? StaffPositionMasterId { get; set; }
+            public string? PositionName { get; set; }
             public int StaffEmploymentTypeId { get; set; }
             public short? StaffCategoryId { get; set; }
             public string? StaffEmploymentTypeName { get; set; }
@@ -73,8 +73,8 @@ namespace skolenza.application.DTOS.Staff.BaseStaffMember
     {   
         public string? StaffMemberId { get; set; }
         public string? FullName { get; set; }
-        public int? Designation { get; set; }
-        public string? DesignationType { get; set; }
+        public int? StaffPositionMasterId { get; set; }
+        public string? PositionName { get; set; }
         public int? Department { get; set; }
         public string? DepartmentType { get; set; }
         public string? StaffMemberCode { get; set; }       
@@ -107,8 +107,8 @@ namespace skolenza.application.DTOS.Staff.BaseStaffMember
         public int RoleId { get; set; }
         public int? RoleType { get; set; }
         public string? RoleName { get; set; } = null;
-        public int DesignationId { get; set; }
-        public string? Designation { get; set; }
+        public int StaffPositionMasterId { get; set; }
+        public string? PositionName { get; set; }
         public int DepartmentId { get; set; }
         public string? Department { get; set; }
         public string? ProfileImage { get; set; }

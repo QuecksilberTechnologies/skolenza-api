@@ -97,6 +97,7 @@ public sealed class PolicyRuleInputDTO
     public List<int> LeaveTypeIds { get; set; } = new();
 }
 
+[JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
 public sealed class PolicyApplicabilityInputDTO
 {
     [Range(1, 2)] public short ApplicabilityMode { get; set; } = 1;
@@ -107,7 +108,7 @@ public sealed class PolicyApplicabilityInputDTO
     public long? CampusId { get; set; }
     public int? StaffEmploymentTypeId { get; set; }
     public int? DepartmentId { get; set; }
-    public int? DesignationId { get; set; }
+    public int? StaffPositionMasterId { get; set; }
     public long? StaffMemberId { get; set; }
     /// <summary>Globally salted encoded staffMember identifier returned by the StaffMember APIs.</summary>
     public string? StaffMemberPublicId { get; set; }
@@ -217,7 +218,7 @@ public sealed class PolicyAssignmentCandidateRequestDTO : PermissionRequestDTO
     public DateOnly? EffectiveDate { get; set; }
     public int? StaffEmploymentTypeId { get; set; }
     public int? DepartmentId { get; set; }
-    public int? DesignationId { get; set; }
+    public int? StaffPositionMasterId { get; set; }
     [MaxLength(100)] public string? Search { get; set; }
     public bool IncludeAssigned { get; set; } = true;
     [Range(1, int.MaxValue)] public int PageNumber { get; set; } = 1;
@@ -275,10 +276,13 @@ public sealed record PolicyRuleResponseDTO(long Id, int RuleTypeId, string Name,
     IReadOnlyList<int> LeaveTypeIds);
 public sealed record PolicyApplicabilityResponseDTO(long Id, short Mode, int Priority,
     int? CountryId, int? StateId, int? DistrictId, int? LocalityId, long? CampusId,
-    int? StaffEmploymentTypeId, int? DepartmentId, int? DesignationId, long? StaffMemberId,
+    int? StaffEmploymentTypeId, int? DepartmentId, long? StaffMemberId,
     int? GenderId, short? WorkArrangementType, short? EmploymentStatus,
     int? MinimumServiceDays, DateOnly EffectiveFrom, DateOnly? EffectiveTo,
-    IReadOnlyList<int> LeaveTypeIds);
+    IReadOnlyList<int> LeaveTypeIds)
+{
+    public int? StaffPositionMasterId { get; init; }
+}
 public sealed record PolicyDetailResponseDTO(long Id, string Code, string Name, string? Summary,
     int PolicyTypeId, int? OwnerDepartmentId, string? DefaultCurrencyCode,
     long VersionId, int VersionNumber, short StatusId, string Status,
@@ -317,24 +321,24 @@ public sealed record PolicyAssignmentResponseDTO(long Id, long PolicyVersionId, 
 public sealed record PolicyAssignmentFilterOptionDTO(int Id, string Name, int StaffMemberCount);
 public sealed record PolicyAssignmentCandidateDataDTO(long StaffMemberId, string StaffMemberCode, string StaffMemberName,
     int? StaffEmploymentTypeId, string? StaffEmploymentTypeName, int? DepartmentId, string? DepartmentName,
-    int? DesignationId, string? DesignationName, bool IsAssigned);
+    int? StaffPositionMasterId, string? PositionName, bool IsAssigned);
 public sealed record PolicyAssignmentCandidateResponseDTO(string StaffMemberId, string StaffMemberCode, string StaffMemberName,
     int? StaffEmploymentTypeId, string? StaffEmploymentTypeName, int? DepartmentId, string? DepartmentName,
-    int? DesignationId, string? DesignationName, bool IsAssigned);
+    int? StaffPositionMasterId, string? PositionName, bool IsAssigned);
 public sealed record PolicyAssignmentCandidatePageDTO(long PolicyId, long PolicyVersionId, string PolicyCode,
     string PolicyName, int VersionNumber, DateOnly EffectiveDate, int TotalRecords,
     IReadOnlyList<PolicyAssignmentCandidateResponseDTO> StaffMembers,
     IReadOnlyList<PolicyAssignmentFilterOptionDTO> StaffEmploymentTypes,
     IReadOnlyList<PolicyAssignmentFilterOptionDTO> Departments,
-    IReadOnlyList<PolicyAssignmentFilterOptionDTO> Designations);
+    IReadOnlyList<PolicyAssignmentFilterOptionDTO> Positions);
 public sealed record PolicyAssignmentCandidateDataPageDTO(long PolicyId, long PolicyVersionId, string PolicyCode,
     string PolicyName, int VersionNumber, DateOnly EffectiveDate, int TotalRecords,
     IReadOnlyList<PolicyAssignmentCandidateDataDTO> StaffMembers,
     IReadOnlyList<PolicyAssignmentFilterOptionDTO> StaffEmploymentTypes,
     IReadOnlyList<PolicyAssignmentFilterOptionDTO> Departments,
-    IReadOnlyList<PolicyAssignmentFilterOptionDTO> Designations);
+    IReadOnlyList<PolicyAssignmentFilterOptionDTO> Positions);
 public sealed record PolicyAssignmentExportRowDTO(long AssignmentId, long StaffMemberId, string StaffMemberCode,
-    string StaffMemberName, string? StaffEmploymentTypeName, string? DepartmentName, string? DesignationName,
+    string StaffMemberName, string? StaffEmploymentTypeName, string? DepartmentName, string? PositionName,
     short AssignmentSource, DateOnly EffectiveFrom, DateOnly? EffectiveTo, bool IsMandatory, bool IsActive,
     bool IsEffective, string? StateReason);
 public sealed record PolicyExceptionResponseDTO(long Id, long PolicyVersionId, long StaffMemberId, short ExceptionType, string OverrideConfiguration, string Reason, DateOnly EffectiveFrom, DateOnly EffectiveTo, short ApprovalStatusId, bool IsActive);

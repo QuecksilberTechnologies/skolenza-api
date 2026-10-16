@@ -99,6 +99,8 @@ public sealed class StaffMemberImportTests
 
     [TestCase("OfficialEmail", "invalid email")]
     [TestCase("DepartmentId", "-1")]
+    [TestCase("InstitutionStaffCategoryMasterId", "0")]
+    [TestCase("StaffPositionMasterId", "")]
     [TestCase("GenderId", "Female")]
     [TestCase("IsActive", "maybe")]
     [TestCase("FirstName", "")]
@@ -118,7 +120,8 @@ public sealed class StaffMemberImportTests
             {
                 ["FirstName"] = "Import", ["LastName"] = "Example", ["OfficialEmail"] = "example@example.invalid",
                 ["DateOfBirth"] = "1990-01-01", ["DateOfOnBoarding"] = "2020-03-15",
-                ["GenderId"] = "1", ["CountryId"] = "1", ["DepartmentId"] = "1", ["DesignationId"] = "1",
+                ["GenderId"] = "1", ["CountryId"] = "1", ["DepartmentId"] = "1",
+                ["InstitutionStaffCategoryMasterId"] = "1", ["StaffPositionMasterId"] = "1",
                 ["StaffEmploymentTypeId"] = "1", ["HasPermanent"] = "true", ["IsActive"] = "true"
             }
         };

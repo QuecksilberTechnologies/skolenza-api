@@ -10,7 +10,6 @@ using skolenza.application.Constants;
 using skolenza.application.DTOs.Client;
 using skolenza.application.DTOs.Department;
 using skolenza.application.DTOs.DefaultEmailConfig;
-using skolenza.application.DTOs.Designation;
 using skolenza.application.DTOs.EmailTemplate;
 using skolenza.application.DTOs.Staff;
 using skolenza.application.DTOs.Staff.AccessControlReadOnlyType;
@@ -727,10 +726,6 @@ namespace skolenza.application.Mappings
 
 
 
-            CreateMap<CreateDesignationRequestDTO, Designation>().ReverseMap();
-            CreateMap<Designation, GetDesignationRequestDTO>().ReverseMap();
-            CreateMap<UpdateDesignationRequestDTO, Designation>().ReverseMap();
-            CreateMap<GetDesignationResponseDTO, Designation>().ReverseMap();
 
 
             CreateMap<skolenza.application.DTOS.Staff.Type.CreateStaffEmploymentTypeDTO, StaffEmploymentType>();
@@ -1008,7 +1003,7 @@ namespace skolenza.application.Mappings
                 .ForMember(dest => dest.DateOfBirth, opt => opt.MapFrom(src => src.DateOfBirth))
                 .ForMember(dest => dest.DateOfOnBoarding, opt => opt.MapFrom(src => src.DateOfOnBoarding))
                 .ForMember(dest => dest.DateOfExit, opt => opt.MapFrom(src => src.DateOfExit))
-                .ForMember(dest => dest.DesignationId, opt => opt.MapFrom(src => src.DesignationId))  // int now
+                .ForMember(dest => dest.StaffPositionMasterId, opt => opt.Ignore()) // Resolved from effective Position assignments.
                 .ForMember(dest => dest.StaffEmploymentTypeId, opt => opt.MapFrom(src => src.StaffEmploymentTypeId)) // int now
                 .ForMember(dest => dest.DepartmentId, opt => opt.MapFrom(src => src.DepartmentId)) // int now
                 .ForMember(dest => dest.OfficialEmail, opt => opt.MapFrom(src => src.OfficialEmail))
@@ -1024,7 +1019,6 @@ namespace skolenza.application.Mappings
 
 
 
-            //.ForMember(dest => dest.DesignationId, opt => opt.MapFrom(src => src.DesignationId != null ? src.DesignationId.ToString() : null))
             //.ForMember(dest => dest.StaffEmploymentTypeId, opt => opt.MapFrom(src => src.StaffEmploymentTypeId != null ? src.StaffEmploymentTypeId.ToString() : null))
             //.ForMember(dest => dest.DepartmentId, opt => opt.MapFrom(src => src.DepartmentId != null ? src.DepartmentId.ToString() : null))
 
@@ -1139,7 +1133,7 @@ namespace skolenza.application.Mappings
                     $"{src.FirstName} {(string.IsNullOrWhiteSpace(src.MiddleName) ? "" : src.MiddleName + " ")}{src.LastName}".Trim()))
                 .ForMember(dest => dest.StaffEmploymentTypeId, opt => opt.MapFrom(src => src.StaffEmploymentTypeId)) // now int?
                 .ForMember(dest => dest.DepartmentId, opt => opt.MapFrom(src => src.DepartmentId))
-                .ForMember(dest => dest.DesignationId, opt => opt.MapFrom(src => src.DesignationId))
+                .ForMember(dest => dest.StaffPositionMasterId, opt => opt.MapFrom(src => src.StaffPositionMasterId))
 
                 .ForMember(dest => dest.OfficialEmail, opt => opt.MapFrom(src => src.OfficialEmail));
 

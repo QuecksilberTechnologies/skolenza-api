@@ -116,7 +116,6 @@ namespace skolenza.persistance
             services.AddScoped<IClientRepository, ClientRepository>();
             services.AddScoped<ITravelRepository, TravelRepository>();
             services.AddScoped<IOperationRepository, OperationRepository>();
-            services.AddScoped<IDesignationRepository, DesignationRepository>();
             services.AddScoped<ICandidateCategorySkillRepository, CandidateCategorySkillRepository>();
             services.AddScoped<IEmailTemplateRepository, EmailTemplateRepository>();
             services.AddScoped<IEmailQueueRepository, EmailQueueRepository>();

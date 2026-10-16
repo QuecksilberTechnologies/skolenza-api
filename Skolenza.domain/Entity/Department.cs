@@ -33,7 +33,6 @@ public partial class Department
 
     public DateTime? DeletedDateTime { get; set; }
 
-    public virtual ICollection<Designation> Designation { get; set; } = new List<Designation>();
 
     public virtual ICollection<StaffMember> StaffMember { get; set; } = new List<StaffMember>();
 

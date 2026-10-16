@@ -107,7 +107,6 @@ public class UnitOfWork : IUnitOfWork
     private IInstitutionEncryptionKeyRepository? _institutionEncryptionKeyRepository;
     private IPermissionRepository? _permissionRepository;
     private IDepartmentRepository? _departmentRepository;
-    private IDesignationRepository? _designationRepository;
     private IOperationRepository? _operationRepository;
     private ITravelRepository? _travelRepository;
     private IClientRepository? _clientRepository;
@@ -364,8 +363,6 @@ public class UnitOfWork : IUnitOfWork
             _context,
             _loggerFactory.CreateLogger<DefaultEmailConfigRepository>());
 
-    public IDesignationRepository DesignationRepository =>
-        _designationRepository ??= new DesignationRepository(_context, _loggerFactory.CreateLogger<DesignationRepository>(), _mapper);
 
     public IDepartmentRepository DepartmentRepository =>
         _departmentRepository ??= new DepartmentRepository(_context, _loggerFactory.CreateLogger<DepartmentRepository>(), _mapper, _encriptionService);

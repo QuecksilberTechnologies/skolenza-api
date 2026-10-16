@@ -77,7 +77,7 @@ if (-not $databaseHost -or -not $databaseName -or -not $databaseUser) {
 $sslModes = @{ Disable='disable'; Allow='allow'; Prefer='prefer'; Require='require'; VerifyCA='verify-ca'; VerifyFull='verify-full' }
 $sslMode = Get-ConnectionValue @('SSL Mode', 'SslMode') 'Prefer'
 if (-not $sslModes.ContainsKey($sslMode)) { throw 'Unsupported SSL Mode; configure an explicit supported PostgreSQL SSL mode.' }
-$scripts = @('EnforceDesignationDepartmentScope.sql', 'AddDurableMasterBulkImport.sql',
+$scripts = @('AddDurableMasterBulkImport.sql',
     'AddTenantEmployeeTypes.sql', 'SeedTenantEmployeeTypeModule.sql', 'AddEmployeeBulkImport.sql',
     'production-seed/05-dependent-master/001-employee-identity-catalog.sql')
 if ($HostBulkOnly) {

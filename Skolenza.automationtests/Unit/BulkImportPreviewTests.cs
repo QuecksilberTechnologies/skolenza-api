@@ -4,7 +4,6 @@ using skolenza.application.Common.Enums;
 using skolenza.application.Common.Helpers;
 using skolenza.application.Constants;
 using skolenza.application.DTOs.Department;
-using skolenza.application.DTOs.Designation;
 using skolenza.application.DTOs.Role;
 using skolenza.application.DTOS.Common;
 using skolenza.application.Exceptions;
@@ -63,8 +62,6 @@ public sealed class BulkImportPreviewTests
         {
             Assert.That(BulkImportConstants.DepartmentColumns,
                 Is.EqualTo(new[] { "DepartmentName", "Description", "Remark", "IsActive" }));
-            Assert.That(BulkImportConstants.DesignationColumns,
-                Is.EqualTo(new[] { "DesignationName", "DepartmentName", "Description", "IsActive" }));
             Assert.That(BulkImportConstants.RoleColumns,
                 Is.EqualTo(new[] { "RoleName", "RoleType", "Remark", "IsActive" }));
             Assert.That(BulkImportConstants.StaffEmploymentTypeColumns,
@@ -133,96 +130,11 @@ public sealed class BulkImportPreviewTests
 
     #region Master matching
 
-    [Test, Combinatorial]
-    public async Task Custom_designation_headers_require_manual_mapping_and_then_match_existing_data(
-        [Values("DesName", "design name", "DesignationType")] string header,
-        [Values("csv", "xlsx", "paste")] string format)
-    {
-        var table = await DesignationTable(header, format);
-        var existing = new[]
-        {
-            new GetDesignationResponseDTO { Id = 88, DepartmentId = 10, DesignationName = "Manager", IsActive = true }
-        };
-        var unmapped = BulkImportPreviewService.Build(BulkImportMaster.Designation, null, table,
-            Departments(), existing, Array.Empty<GetRoleResponseDTO>());
-        Assert.That(unmapped.IsValid, Is.False, "Do not guess semantic aliases while AI is disabled.");
-        Assert.That(unmapped.Errors, Does.Contain("Map the required column DesignationName."));
 
-        var mapping = System.Text.Json.JsonSerializer.Serialize(new Dictionary<string, string>
-        {
-            [BulkImportConstants.DesignationName] = header
-        });
-        var mapped = BulkImportPreviewService.Build(BulkImportMaster.Designation, mapping, table,
-            Departments(), existing, Array.Empty<GetRoleResponseDTO>());
-        Assert.Multiple(() =>
-        {
-            Assert.That(mapped.IsValid, Is.True);
-            Assert.That(mapped.ExistingCount, Is.EqualTo(1));
-            Assert.That(mapped.ReadyCount, Is.Zero);
-            Assert.That(mapped.Rows[0].ExistingId, Is.EqualTo(88));
-            Assert.That(mapped.Rows[0].DepartmentId, Is.EqualTo(10));
-        });
-    }
 
-    [Test, Combinatorial]
-    public async Task Canonical_designation_headers_ignore_case_spaces_and_punctuation(
-        [Values("DesignationName", "designation name", "Designation_Name")] string header,
-        [Values("csv", "xlsx", "paste")] string format)
-    {
-        var preview = BulkImportPreviewService.Build(BulkImportMaster.Designation, null,
-            await DesignationTable(header, format), Departments(),
-            Array.Empty<GetDesignationResponseDTO>(), Array.Empty<GetRoleResponseDTO>());
-        Assert.That(preview.IsValid, Is.True);
-        Assert.That(preview.ColumnMapping[BulkImportConstants.DesignationName], Is.EqualTo(header));
-    }
 
-    [Test]
-    public async Task Same_designation_in_two_departments_is_valid()
-    {
-        var preview = await Preview(BulkImportMaster.Designation,
-            "DesignationName,DepartmentName\nManager,IT\nManager,HR");
-        Assert.Multiple(() =>
-        {
-            Assert.That(preview.ReadyCount, Is.EqualTo(2));
-            Assert.That(preview.Rows.Select(row => row.DepartmentId), Is.EqualTo(new int?[] { 10, 20 }));
-            Assert.That(preview.CanCommit, Is.False);
-        });
-    }
 
-    [Test]
-    public async Task Duplicate_name_in_same_department_marks_both_rows_invalid()
-    {
-        var preview = await Preview(BulkImportMaster.Designation,
-            "DesignationName,DepartmentName\nManager,IT\n manager , it ");
-        Assert.That(preview.InvalidCount, Is.EqualTo(2));
-    }
 
-    [TestCase("Unknown")]
-    [TestCase("Inactive")]
-    [TestCase("")]
-    public async Task Designation_requires_active_existing_institution_department(string department)
-    {
-        var preview = await Preview(BulkImportMaster.Designation,
-            $"DesignationName,DepartmentName\nManager,{department}");
-        Assert.That(preview.InvalidCount, Is.EqualTo(1));
-    }
-
-    [Test]
-    public async Task Existing_designation_matches_only_its_department()
-    {
-        var table = await Read("DesignationName,DepartmentName\nManager,IT\nManager,HR");
-        var preview = BulkImportPreviewService.Build(BulkImportMaster.Designation, null, table,
-            Departments(), new[]
-            {
-                new GetDesignationResponseDTO { Id = 7, DepartmentId = 10, DesignationName = "Manager", IsActive = true }
-            }, Array.Empty<GetRoleResponseDTO>());
-        Assert.Multiple(() =>
-        {
-            Assert.That(preview.ExistingCount, Is.EqualTo(1));
-            Assert.That(preview.ReadyCount, Is.EqualTo(1));
-            Assert.That(preview.Rows[0].ExistingId, Is.EqualTo(7));
-        });
-    }
 
     [Test]
     public async Task Custom_column_mapping_is_explicit()
@@ -230,7 +142,7 @@ public sealed class BulkImportPreviewTests
         var table = await Read("Dept\nFinance");
         var preview = BulkImportPreviewService.Build(BulkImportMaster.Department,
             "{\"DepartmentName\":\"Dept\"}", table, Departments(),
-            Array.Empty<GetDesignationResponseDTO>(), Array.Empty<GetRoleResponseDTO>());
+            Array.Empty<GetRoleResponseDTO>());
         Assert.That(preview.ReadyCount, Is.EqualTo(1));
     }
 
@@ -248,7 +160,7 @@ public sealed class BulkImportPreviewTests
         var table = await Read("Dept,Institution\nFinance,999");
         Assert.Throws<ValidationErrorException>(() => BulkImportPreviewService.Build(
             BulkImportMaster.Department, "{\"DepartmentName\":\"Dept\",\"InstitutionId\":\"Institution\"}",
-            table, Departments(), Array.Empty<GetDesignationResponseDTO>(), Array.Empty<GetRoleResponseDTO>()));
+            table, Departments(), Array.Empty<GetRoleResponseDTO>()));
     }
 
     [Test]
@@ -256,7 +168,7 @@ public sealed class BulkImportPreviewTests
     {
         var table = await Read($"RoleName,RoleType\nStaffMember,{ConstantValues.RoleTypeStaffMember}");
         var preview = BulkImportPreviewService.Build(BulkImportMaster.Role, null, table,
-            Departments(), Array.Empty<GetDesignationResponseDTO>(), new[]
+            Departments(), new[]
             {
                 new GetRoleResponseDTO { Id = 4, RoleName = "StaffMember", RoleType = ConstantValues.RoleTypeStaffMember, IsActive = true }
             });
@@ -264,7 +176,6 @@ public sealed class BulkImportPreviewTests
     }
 
     [TestCase(BulkImportMaster.Department)]
-    [TestCase(BulkImportMaster.Designation)]
     [TestCase(BulkImportMaster.Role)]
     [TestCase(BulkImportMaster.StaffEmploymentType)]
     public async Task Active_upload_marks_matching_inactive_master_for_reactivation(BulkImportMaster master)
@@ -272,13 +183,11 @@ public sealed class BulkImportPreviewTests
         var table = master switch
         {
             BulkImportMaster.Department => await Read("DepartmentName,IsActive\nInactive,true"),
-            BulkImportMaster.Designation => await Read("DesignationName,DepartmentName,IsActive\nInactive,IT,true"),
             BulkImportMaster.Role => await Read($"RoleName,RoleType,IsActive\nInactive,{ConstantValues.RoleTypeStaffMember},true"),
             _ => await Read("TypeName,IsActive\nInactive,true")
         };
         var preview = BulkImportPreviewService.Build(master, null, table,
             Departments(),
-            new[] { new GetDesignationResponseDTO { Id = 21, DepartmentId = 10, DesignationName = "Inactive", IsActive = false } },
             new[] { new GetRoleResponseDTO { Id = 22, RoleName = "Inactive", RoleType = ConstantValues.RoleTypeStaffMember, IsActive = false } },
             new[] { new global::skolenza.application.DTOs.StaffType.GetStaffEmploymentTypeResponseDTO { Id = 23, TypeName = "Inactive", IsActive = false } });
 
@@ -286,7 +195,7 @@ public sealed class BulkImportPreviewTests
         {
             preview = BulkImportPreviewService.Build(master, null, table,
                 new[] { new GetDepartmentResponseDTO { Id = 20, DepartmentName = "Inactive", IsActive = false } },
-                Array.Empty<GetDesignationResponseDTO>(), Array.Empty<GetRoleResponseDTO>());
+                Array.Empty<GetRoleResponseDTO>());
         }
 
         Assert.Multiple(() =>
@@ -303,7 +212,7 @@ public sealed class BulkImportPreviewTests
     {
         var table = await Read($"RoleName,RoleType,IsActive\nInactive,{ConstantValues.RoleTypeStaffMember},false");
         var preview = BulkImportPreviewService.Build(BulkImportMaster.Role, null, table,
-            Departments(), Array.Empty<GetDesignationResponseDTO>(), new[]
+            Departments(), new[]
             {
                 new GetRoleResponseDTO { Id = 22, RoleName = "Inactive", RoleType = ConstantValues.RoleTypeStaffMember, IsActive = false }
             });
@@ -315,55 +224,6 @@ public sealed class BulkImportPreviewTests
         });
     }
 
-    [TestCase("999")]
-    [TestCase("custom")]
-    [TestCase("")]
-    public async Task Unknown_role_types_are_rejected(string roleType)
-    {
-        var preview = await Preview(BulkImportMaster.Role, $"RoleName,RoleType\nSupport,{roleType}");
-        Assert.That(preview.InvalidCount, Is.EqualTo(1));
-    }
-
-    #endregion
-
-    #region Fixtures
-
-    private static async Task<BulkImportTableDTO> DesignationTable(string header, string format)
-    {
-        var request = new BulkImportPreviewRequestDTO();
-        if (format == "paste")
-        {
-            request.PastedText = $"{header}\tDepartmentName\n manager \tIT";
-        }
-        else if (format == "csv")
-        {
-            request.File = File($"{header},DepartmentName\n manager ,IT", "institution-designations.csv");
-        }
-        else
-        {
-            var stream = new MemoryStream();
-            using (var archive = new ZipArchive(stream, ZipArchiveMode.Create, leaveOpen: true))
-            {
-                Write(archive, "xl/workbook.xml", """
-                    <workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="Designations" sheetId="1" r:id="rId1"/></sheets></workbook>
-                    """);
-                Write(archive, "xl/_rels/workbook.xml.rels", """
-                    <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Target="worksheets/sheet1.xml"/></Relationships>
-                    """);
-                Write(archive, "xl/worksheets/sheet1.xml", """
-                    <worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData>
-                    <row r="1"><c r="A1" t="inlineStr"><is><t>
-                    """ + System.Security.SecurityElement.Escape(header) + """
-                    </t></is></c><c r="B1" t="inlineStr"><is><t>DepartmentName</t></is></c></row>
-                    <row r="2"><c r="A2" t="inlineStr"><is><t> manager </t></is></c><c r="B2" t="inlineStr"><is><t>IT</t></is></c></row>
-                    </sheetData></worksheet>
-                    """);
-            }
-            stream.Position = 0;
-            request.File = new FormFile(stream, 0, stream.Length, "File", "institution-designations.xlsx");
-        }
-        return await BulkImportTableReader.ReadAsync(request, CancellationToken.None);
-    }
 
     private static Task<BulkImportTableDTO> Read(string input)
     {
@@ -373,7 +233,7 @@ public sealed class BulkImportPreviewTests
     private static async Task<BulkImportPreviewResponseDTO> Preview(BulkImportMaster master, string input)
     {
         return BulkImportPreviewService.Build(master, null, await Read(input), Departments(),
-            Array.Empty<GetDesignationResponseDTO>(), Array.Empty<GetRoleResponseDTO>());
+            Array.Empty<GetRoleResponseDTO>());
     }
 
     private static GetDepartmentResponseDTO[] Departments()

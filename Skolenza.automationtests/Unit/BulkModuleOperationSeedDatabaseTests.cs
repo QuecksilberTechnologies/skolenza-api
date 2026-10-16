@@ -62,8 +62,7 @@ public sealed class BulkModuleOperationSeedDatabaseTests
             JOIN skolenza."Operation" operation
               ON operation."Id"=mapping."OperationId" AND operation."IsActive"
             WHERE module."ModuleCode" IN
-                ('EMP_LIST','DEPARTMENT','DESIGNATION',
-                 'ROLE','STAFF_MEMBER_TYPE',
+                ('EMP_LIST','DEPARTMENT','ROLE','STAFF_MEMBER_TYPE',
                  'HOST_INSTITUTION_RFID_MANAGEMENT','HOST_DEVICE_SETUP','HOST_MODULES',
                  'HOST_SUBMODULES','HOST_OPERATIONS','HOST_MODULE_OPERATIONS')
               AND operation."OperationType" IN (11,12);
@@ -81,7 +80,7 @@ public sealed class BulkModuleOperationSeedDatabaseTests
         Assert.Multiple(() =>
         {
             Assert.That(obsoleteModules, Is.Zero);
-            Assert.That(expectedMappings, Is.EqualTo(22));
+            Assert.That(expectedMappings, Is.EqualTo(20));
             Assert.That(duplicateMappings, Is.Zero);
         });
     }

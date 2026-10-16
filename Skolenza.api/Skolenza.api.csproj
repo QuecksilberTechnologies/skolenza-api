@@ -38,7 +38,7 @@
 
   <ItemGroup>
     <!-- Ship only this feature's additive migrations; never run the broad reset seed during deployment. -->
-    <Content Include="..\database-scripts\EnforceDesignationDepartmentScope.sql;..\database-scripts\AddDurableMasterBulkImport.sql;..\database-scripts\AddInstitutionStaffEmploymentTypes.sql;..\database-scripts\SeedInstitutionStaffEmploymentTypeModule.sql;..\database-scripts\AddStaffMemberBulkImport.sql;..\database-scripts\AddHostBulkImport.sql;..\database-scripts\AddPolicyBulkImport.sql;..\database-scripts\AddPolicyPublicationIntegrity.sql;..\database-scripts\EnforceInstitutionPolicyUniqueName.sql;..\database-scripts\migrations\20261012_EnforceInstitutionRoleTypes.sql;..\database-scripts\SeedHostBulkImportModules.sql;..\database-scripts\ApplyBulkImportMigrations.ps1">
+    <Content Include="..\database-scripts\AddDurableMasterBulkImport.sql;..\database-scripts\AddInstitutionStaffEmploymentTypes.sql;..\database-scripts\SeedInstitutionStaffEmploymentTypeModule.sql;..\database-scripts\AddStaffMemberBulkImport.sql;..\database-scripts\AddHostBulkImport.sql;..\database-scripts\AddPolicyBulkImport.sql;..\database-scripts\AddPolicyPublicationIntegrity.sql;..\database-scripts\EnforceInstitutionPolicyUniqueName.sql;..\database-scripts\migrations\20261012_EnforceInstitutionRoleTypes.sql;..\database-scripts\SeedHostBulkImportModules.sql;..\database-scripts\ApplyBulkImportMigrations.ps1">
       <Link>database-scripts\%(Filename)%(Extension)</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>

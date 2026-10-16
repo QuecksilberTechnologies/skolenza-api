@@ -56,6 +56,7 @@ test run.
 
 - [Staff Category catalogue migration (2026-10-12)](staff/staff-category-catalogue/2026-10-12.md)
 - [Staff professional structure Phase 1B/1C (2026-10-12)](staff/professional-structure/2026-10-12.md)
+- [Designation retirement into Position (2026-10-16)](staff/position-retirement/2026-10-16.md)
 - [Staff professional structure inactive dependency lifecycle (2026-10-15)](staff/professional-structure-inactive-dependencies/2026-10-15.md)
 - [Staff academic structure and assignments Phase 2 (2026-10-13)](staff/academic-structure/2026-10-13.md)
 - [Local to Render full schema and data synchronization (2026-10-13)](database/local-to-render-full-sync/2026-10-13.md)

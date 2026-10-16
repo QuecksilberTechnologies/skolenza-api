@@ -10,6 +10,12 @@ using skolenza.persistance.Data.Context;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Routing;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Options;
+using skolenza.application.Common.Models;
+using skolenza.application.DTOS.Common;
+using skolenza.persistance.Repositories;
+using System.Text.Json;
 using NUnit.Framework;
 
 namespace skolenza.automationtests.Unit;
@@ -18,6 +24,85 @@ namespace skolenza.automationtests.Unit;
 [Category("PolicyFramework")]
 public sealed class GenericPolicyApiContractTests
 {
+    [Test]
+    [Category("PositionCutoverDatabase")]
+    public async Task Policy_import_preserves_its_Position_target_in_the_saved_scope()
+    {
+        var settingsPath = Environment.GetEnvironmentVariable("SKOLENZA_HOST_DB_SETTINGS");
+        if (string.IsNullOrWhiteSpace(settingsPath))
+        {
+            Assert.Ignore("Opt-in real database rollback test.");
+        }
+        var configuration = new ConfigurationBuilder().AddJsonFile(settingsPath!).Build();
+        await using var db = new SkolenzaDbContext(new DbContextOptionsBuilder<SkolenzaDbContext>()
+            .UseNpgsql(configuration.GetConnectionString("DefaultConnection")).Options);
+        await using var transaction = await db.Database.BeginTransactionAsync();
+        var draftStatus = await db.PolicyStatuses.SingleOrDefaultAsync(
+            status => status.StatusCode == AppConstants.PolicyStatusCodes.Draft);
+        if (draftStatus is null)
+        {
+            draftStatus = new PolicyStatus
+            {
+                Id = checked((short)((await db.PolicyStatuses.MaxAsync(status => (short?)status.Id) ?? 0) + 1)),
+                StatusCode = AppConstants.PolicyStatusCodes.Draft,
+                StatusName = "Draft",
+                IsActive = true
+            };
+            db.PolicyStatuses.Add(draftStatus);
+        }
+        else
+        {
+            draftStatus.IsActive = true;
+        }
+        await db.SaveChangesAsync();
+        var target = await (from position in db.StaffPositionMasters
+                            join staff in db.StaffMembers on position.InstitutionId equals staff.InstitutionId
+                            where position.InstitutionId.HasValue && position.IsActive && !position.IsSoftDeleted && !staff.IsSoftDeleted
+                            select new { position.Id, InstitutionId = position.InstitutionId!.Value, ActorId = staff.Id })
+            .FirstAsync();
+        var policyType = new PolicyType
+        {
+            InstitutionId = target.InstitutionId,
+            PolicyName = "Position import rollback probe " + Guid.NewGuid().ToString("N"),
+            PolicyTypeCode = "POSITION-PROBE-" + Guid.NewGuid().ToString("N").ToUpperInvariant(),
+            IsActive = true,
+            IsSoftDelete = false,
+            AddedById = target.ActorId,
+            AddedDateTime = DateTime.UtcNow
+        };
+        db.PolicyTypes.Add(policyType);
+        await db.SaveChangesAsync();
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var row = new BulkImportPreviewRowDTO
+        {
+            Values = new Dictionary<string, string>
+            {
+                ["PolicyTypeCode"] = policyType.PolicyTypeCode,
+                ["PolicyCode"] = "POSITION-PROBE-" + Guid.NewGuid().ToString("N"),
+                ["PolicyName"] = "Position preservation rollback probe " + Guid.NewGuid().ToString("N"),
+                ["EffectiveFrom"] = today.ToString("yyyy-MM-dd"),
+                ["RulesJson"] = "[]",
+                ["ApplicabilityJson"] = JsonSerializer.Serialize(new[]
+                {
+                    new PolicyApplicabilityInputDTO { StaffPositionMasterId = target.Id, EffectiveFrom = today }
+                })
+            }
+        };
+        var repository = new BulkImportRepository(db, null!, null!, Options.Create(new BulkImportOptions()));
+        var insert = typeof(BulkImportRepository).GetMethod("InsertPolicyDefinitionAsync", BindingFlags.Instance | BindingFlags.NonPublic)!;
+        await (Task)insert.Invoke(repository, new object[]
+        {
+            new BulkImportJob { Id = Guid.NewGuid(), InstitutionId = target.InstitutionId, ActorId = target.ActorId },
+            row, CancellationToken.None
+        })!;
+        db.ChangeTracker.Clear();
+        var savedTarget = await db.PolicyApplicabilities.AsNoTracking()
+            .Where(scope => scope.PolicyVersionId == row.PolicyVersionId)
+            .Select(scope => scope.StaffPositionMasterId).SingleAsync();
+        Assert.That(savedTarget, Is.EqualTo(target.Id));
+        await transaction.RollbackAsync();
+    }
+
     [Test]
     public void StaffMember_long_identifier_round_trips_with_the_global_salt_independent_of_institution_key()
     {
@@ -183,6 +268,33 @@ public sealed class GenericPolicyApiContractTests
             Assert.That(repository, Does.Contain("Every Leave rule must target one or more covered Leave Types."));
             Assert.That(repository, Does.Contain("Every Leave applicability row must target one or more covered Leave Types."));
             Assert.That(repository, Does.Contain("VersionLeaveTypes = versionLeaveTypes"));
+        });
+    }
+
+    [Test]
+    public void Policy_applicability_supports_position_targets_and_rejects_retired_json_targets()
+    {
+        Assert.Multiple(() =>
+        {
+            Assert.That(typeof(PolicyApplicabilityInputDTO)
+                .GetProperty(nameof(PolicyApplicabilityInputDTO.StaffPositionMasterId)), Is.Not.Null);
+            Assert.That(typeof(PolicyApplicabilityResponseDTO)
+                .GetProperty(nameof(PolicyApplicabilityResponseDTO.StaffPositionMasterId)), Is.Not.Null);
+        });
+
+        var repository = ReadRepositoryFile(
+            "Skolenza.persistance",
+            "Repositories",
+            "GenericPolicyRepository.cs");
+        Assert.Multiple(() =>
+        {
+            Assert.That(typeof(PolicyApplicabilityInputDTO).GetProperty("DesignationId"), Is.Null);
+            Assert.Throws<System.Text.Json.JsonException>(() =>
+                System.Text.Json.JsonSerializer.Deserialize<PolicyApplicabilityInputDTO>(
+                    "{\"DesignationId\":42,\"StaffPositionMasterId\":7}"));
+            Assert.That(repository, Does.Contain("&& (!x.StaffPositionMasterId.HasValue || x.StaffPositionMasterId == positionId)"));
+            Assert.That(repository, Does.Contain("StaffPositionAssignments.AsNoTracking()"));
+            Assert.That(repository, Does.Contain("object checksumApplicability = applicability.Any(x => x.StaffPositionMasterId.HasValue)"));
         });
     }
 
@@ -540,11 +652,11 @@ public sealed class GenericPolicyApiContractTests
             Assert.That(typeof(PolicyAssignmentCandidateResponseDTO)
                 .GetProperty(nameof(PolicyAssignmentCandidateResponseDTO.DepartmentName)), Is.Not.Null);
             Assert.That(typeof(PolicyAssignmentCandidateResponseDTO)
-                .GetProperty(nameof(PolicyAssignmentCandidateResponseDTO.DesignationName)), Is.Not.Null);
+                .GetProperty(nameof(PolicyAssignmentCandidateResponseDTO.PositionName)), Is.Not.Null);
             Assert.That(repository, Does.Contain("GetApplicabilityEligibleStaffMemberIdsAsync("));
             Assert.That(repository, Does.Contain("outside the selected policy version applicability"));
             Assert.That(bulk, Does.Contain("outside the selected policy version applicability on EffectiveFrom"));
-            Assert.That(handler, Does.Contain("StaffMemberCode,StaffMemberName,StaffEmploymentType,Department,Designation"));
+            Assert.That(handler, Does.Contain("StaffMemberCode,StaffMemberName,StaffEmploymentType,Department,Position"));
             Assert.That(handler, Does.Contain("idEncoderService.EncodeId_long("));
         });
     }

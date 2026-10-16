@@ -47,7 +47,7 @@ public sealed class DashboardController(IMediator mediator, ILoggerService logge
         return Ok(await mediator.Send(new GetSuperAdminStaffMemberOverviewQuery(permission), cancellationToken));
     }
 
-    /// <summary>Returns upcoming birthdays with department, designation, and role context.</summary>
+    /// <summary>Returns upcoming birthdays with department, Position, and role context.</summary>
     [HttpGet("SuperAdmin/Birthdays")]
     public async Task<IActionResult> Birthdays(
         [FromQuery] PermissionRequestDTO permission,

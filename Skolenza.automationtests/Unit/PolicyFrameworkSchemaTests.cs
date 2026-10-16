@@ -1,4 +1,7 @@
 using skolenza.application.Common.Enums;
+using skolenza.domain.Entity;
+using skolenza.persistance.Data.Context;
+using Microsoft.EntityFrameworkCore;
 using NUnit.Framework;
 
 namespace skolenza.automationtests.Unit;
@@ -150,6 +153,35 @@ public sealed class PolicyFrameworkSchemaTests
             Assert.That(sql, Does.Contain("Menstrual Leave"));
             Assert.That(sql, Does.Contain("Bereavement Leave"));
             Assert.That(sql, Does.Contain("Birthday Leave"));
+        });
+    }
+
+    [Test]
+    public void Policy_applicability_position_migration_is_nullable_idempotent_and_reversible()
+    {
+        var migration = ReadRepositoryFile("database-scripts", "AddPolicyApplicabilityStaffPosition.sql");
+        var rollback = ReadRepositoryFile(
+            "database-scripts",
+            "rollback",
+            "20261016_AddPolicyApplicabilityStaffPosition.rollback.sql");
+        var baseline = ReadRepositoryFile("database-scripts", "CreateGenericInstitutionPolicyFramework.sql");
+        var options = new DbContextOptionsBuilder<SkolenzaDbContext>()
+            .UseNpgsql("Host=localhost;Database=model_only;Username=x;Password=x")
+            .Options;
+        using var context = new SkolenzaDbContext(options);
+        var property = context.Model.FindEntityType(typeof(PolicyApplicability))!
+            .FindProperty(nameof(PolicyApplicability.StaffPositionMasterId));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(property, Is.Not.Null);
+            Assert.That(property!.IsNullable, Is.True);
+            Assert.That(migration, Does.Contain("ADD COLUMN IF NOT EXISTS \"StaffPositionMasterId\" integer"));
+            Assert.That(migration, Does.Contain("FK_PolicyApplicability_StaffPositionMaster"));
+            Assert.That(migration, Does.Contain("CREATE INDEX IF NOT EXISTS \"IX_PolicyApplicability_StaffPositionMasterId\""));
+            Assert.That(rollback, Does.Contain("DROP COLUMN IF EXISTS \"StaffPositionMasterId\""));
+            Assert.That(baseline, Does.Contain("\"StaffPositionMasterId\" integer"));
+            Assert.That(baseline, Does.Contain("FK_PolicyApplicability_StaffPositionMaster"));
         });
     }
 

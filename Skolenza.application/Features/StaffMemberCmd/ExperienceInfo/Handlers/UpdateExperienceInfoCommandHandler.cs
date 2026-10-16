@@ -119,10 +119,10 @@ public class UpdateExperienceInfoCommandHandler
                         : request.DTO.CompanyName,
                     "Company name");
                 skolenza.application.Common.Helpers.StaffMemberProfileValidationHelper.RequireText(
-                    string.IsNullOrWhiteSpace(request.DTO.Designation)
-                        ? existing.Designation
-                        : request.DTO.Designation,
-                    "Designation");
+                    string.IsNullOrWhiteSpace(request.DTO.PreviousPositionTitle)
+                        ? existing.PreviousPositionTitle
+                        : request.DTO.PreviousPositionTitle,
+                    "PreviousPositionTitle");
                 skolenza.application.Common.Helpers.StaffMemberProfileValidationHelper.ValidateDateRange(
                     request.DTO.StartDate ?? existing.StartDate,
                     request.DTO.EndDate ?? existing.EndDate);
@@ -151,8 +151,8 @@ public class UpdateExperienceInfoCommandHandler
                 if (!string.IsNullOrWhiteSpace(request.DTO.CompanyName))
                     existing.CompanyName = request.DTO.CompanyName;
 
-                if (!string.IsNullOrWhiteSpace(request.DTO.Designation))
-                    existing.Designation = request.DTO.Designation;
+                if (!string.IsNullOrWhiteSpace(request.DTO.PreviousPositionTitle))
+                    existing.PreviousPositionTitle = request.DTO.PreviousPositionTitle;
 
                 if (!string.IsNullOrWhiteSpace(request.DTO.StaffMemberIdOfCompany))
                     existing.StaffMemberIdOfCompany = request.DTO.StaffMemberIdOfCompany;
@@ -193,8 +193,8 @@ public class UpdateExperienceInfoCommandHandler
                 if (!string.IsNullOrWhiteSpace(request.DTO.ColleagueName))
                     existing.ColleagueName = request.DTO.ColleagueName;
 
-                if (!string.IsNullOrWhiteSpace(request.DTO.ColleagueDesignation))
-                    existing.ColleagueDesignation = request.DTO.ColleagueDesignation;
+                if (!string.IsNullOrWhiteSpace(request.DTO.ColleaguePositionTitle))
+                    existing.ColleaguePositionTitle = request.DTO.ColleaguePositionTitle;
 
                 if (!string.IsNullOrWhiteSpace(request.DTO.ColleagueContactNumber))
                     existing.ColleagueContactNumber = request.DTO.ColleagueContactNumber;

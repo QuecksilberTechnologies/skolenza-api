@@ -34,7 +34,7 @@ namespace skolenza.application.DTOS.Staff.BaseStaffMember
         public DateTime? DateOfBirth { get; set; }
 
         public DateTime? DateOfOnBoarding { get; set; }
-        public string? DesignationId { get; set; }  
+        public string? StaffPositionMasterId { get; set; }
         public bool? HasPermanent { get; set; }
         public int TypeId { get; set; }
         public bool IsActive { get; set; }

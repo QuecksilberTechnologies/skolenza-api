@@ -127,6 +127,7 @@ public class CreateBaseStaffMemberInfoCommandHandler
                 // ===============================
                 var staffMember = _mapper.Map<StaffMember>(request.DTO);
 
+
                 var staffEmploymentType = await _unitOfWork.StaffEmploymentTypeRepository.GetStaffEmploymentTypeByIdAsync(
                     validation.InstitutionId, request.DTO.StaffEmploymentTypeId, cancellationToken);
                 if (staffEmploymentType?.IsActive != true)

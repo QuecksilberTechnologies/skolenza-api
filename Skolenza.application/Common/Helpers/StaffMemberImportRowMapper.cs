@@ -62,7 +62,8 @@ public static class StaffMemberImportRowMapper
             GenderId = Number(nameof(CreateBaseStaffMemberRequestDTO.GenderId)),
             CountryId = Number(nameof(CreateBaseStaffMemberRequestDTO.CountryId)),
             DepartmentId = Number(nameof(CreateBaseStaffMemberRequestDTO.DepartmentId)),
-            DesignationId = Number(nameof(CreateBaseStaffMemberRequestDTO.DesignationId)),
+            InstitutionStaffCategoryMasterId = Number(nameof(CreateBaseStaffMemberRequestDTO.InstitutionStaffCategoryMasterId)),
+            StaffPositionMasterId = Number(nameof(CreateBaseStaffMemberRequestDTO.StaffPositionMasterId)),
             StaffEmploymentTypeId = Number(nameof(CreateBaseStaffMemberRequestDTO.StaffEmploymentTypeId)),
             RoleId = Number(nameof(CreateBaseStaffMemberRequestDTO.RoleId), false),
             HasPermanent = Flag(nameof(CreateBaseStaffMemberRequestDTO.HasPermanent)),
@@ -73,7 +74,8 @@ public static class StaffMemberImportRowMapper
         row.Errors.AddRange(results.Select(result => result.ErrorMessage ?? "Invalid StaffMember field."));
 
         CreateContactRequestDTO? contact = null;
-        if (BulkImportConstants.StaffMemberColumns.Skip(16).Any(field => !string.IsNullOrWhiteSpace(Text(field))))
+
+        if (BulkImportConstants.StaffMemberContactColumns.Any(field => !string.IsNullOrWhiteSpace(Text(field))))
         {
             int? OptionalId(string field)
             {

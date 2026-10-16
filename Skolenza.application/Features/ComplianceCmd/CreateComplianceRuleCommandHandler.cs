@@ -5,7 +5,6 @@
 // Purpose : Defines and handles Create Compliance Rule Command Handler requests.
 // ================================================================
 
-using skolenza.application.DTOs.Designation;
 using skolenza.application.DTOS.Common;
 using skolenza.application.DTOS.Compliances.ComplianceRule;
 using skolenza.application.Exceptions;

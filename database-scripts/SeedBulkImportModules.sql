@@ -16,7 +16,6 @@ BEGIN
     INTO missing_module_codes
     FROM (VALUES
         ('INSTITUTION_DEPARTMENTS'),
-        ('INSTITUTION_STAFF_DESIGNATIONS'),
         ('INSTITUTION_ACCESS'),
         ('STAFF_EMPLOYMENT_TYPES'),
         ('STAFF_DIRECTORY')
@@ -144,7 +143,6 @@ BEGIN
       AND module."ModuleCode" IN
       (
           'INSTITUTION_DEPARTMENTS',
-          'INSTITUTION_STAFF_DESIGNATIONS',
           'INSTITUTION_ACCESS',
           'STAFF_EMPLOYMENT_TYPES',
           'STAFF_DIRECTORY'
@@ -185,7 +183,6 @@ BEGIN
       AND module."ModuleCode" IN
       (
           'INSTITUTION_DEPARTMENTS',
-          'INSTITUTION_STAFF_DESIGNATIONS',
           'INSTITUTION_ACCESS',
           'STAFF_EMPLOYMENT_TYPES',
           'STAFF_DIRECTORY'
@@ -207,7 +204,6 @@ JOIN skolenza."Operation" operation
 WHERE module."ModuleCode" IN
 (
     'INSTITUTION_DEPARTMENTS',
-    'INSTITUTION_STAFF_DESIGNATIONS',
     'INSTITUTION_ACCESS',
     'STAFF_EMPLOYMENT_TYPES',
     'STAFF_DIRECTORY'

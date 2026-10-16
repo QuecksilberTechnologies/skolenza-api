@@ -7,12 +7,10 @@
 
 using skolenza.application.DTOs.Operation;
 using skolenza.application.DTOS.Common;
-using skolenza.application.DTOS.Designation;
 using skolenza.application.DTOS.Gender;
 using skolenza.application.DTOS.Location;
 using skolenza.application.DTOS.Role;
 using skolenza.application.Features.DepartmentCmd.Handlers;
-using skolenza.application.Features.DesignationCmd.Handlers;
 using skolenza.application.Features.GenderCmd.Handlers;
 using skolenza.application.Features.LocationCmd.Handlers;
 using skolenza.application.Features.OperationCmd.Commands;

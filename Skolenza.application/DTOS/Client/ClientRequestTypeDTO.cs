@@ -10,7 +10,7 @@ namespace skolenza.application.DTOs.Client
     {
         public long Id { get; set; }
         public int SelfRoleId { get; set; }
-        public int DesignationId { get; set; }
+        public int StaffPositionMasterId { get; set; }
         public int ClientTypeId { get; set; } //  
         public bool IsActive { get; set; } = true;
 

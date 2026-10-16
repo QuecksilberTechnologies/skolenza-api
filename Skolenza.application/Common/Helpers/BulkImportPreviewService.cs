@@ -2,7 +2,6 @@ using System.Text.Json;
 using skolenza.application.Common.Enums;
 using skolenza.application.Constants;
 using skolenza.application.DTOs.Department;
-using skolenza.application.DTOs.Designation;
 using skolenza.application.DTOs.Role;
 using skolenza.application.DTOS.Common;
 using skolenza.application.Exceptions;
@@ -33,12 +32,11 @@ public sealed class BulkImportPreviewService(
 
         var table = await BulkImportTableReader.ReadAsync(request, cancellationToken);
         var departments = new List<GetDepartmentResponseDTO>();
-        var designations = new List<GetDesignationResponseDTO>();
         var roles = new List<GetRoleResponseDTO>();
         var staffEmploymentTypes = new List<global::skolenza.application.DTOs.StaffType.GetStaffEmploymentTypeResponseDTO>();
 
         // Existing list repositories already enforce institution ownership and exclude soft-deleted rows.
-        if (master is BulkImportMaster.Department or BulkImportMaster.Designation)
+        if (master == BulkImportMaster.Department)
         {
             departments = (await unitOfWork.DepartmentRepository.GetAsync(
                 new GetDepartmentRequestDTO { PageNumber = 1, PageSize = int.MaxValue },
@@ -46,13 +44,7 @@ public sealed class BulkImportPreviewService(
                 cancellationToken)).Data;
         }
 
-        if (master == BulkImportMaster.Designation)
-        {
-            designations = (await unitOfWork.DesignationRepository.GetAsync(
-                new GetDesignationRequestDTO { PageNumber = 1, PageSize = int.MaxValue },
-                context.InstitutionId,
-                cancellationToken)).Data;
-        }
+
 
         if (master == BulkImportMaster.Role)
         {
@@ -72,7 +64,7 @@ public sealed class BulkImportPreviewService(
         }
 
         cancellationToken.ThrowIfCancellationRequested();
-        return Build(master, request.ColumnMappingJson, table, departments, designations, roles, staffEmploymentTypes);
+        return Build(master, request.ColumnMappingJson, table, departments, roles, staffEmploymentTypes);
     }
 
     #endregion
@@ -84,14 +76,12 @@ public sealed class BulkImportPreviewService(
         string? mappingJson,
         BulkImportTableDTO table,
         IReadOnlyList<GetDepartmentResponseDTO> departments,
-        IReadOnlyList<GetDesignationResponseDTO> designations,
         IReadOnlyList<GetRoleResponseDTO> roles,
         IReadOnlyList<global::skolenza.application.DTOs.StaffType.GetStaffEmploymentTypeResponseDTO>? staffEmploymentTypes = null)
     {
         var nameField = master switch
         {
             BulkImportMaster.Department => BulkImportConstants.DepartmentName,
-            BulkImportMaster.Designation => BulkImportConstants.DesignationName,
             BulkImportMaster.Role => BulkImportConstants.RoleName,
             BulkImportMaster.StaffEmploymentType => BulkImportConstants.TypeName,
             _ => throw new ValidationErrorException(AppConstants.ErrorMessages.InvalidRequest)
@@ -102,10 +92,7 @@ public sealed class BulkImportPreviewService(
         {
             allowed.Add(BulkImportConstants.Remark);
         }
-        if (master == BulkImportMaster.Designation)
-        {
-            allowed.Add(BulkImportConstants.DepartmentName);
-        }
+
         if (master == BulkImportMaster.Role)
         {
             allowed.Add(BulkImportConstants.RoleType);
@@ -119,10 +106,7 @@ public sealed class BulkImportPreviewService(
         var mapping = ResolveColumnMapping(table, mappingJson, allowed);
         result.ColumnMapping = mapping;
         var required = new List<string> { nameField };
-        if (master == BulkImportMaster.Designation)
-        {
-            required.Add(BulkImportConstants.DepartmentName);
-        }
+
         if (master == BulkImportMaster.Role)
         {
             required.Add(BulkImportConstants.RoleType);
@@ -169,22 +153,7 @@ public sealed class BulkImportPreviewService(
                 var matches = departments.Where(item => Same(item.DepartmentName, name)).ToList();
                 Match(row, matches.Select(item => (item.Id, item.IsActive)).ToList());
             }
-            else if (master == BulkImportMaster.Designation)
-            {
-                var departmentName = row.Values.GetValueOrDefault(BulkImportConstants.DepartmentName);
-                var parents = departments.Where(item => Same(item.DepartmentName, departmentName)).ToList();
-                if (parents.Count != 1 || !parents[0].IsActive)
-                {
-                    row.Errors.Add("DepartmentName must match exactly one active department in this institution; create missing departments first.");
-                }
-                else
-                {
-                    row.DepartmentId = parents[0].Id;
-                    var matches = designations.Where(item =>
-                        item.DepartmentId == row.DepartmentId && Same(item.DesignationName, name)).ToList();
-                    Match(row, matches.Select(item => (item.Id, item.IsActive)).ToList());
-                }
-            }
+
             else if (master == BulkImportMaster.StaffEmploymentType)
             {
                 var matches = (staffEmploymentTypes ?? Array.Empty<global::skolenza.application.DTOs.StaffType.GetStaffEmploymentTypeResponseDTO>())
@@ -212,9 +181,7 @@ public sealed class BulkImportPreviewService(
 
         var duplicates = result.Rows.GroupBy(row => (
                 Name: row.Values.GetValueOrDefault(nameField, string.Empty).ToUpperInvariant(),
-                Department: master == BulkImportMaster.Designation
-                    ? row.Values.GetValueOrDefault(BulkImportConstants.DepartmentName, string.Empty).ToUpperInvariant()
-                    : string.Empty))
+                Department: string.Empty))
             .Where(group => group.Count() > 1);
         foreach (var group in duplicates)
         {

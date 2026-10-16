@@ -23,7 +23,6 @@
     <Compile Remove="Features\AssetFeatures\Category\Queries\**" />
     <Compile Remove="Features\AssetFeatures\Status\Commands\**" />
     <Compile Remove="Features\Cmd - Copy\**" />
-    <Compile Remove="Features\DesignationCmd\Commands\**" />
     <Compile Remove="Features\StaffMemberCmd\BaseInfo\**" />
     <Compile Remove="Features\StaffMemberCmd\BasicInfo - Copy %283%29 - Copy %282%29\**" />
     <Compile Remove="Features\StaffMemberCmd\Commands\**" />
@@ -34,7 +33,6 @@
     <EmbeddedResource Remove="Features\AssetFeatures\Category\Queries\**" />
     <EmbeddedResource Remove="Features\AssetFeatures\Status\Commands\**" />
     <EmbeddedResource Remove="Features\Cmd - Copy\**" />
-    <EmbeddedResource Remove="Features\DesignationCmd\Commands\**" />
     <EmbeddedResource Remove="Features\StaffMemberCmd\BaseInfo\**" />
     <EmbeddedResource Remove="Features\StaffMemberCmd\BasicInfo - Copy %283%29 - Copy %282%29\**" />
     <EmbeddedResource Remove="Features\StaffMemberCmd\Commands\**" />
@@ -45,7 +43,6 @@
     <None Remove="Features\AssetFeatures\Category\Queries\**" />
     <None Remove="Features\AssetFeatures\Status\Commands\**" />
     <None Remove="Features\Cmd - Copy\**" />
-    <None Remove="Features\DesignationCmd\Commands\**" />
     <None Remove="Features\StaffMemberCmd\BaseInfo\**" />
     <None Remove="Features\StaffMemberCmd\BasicInfo - Copy %283%29 - Copy %282%29\**" />
     <None Remove="Features\StaffMemberCmd\Commands\**" />

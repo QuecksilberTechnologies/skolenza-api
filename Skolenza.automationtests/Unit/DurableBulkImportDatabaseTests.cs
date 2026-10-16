@@ -7,7 +7,6 @@ using skolenza.application.Common.Models;
 using skolenza.application.Common.Models.Security;
 using skolenza.application.Constants;
 using skolenza.application.DTOs.Department;
-using skolenza.application.DTOs.Designation;
 using skolenza.application.DTOs.Role;
 using skolenza.application.DTOS.Common;
 using skolenza.application.Exceptions;
@@ -59,7 +58,6 @@ public sealed class DurableBulkImportDatabaseTests
         foreach (var pair in new[]
         {
             (BulkImportMaster.Department, "DEPARTMENT"),
-            (BulkImportMaster.Designation, "DESIGNATION"),
             (BulkImportMaster.Role, "ROLE")
         })
         {
@@ -105,7 +103,6 @@ public sealed class DurableBulkImportDatabaseTests
         await using var context = Context();
         var ids = _jobs.ToArray();
         await context.Set<BulkImportJob>().Where(job => ids.Contains(job.Id)).ExecuteDeleteAsync();
-        await context.Designations.Where(item => item.DesignationName.StartsWith(_prefix)).ExecuteDeleteAsync();
         await context.Departments.Where(item => item.DepartmentName.StartsWith(_prefix)).ExecuteDeleteAsync();
         await context.Roles.Where(item => item.RoleName!.StartsWith(_prefix)).ExecuteDeleteAsync();
         await context.StaffEmploymentTypes.Where(item => item.TypeName!.StartsWith(_prefix)).ExecuteDeleteAsync();
@@ -282,7 +279,7 @@ public sealed class DurableBulkImportDatabaseTests
     [Test]
     public async Task Invalid_preview_cannot_be_confirmed()
     {
-        var preview = await Draft(BulkImportMaster.Designation, $"DesignationName,DepartmentName\n{_prefix}-Manager,Unknown");
+        var preview = await Draft(BulkImportMaster.Department, "DepartmentName\n" + new string('x', 256));
         Assert.That(preview.CanCommit, Is.False);
         Assert.ThrowsAsync<ValidationErrorException>(async () => await Act(preview, BulkImportAction.Confirm));
     }
@@ -349,33 +346,6 @@ public sealed class DurableBulkImportDatabaseTests
         Assert.That((await Act(preview, BulkImportAction.Get)).CreatedCount, Is.EqualTo(1));
     }
 
-    [Test]
-    public async Task Designation_dependency_change_fails_then_retries_without_duplicate()
-    {
-        var parent = await Draft(BulkImportMaster.Department, $"DepartmentName\n{_prefix}-IT\n{_prefix}-HR");
-        await Act(parent, BulkImportAction.Confirm);
-        await Drain(parent);
-        var preview = await Draft(BulkImportMaster.Designation,
-            $"DesignationName,DepartmentName\n{_prefix}-Manager,{_prefix}-IT\n{_prefix}-Manager,{_prefix}-HR");
-        await Act(preview, BulkImportAction.Confirm);
-        await using (var context = Context())
-        {
-            await context.Departments.Where(item => item.DepartmentName == _prefix + "-HR")
-                .ExecuteUpdateAsync(update => update.SetProperty(item => item.IsActive, false));
-        }
-        await Drain(preview);
-        var partial = await Act(preview, BulkImportAction.Get);
-        Assert.That(partial.Status, Is.EqualTo(BulkImportJobStatus.CompletedWithErrors));
-        Assert.That(partial.CreatedCount, Is.EqualTo(1));
-        await using (var context = Context())
-        {
-            await context.Departments.Where(item => item.DepartmentName == _prefix + "-HR")
-                .ExecuteUpdateAsync(update => update.SetProperty(item => item.IsActive, true));
-        }
-        await Act(preview, BulkImportAction.Retry);
-        await Drain(preview);
-        Assert.That((await Act(preview, BulkImportAction.Get)).CreatedCount, Is.EqualTo(2));
-    }
 
     [Test]
     public async Task Roles_are_created_without_grants_or_assignments_and_new_upload_skips_existing()
@@ -542,7 +512,7 @@ public sealed class DurableBulkImportDatabaseTests
         var roles = await context.Roles.Where(item => item.InstitutionId == _actor.InstitutionId && item.IsSoftDeleted != true)
             .Select(item => new GetRoleResponseDTO { Id = item.Id, RoleName = item.RoleName!, RoleType = item.RoleType, IsActive = item.IsActive }).ToListAsync();
         var preview = BulkImportPreviewService.Build(master, null, table, departments,
-            Array.Empty<GetDesignationResponseDTO>(), roles);
+            roles);
         return await Repo(context).SaveDraftAsync(preview, request, _actor, CancellationToken.None);
     }
 

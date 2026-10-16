@@ -69,7 +69,7 @@ namespace skolenza.application.DTOs.Staff.AccessControlReadOnlyType
         public string? WorkedWithContactNumber { get; set; }
 
         [AccessControl(ReadOnly = false)]
-        public string? WorkedWithDesignation { get; set; }
+        public string? WorkedWithPositionTitle { get; set; }
 
         [AccessControl(ReadOnly = false)]
         public string? ExperienceLetterPath { get; set; }

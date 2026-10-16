@@ -102,7 +102,8 @@ public sealed class SuperAdminDashboardApiContractTests
         {
             Assert.That(typeof(DashboardStaffMemberDTO).GetProperty(nameof(DashboardStaffMemberDTO.StaffMemberId))?.PropertyType, Is.EqualTo(typeof(string)));
             Assert.That(typeof(DashboardStaffMemberDTO).GetProperty(nameof(DashboardStaffMemberDTO.DepartmentName)), Is.Not.Null);
-            Assert.That(typeof(DashboardStaffMemberDTO).GetProperty(nameof(DashboardStaffMemberDTO.DesignationName)), Is.Not.Null);
+            Assert.That(typeof(DashboardStaffMemberDTO).GetProperty(nameof(DashboardStaffMemberDTO.PositionName)), Is.Not.Null);
+            Assert.That(typeof(DashboardStaffMemberDTO).GetProperty("DesignationName"), Is.Null);
             Assert.That(typeof(DashboardStaffMemberDTO).GetProperty(nameof(DashboardStaffMemberDTO.RoleName)), Is.Not.Null);
         });
     }

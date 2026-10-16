@@ -18,7 +18,7 @@ namespace skolenza.application.DTOs.Staff.AccessResponse
         public FieldWithAccess<DateTime?> DateOfBirth { get; set; } = new();
         public FieldWithAccess<DateTime?> DateOfOnBoarding { get; set; } = new();
         public FieldWithAccess<DateTime?> DateOfExit { get; set; } = new();
-        public FieldWithAccess<int?> DesignationId { get; set; } = new();
+        public FieldWithAccess<int?> StaffPositionMasterId { get; set; } = new();
         public FieldWithAccess<int> StaffEmploymentTypeId { get; set; } = new();
         public FieldWithAccess<int?> DepartmentId { get; set; } = new();
         public FieldWithAccess<string> OfficialEmail { get; set; } = new();

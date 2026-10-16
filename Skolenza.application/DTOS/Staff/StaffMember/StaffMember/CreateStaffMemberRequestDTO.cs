@@ -36,8 +36,6 @@ namespace skolenza.application.DTOS.Staff.BaseStaffMember
         [Required]
         public DateTime? DateOfBirth { get; set; }
 
-        [Required]
-        public int DesignationId { get; set; }
 
         [Required]
 
@@ -49,9 +47,11 @@ namespace skolenza.application.DTOS.Staff.BaseStaffMember
         public int StaffEmploymentTypeId { get; set; }
 
         [Required]
+        [Range(1, int.MaxValue)]
         public int InstitutionStaffCategoryMasterId { get; set; }
 
         [Required]
+        [Range(1, int.MaxValue)]
         public int StaffPositionMasterId { get; set; }
 
         [Required]

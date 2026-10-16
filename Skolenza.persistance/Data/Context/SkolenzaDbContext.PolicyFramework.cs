@@ -152,6 +152,8 @@ public partial class SkolenzaDbContext
             entity.ToTable("PolicyApplicability", "skolenza");
             entity.Property(e => e.EffectiveFrom).HasColumnType("date");
             entity.Property(e => e.EffectiveTo).HasColumnType("date");
+            entity.HasOne<StaffPositionMaster>().WithMany()
+                .HasForeignKey(e => e.StaffPositionMasterId).OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<PolicyAssignment>(entity =>

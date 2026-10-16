@@ -56,19 +56,17 @@ public sealed class ModuleOperationSeedContractTests
         Assert.Multiple(() =>
         {
             Assert.That(sql, Does.Contain("('INSTITUTION_DEPARTMENT','Institution-Department','Institution Department'"));
-            Assert.That(sql, Does.Contain("('INSTITUTION_DESIGNATION','Institution-Designation','Institution Designation'"));
             Assert.That(sql, Does.Contain("('INSTITUTION_ROLE','Institution-Role','Institution Role'"));
             Assert.That(sql, Does.Contain("independent roots, not children of INSTITUTION_MGMT"));
             Assert.That(sql, Does.Contain("WHEN 'DEPARTMENT' THEN department_parent_id"));
-            Assert.That(sql, Does.Contain("WHEN 'DESIGNATION' THEN designation_parent_id"));
             Assert.That(sql, Does.Contain("WHEN 'ROLE' THEN role_parent_id"));
             Assert.That(sql, Does.Contain("WHEN 'STAFF_MEMBER_TYPE' THEN staffMember_parent_id"));
             Assert.That(sql, Does.Contain("('INSTITUTION_DEPARTMENTS','DEPARTMENT')"));
-            Assert.That(sql, Does.Contain("('INSTITUTION_DESIGNATIONS','DESIGNATION')"));
             Assert.That(sql, Does.Contain("('INSTITUTION_ROLES_PERMISSIONS','ROLE')"));
             Assert.That(sql, Does.Contain("('INSTITUTION_STAFF_MEMBER_TYPES','STAFF_MEMBER_TYPE')"));
             Assert.That(sql, Does.Contain("'institution-departments'"));
-            Assert.That(sql, Does.Contain("'institution-designations'"));
+            Assert.That(sql, Does.Not.Contain("'INSTITUTION_DESIGNATION'"));
+            Assert.That(sql, Does.Not.Contain("'DESIGNATION'"));
             Assert.That(sql, Does.Contain("'institution-roles-permissions'"));
             Assert.That(sql, Does.Contain("Each singular parent inherits the plans of its own functional child."));
             Assert.That(sql, Does.Contain("Existing institutions on plans containing these modules receive the same"));
@@ -76,7 +74,7 @@ public sealed class ModuleOperationSeedContractTests
             Assert.That(sql, Does.Not.Contain("canonical bulk Export operation"));
             Assert.That(sql, Does.Contain("Auto-assigned during Institution plan entitlement synchronization"));
             Assert.That(standaloneSql, Does.Contain("('INSTITUTION_DEPARTMENTS')"));
-            Assert.That(standaloneSql, Does.Contain("('INSTITUTION_STAFF_DESIGNATIONS')"));
+            Assert.That(standaloneSql, Does.Not.Contain("INSTITUTION_STAFF_DESIGNATIONS"));
             Assert.That(standaloneSql, Does.Contain("('INSTITUTION_ACCESS')"));
             Assert.That(standaloneSql, Does.Contain("('STAFF_EMPLOYMENT_TYPES')"));
             Assert.That(standaloneSql, Does.Contain("('STAFF_DIRECTORY')"));
@@ -104,7 +102,7 @@ public sealed class ModuleOperationSeedContractTests
             Assert.That(migration, Does.Contain("TR_Module_TwoLevelHierarchy"));
             Assert.That(migration, Does.Contain("Module hierarchy supports only Parent headers and Child options."));
             Assert.That(catalogue, Does.Contain("('INSTITUTION_DEPARTMENTS','Institution Departments','Departments','/app/departments','INSTITUTION_MGMT',TRUE"));
-            Assert.That(catalogue, Does.Contain("('INSTITUTION_STAFF_DESIGNATIONS','Staff Designations','Staff Designations','/app/designations','INSTITUTION_MGMT',TRUE"));
+            Assert.That(catalogue, Does.Not.Contain("INSTITUTION_STAFF_DESIGNATIONS"));
             Assert.That(catalogue, Does.Contain("('INSTITUTION_ACCESS','Institution Access','Roles & Permissions','/app/roles','INSTITUTION_MGMT',TRUE"));
             Assert.That(catalogue, Does.Not.Contain("('DEPARTMENT','Departments','Departments'"));
             Assert.That(catalogue, Does.Not.Contain("('STAFF_DESIGNATIONS','Staff Designations','Designations'"));
@@ -206,7 +204,6 @@ public sealed class ModuleOperationSeedDatabaseTests
             SELECT count(*)
             FROM (VALUES
                 ('INSTITUTION_DEPARTMENT','DEPARTMENT','institution-departments'),
-                ('INSTITUTION_DESIGNATION','DESIGNATION','institution-designations'),
                 ('INSTITUTION_ROLE','ROLE','institution-roles-permissions')
             ) expected(parent_code,child_code,child_page_name)
             JOIN skolenza."Module" parent
@@ -230,7 +227,7 @@ public sealed class ModuleOperationSeedDatabaseTests
                 SELECT "ModuleCode","ModuleScope"
                 FROM skolenza."Module"
                 WHERE "ModuleCode" IN
-                    ('INSTITUTION_DEPARTMENT','INSTITUTION_DESIGNATION','INSTITUTION_ROLE')
+                    ('INSTITUTION_DEPARTMENT','INSTITUTION_ROLE')
                 GROUP BY "ModuleCode","ModuleScope"
                 HAVING count(*) > 1
             ) duplicate;
@@ -242,7 +239,7 @@ public sealed class ModuleOperationSeedDatabaseTests
             JOIN skolenza."ModuleOperationMapping" mapping
               ON mapping."ModuleId"=module."Id"
             WHERE module."ModuleCode" IN
-                ('INSTITUTION_DEPARTMENT','INSTITUTION_DESIGNATION','INSTITUTION_ROLE');
+                ('INSTITUTION_DEPARTMENT','INSTITUTION_ROLE');
             """);
 
         var duplicatePlanMappings = await ScalarAsync("""
@@ -251,7 +248,7 @@ public sealed class ModuleOperationSeedDatabaseTests
                 FROM skolenza."PlanModuleMapping" mapping
                 JOIN skolenza."Module" module ON module."Id"=mapping."ModuleId"
                 WHERE module."ModuleCode" IN
-                    ('INSTITUTION_DEPARTMENT','INSTITUTION_DESIGNATION','INSTITUTION_ROLE')
+                    ('INSTITUTION_DEPARTMENT','INSTITUTION_ROLE')
                 GROUP BY mapping."SubscriptionPlanId",mapping."ModuleId"
                 HAVING count(*) > 1
             ) duplicate;
@@ -265,7 +262,7 @@ public sealed class ModuleOperationSeedDatabaseTests
             JOIN skolenza."Operation" operation
               ON operation."Id"=mapping."OperationId" AND operation."IsActive"
             WHERE module."ModuleCode" IN
-                ('DEPARTMENT','DESIGNATION','ROLE','STAFF_MEMBER_TYPE')
+                ('DEPARTMENT','ROLE','STAFF_MEMBER_TYPE')
               AND lower(btrim(operation."OperationName")) IN
                 ('add','update','delete','view','import','export');
             """);
@@ -279,7 +276,7 @@ public sealed class ModuleOperationSeedDatabaseTests
                 JOIN skolenza."Operation" operation
                   ON operation."Id"=mapping."OperationId" AND operation."IsActive"
                 WHERE module."ModuleCode" IN
-                    ('DEPARTMENT','DESIGNATION','ROLE','STAFF_MEMBER_TYPE')
+                    ('DEPARTMENT','ROLE','STAFF_MEMBER_TYPE')
                   AND lower(btrim(operation."OperationName")) IN
                     ('add','update','delete','view','import','export')
                 GROUP BY module."Id",lower(btrim(operation."OperationName"))
@@ -311,7 +308,6 @@ public sealed class ModuleOperationSeedDatabaseTests
             SELECT count(*)
             FROM (VALUES
                 ('INSTITUTION_DEPARTMENT','DEPARTMENT'),
-                ('INSTITUTION_DESIGNATION','DESIGNATION'),
                 ('INSTITUTION_ROLE','ROLE')
             ) expected(parent_code,child_code)
             JOIN skolenza."Module" parent ON parent."ModuleCode"=expected.parent_code
@@ -330,11 +326,11 @@ public sealed class ModuleOperationSeedDatabaseTests
 
         Assert.Multiple(() =>
         {
-            Assert.That(validHierarchyRows, Is.EqualTo(3));
+            Assert.That(validHierarchyRows, Is.EqualTo(2));
             Assert.That(duplicateModules, Is.Zero);
             Assert.That(parentOperationMappings, Is.Zero);
             Assert.That(duplicatePlanMappings, Is.Zero);
-            Assert.That(requiredLeafOperationMappings, Is.EqualTo(24));
+            Assert.That(requiredLeafOperationMappings, Is.EqualTo(18));
             Assert.That(duplicateLeafOperationNames, Is.Zero);
             Assert.That(legacyLeafRows, Is.Zero);
             Assert.That(missingParentPlanMappings, Is.Zero);

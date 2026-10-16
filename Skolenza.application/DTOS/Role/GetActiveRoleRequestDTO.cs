@@ -12,7 +12,7 @@ namespace skolenza.application.DTOs.Role
         public long? InstitutionId { get; set; }
         public long StaffMemberId { get; set; }
         public int RoleId { get; set; }
-        public int DesignationId { get; set; }
+        public int StaffPositionMasterId { get; set; }
         
 
 

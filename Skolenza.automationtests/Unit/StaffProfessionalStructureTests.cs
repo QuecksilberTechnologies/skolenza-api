@@ -4,6 +4,9 @@ using skolenza.api.Controllers.Staff;
 using skolenza.application.DTOS.Staff.BaseStaffMember;
 using skolenza.domain.Entity;
 using skolenza.persistance.Data.Context;
+using skolenza.application.DTOS.Staff;
+using skolenza.persistance.Repositories;
+using Microsoft.Extensions.Configuration;
 
 namespace skolenza.automationtests.Unit;
 
@@ -11,6 +14,56 @@ namespace skolenza.automationtests.Unit;
 [Category("StaffProfessionalStructure")]
 public sealed class StaffProfessionalStructureTests
 {
+    [Test]
+    [Category("PositionCutoverDatabase")]
+    public async Task Scheduling_a_future_Position_keeps_the_current_Position_effective_until_the_change_date()
+    {
+        var settingsPath = Environment.GetEnvironmentVariable("SKOLENZA_HOST_DB_SETTINGS");
+        if (string.IsNullOrWhiteSpace(settingsPath))
+        {
+            Assert.Ignore("Opt-in real database rollback test.");
+        }
+        var configuration = new ConfigurationBuilder().AddJsonFile(settingsPath!).Build();
+        await using var db = new SkolenzaDbContext(new DbContextOptionsBuilder<SkolenzaDbContext>()
+            .UseNpgsql(configuration.GetConnectionString("DefaultConnection")).Options);
+        await using var transaction = await db.Database.BeginTransactionAsync();
+        var target = await (from staff in db.StaffMembers
+                            join position in db.StaffPositionMasters on staff.InstitutionStaffCategoryMasterId equals position.InstitutionStaffCategoryMasterId
+                            where staff.InstitutionId == position.InstitutionId && !staff.IsSoftDeleted &&
+                                position.IsActive && !position.IsSoftDeleted && !position.DepartmentId.HasValue
+                            select new { StaffId = staff.Id, InstitutionId = position.InstitutionId!.Value, Position = position })
+            .FirstAsync();
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var repository = new StaffProfessionalStructureRepository(db);
+        var current = await repository.GetStaffProfileAsync(target.InstitutionId, target.StaffId);
+        if (current is null)
+        {
+            await repository.AssignPrimaryPositionAsync(target.InstitutionId, target.StaffId,
+                target.Position.Id, today.AddDays(-1), target.StaffId);
+            current = await repository.GetStaffProfileAsync(target.InstitutionId, target.StaffId);
+        }
+        var future = await repository.SavePositionAsync(new StaffPositionMasterRequestDTO
+        {
+            Code = "FUTURE_PROBE_" + Guid.NewGuid().ToString("N"),
+            Name = "Future Position rollback probe",
+            StaffJobFamilyMasterId = target.Position.StaffJobFamilyMasterId,
+            InstitutionStaffCategoryMasterId = target.Position.InstitutionStaffCategoryMasterId!.Value,
+            IsActive = true
+        }, target.InstitutionId, target.StaffId);
+        var changeDate = today.AddDays(30);
+        await repository.ReplacePrimaryPositionAsync(target.InstitutionId, target.StaffId,
+            future.Id, changeDate, target.StaffId);
+        var stillCurrent = await repository.GetStaffProfileAsync(target.InstitutionId, target.StaffId);
+        var atChangeDate = await StaffProfessionalStructureRepository.CurrentPositionIdentities(db, changeDate)
+            .Where(position => position.StaffMemberId == target.StaffId).SingleAsync();
+        Assert.Multiple(() =>
+        {
+            Assert.That(stillCurrent?.StaffPositionMasterId, Is.EqualTo(current!.StaffPositionMasterId));
+            Assert.That(atChangeDate.StaffPositionMasterId, Is.EqualTo(future.Id));
+        });
+        await transaction.RollbackAsync();
+    }
+
     [Test]
     public void Persistence_model_builds_and_maps_each_professional_master_to_its_own_table()
     {

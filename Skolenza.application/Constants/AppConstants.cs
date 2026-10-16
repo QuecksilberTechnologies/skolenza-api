@@ -113,7 +113,6 @@ namespace skolenza.application.Constants
             public const string Conflict = "CONFLICT";
             public const string RoleHasDependencies = "ROLE_HAS_DEPENDENCIES";
             public const string DepartmentHasStaffMemberDependencies = "DEPARTMENT_HAS_STAFF_MEMBER_DEPENDENCIES";
-            public const string DesignationHasStaffMemberDependencies = "DESIGNATION_HAS_STAFF_MEMBER_DEPENDENCIES";
             public const string InternalServerError = "INTERNAL_SERVER_ERROR";
             public const string EmailDeliveryFailed = "EMAIL_DELIVERY_FAILED";
             public const string SmtpIpNotAuthorized = "SMTP_IP_NOT_AUTHORIZED";
@@ -290,7 +289,6 @@ namespace skolenza.application.Constants
             public const string DuplicateInstitutionDeviceCode = "A live institution device already uses this device code for the selected institution.";
             public const string RoleHasDependencies = "The role cannot be deactivated or deleted because it is assigned to an staffMember or has module-operation permissions. Remove or soft-delete all role dependencies first.";
             public const string DepartmentHasStaffMembers = "The department cannot be deactivated or deleted because it is assigned to one or more staffMembers. Remove or soft-delete all dependent staffMembers first.";
-            public const string DesignationHasStaffMembers = "The designation cannot be deactivated or deleted because it is assigned to one or more staffMembers. Remove or soft-delete all dependent staffMembers first.";
             public const string StaffEmploymentTypeHasDependencies = "The StaffEmploymentType cannot be deleted because it is referenced by one or more non-soft-deleted records or StaffEmploymentType menu mappings.";
             public const string InvalidDeviceManagementInstitution = "The selected institution is unavailable or inactive.";
             public const string InvalidDeviceManagementCampus = "The selected institution location is unavailable or inactive.";

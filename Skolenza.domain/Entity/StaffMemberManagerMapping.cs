@@ -15,7 +15,7 @@ public partial class StaffMemberManagerMapping
 
     public int? DepartmentId { get; set; }
 
-    public int? DesignationId { get; set; }
+    public int? StaffPositionMasterId { get; set; }
 
     public int ReportingTypeId { get; set; }
 
@@ -41,7 +41,7 @@ public partial class StaffMemberManagerMapping
 
     public virtual Department? Department { get; set; }
 
-    public virtual Designation? Designation { get; set; }
+    public virtual StaffPositionMaster? StaffPositionMaster { get; set; }
 
     public virtual StaffMember StaffMember { get; set; } = null!;
 

@@ -30,7 +30,7 @@ namespace skolenza.application.DTOs.Staff.AccessResponse
         public FieldWithAccess<string?> ReportingManagerEmail { get; set; } = new();
         public FieldWithAccess<string?> WorkedWithName { get; set; } = new();
         public FieldWithAccess<string?> WorkedWithContactNumber { get; set; } = new();
-        public FieldWithAccess<string?> WorkedWithDesignation { get; set; } = new();
+        public FieldWithAccess<string?> WorkedWithPositionTitle { get; set; } = new();
         public FieldWithAccess<string?> ExperienceLetterPath { get; set; } = new();
         public FieldWithAccess<string?> Comment { get; set; } = new();
         public FieldWithAccess<long?> AddedById { get; set; } = new();

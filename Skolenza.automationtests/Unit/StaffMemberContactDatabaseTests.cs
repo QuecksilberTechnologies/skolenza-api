@@ -136,6 +136,7 @@ public sealed class StaffMemberContactDatabaseTests
             common, permission, encoder,
             Proxy<ITokenService>((_, _) => Task.FromResult("not-a-real-token")),
             Proxy<IEmailService>((_, _) => Task.FromResult(true)), config);
+        var position = await db.StaffPositionMasters.FirstAsync(item => item.InstitutionId == template.InstitutionId && item.IsActive && !item.IsSoftDeleted);
         var email = "contact-probe-" + Guid.NewGuid().ToString("N") + "@example.test";
         await using var transaction = await db.Database.BeginTransactionAsync();
         try
@@ -144,7 +145,9 @@ public sealed class StaffMemberContactDatabaseTests
             {
                 FirstName = "Contact", MiddleName = "Rollback", LastName = "Probe",
                 OfficialEmail = email, CountryId = template.CountryId,
-                DepartmentId = template.DepartmentId!.Value, DesignationId = template.DesignationId!.Value,
+                DepartmentId = template.DepartmentId!.Value,
+                StaffPositionMasterId = position.Id,
+                InstitutionStaffCategoryMasterId = position.InstitutionStaffCategoryMasterId!.Value,
                 StaffEmploymentTypeId = template.StaffEmploymentTypeId!.Value, GenderId = template.GenderId ?? 1,
                 DateOfBirth = new DateTime(1990, 1, 1, 0, 0, 0, DateTimeKind.Utc),
                 RoleId = roleId, HasPermanent = true, IsActive = true

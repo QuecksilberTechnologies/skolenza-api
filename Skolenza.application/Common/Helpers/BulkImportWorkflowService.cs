@@ -30,6 +30,10 @@ public sealed partial class BulkImportWorkflowService(
         CancellationToken cancellationToken)
     {
         var actor = await ValidateAsync(request.OperationId, false);
+        if (master == BulkImportMaster.RetiredWorkTitle)
+        {
+            throw new ConflictException(BulkImportConstants.RetiredWorkTitleMessage);
+        }
         var preview = master == BulkImportMaster.StaffMember
             ? await repository.PreviewStaffMembersAsync(
                 await BulkImportTableReader.ReadAsync(request, cancellationToken),
@@ -50,6 +54,10 @@ public sealed partial class BulkImportWorkflowService(
     {
         var actor = await ValidateAsync(request.OperationId,
             action is BulkImportAction.Get or BulkImportAction.List or BulkImportAction.Template);
+        if (master == BulkImportMaster.RetiredWorkTitle)
+        {
+            throw new ConflictException(BulkImportConstants.RetiredWorkTitleMessage);
+        }
         if (action == BulkImportAction.SendInvitations)
         {
             if (master != BulkImportMaster.StaffMember)
@@ -64,7 +72,6 @@ public sealed partial class BulkImportWorkflowService(
             {
                 BulkImportMaster.StaffMember => string.Join(",", BulkImportConstants.StaffMemberColumns) + "\r\n",
                 BulkImportMaster.Department => string.Join(",", BulkImportConstants.DepartmentColumns) + "\r\n",
-                BulkImportMaster.Designation => string.Join(",", BulkImportConstants.DesignationColumns) + "\r\n",
                 BulkImportMaster.StaffEmploymentType => string.Join(",", BulkImportConstants.StaffEmploymentTypeColumns) + "\r\n",
                 BulkImportMaster.PolicyType => string.Join(",", BulkImportConstants.PolicyTypeColumns) + "\r\n",
                 BulkImportMaster.PolicyDefinition => string.Join(",", BulkImportConstants.PolicyDefinitionColumns) + "\r\n",

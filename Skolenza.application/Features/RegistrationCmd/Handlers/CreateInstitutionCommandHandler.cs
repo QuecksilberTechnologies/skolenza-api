@@ -404,25 +404,10 @@ namespace skolenza.application.Features.RegistrationCmd.Handlers
                 }
 
                 // =====================================================
-                // STEP 13 : Seed designations
+                // STEP 13 : Use the canonical administrator Position
                 // =====================================================
-                failureStage = "creating default designations";
-                List<Designation> designations =
-                    DesignationsSeedHelper.GetRuntimeDesignationsToSeed(
-                        newInstitutionId,
-                        newInstitutionId,
-                        deptMap);
-
-                int adminDesignationId =
-                    await _unitOfWork.DesignationRepository.AutoCreateDesignationAsync(
-                        designations,
-                        insertedAdminDepartment);
-
-                if (adminDesignationId <= 0)
-                {
-                    await SafeRollbackAsync();
-                    return Fail("Designation creation failed.");
-                }
+                // New institutions use the canonical administrator Position below.
+                // Previous employment titles remain text history on experience records.
 
                 // =====================================================
                 // STEP 14 : Create staffMember code pattern
@@ -574,7 +559,6 @@ namespace skolenza.application.Features.RegistrationCmd.Handlers
                     InstitutionId = newInstitutionId,
                     FirstName = dto.ContactPersonName?.Trim(),
                     DepartmentId = insertedAdminDepartment,
-                    DesignationId = adminDesignationId,
                     CountryId = dto.CountryId,
                     OfficialEmail = institutionEntity.InstitutionEmail,
                     EmployementCode = employmentCodeGenerated,

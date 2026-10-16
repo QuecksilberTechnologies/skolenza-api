@@ -13,7 +13,7 @@ namespace skolenza.application.DTOs.Institution
             
             public int RoleId { get; set; }
             public int SubscriptionPlanId { get; set; }
-            public int DesignationId { get; set; }
+            public int StaffPositionMasterId { get; set; }
             public long? Id { get; set; }
             public string? CompanyName { get; set; } 
 

@@ -1,4 +1,6 @@
--- Apply after EnforceDesignationDepartmentScope.sql. No data is deleted or reset.
+-- Historical prerequisite note: older databases applied
+-- EnforceDesignationDepartmentScope.sql before this additive migration.
+-- Position-only databases do not require or rerun that retired prerequisite.
 BEGIN;
 
 CREATE TABLE IF NOT EXISTS skolenza."BulkImportJob"

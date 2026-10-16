@@ -103,9 +103,10 @@ namespace skolenza.persistance.Repositories
                 join department in _context.Departments.AsNoTracking()
                     on staffMember.DepartmentId equals department.Id into departmentJoin
                 from department in departmentJoin.DefaultIfEmpty()
-                join designation in _context.Designations.AsNoTracking()
-                    on staffMember.DesignationId equals designation.Id into designationJoin
-                from designation in designationJoin.DefaultIfEmpty()
+                join position in StaffProfessionalStructureRepository.CurrentPositionIdentities(
+                        _context, DateOnly.FromDateTime(DateTime.UtcNow))
+                    on staffMember.Id equals position.StaffMemberId into positionJoin
+                from position in positionJoin.DefaultIfEmpty()
                 join gender in _context.Genders.AsNoTracking()
                     on staffMember.GenderId equals gender.Id into genderJoin
                 from gender in genderJoin.DefaultIfEmpty()
@@ -120,7 +121,6 @@ namespace skolenza.persistance.Repositories
                     && staffEmploymentType.IsActive == true
                     && staffEmploymentType.IsSoftDeleted != true
                     && (department == null || (department.IsActive && !department.IsSoftDeleted))
-                    && (designation == null || (designation.IsActive && !designation.IsSoftDeleted))
                 select new NewLoginBootstrapReadModel
                 {
                     StaffMemberId = staffMember.Id,
@@ -134,8 +134,8 @@ namespace skolenza.persistance.Repositories
                     StaffEmploymentTypeName = staffEmploymentType.TypeName,
                     DepartmentId = staffMember.DepartmentId,
                     DepartmentName = department != null ? department.DepartmentName : null,
-                    DesignationId = staffMember.DesignationId,
-                    DesignationName = designation != null ? designation.DesignationName : null,
+                    StaffPositionMasterId = position != null ? position.StaffPositionMasterId : null,
+                    PositionName = position != null ? position.PositionName : null,
                     GenderId = staffMember.GenderId ?? 0,
                     GenderName = gender != null ? gender.GenderName : null,
                     HasPermanent = staffMember.HasPermanent,

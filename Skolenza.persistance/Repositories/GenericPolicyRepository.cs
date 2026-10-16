@@ -724,6 +724,14 @@ public sealed class GenericPolicyRepository(SkolenzaDbContext context) : IGeneri
                                where assignment.InstitutionId == institutionId && assignment.StaffMemberId == staffMember.Id && assignment.IsActive && !assignment.IsSoftDeleted && assignment.EffectiveFrom <= date && (assignment.EffectiveTo == null || assignment.EffectiveTo >= date)
                                select location).ToListAsync(cancellationToken);
         var workMode = await context.StaffMemberWorkArrangements.AsNoTracking().Where(x => x.InstitutionId == institutionId && x.StaffMemberId == staffMember.Id && x.IsActive && !x.IsSoftDeleted && x.EffectiveFrom <= date && (x.EffectiveTo == null || x.EffectiveTo >= date)).OrderByDescending(x => x.EffectiveFrom).Select(x => (short?)x.WorkMode).FirstOrDefaultAsync(cancellationToken);
+        var positionId = await context.StaffPositionAssignments.AsNoTracking()
+            .Where(x => x.InstitutionId == institutionId && x.StaffMemberId == staffMember.Id
+                && x.IsPrimary && x.IsActive && x.EffectiveFrom <= date
+                && (!x.EffectiveTo.HasValue || x.EffectiveTo >= date))
+            .OrderByDescending(x => x.EffectiveFrom)
+            .ThenByDescending(x => x.Id)
+            .Select(x => (int?)x.StaffPositionMasterId)
+            .FirstOrDefaultAsync(cancellationToken);
         var result = new List<ResolvedPolicyResponseDTO>();
         foreach (var item in versions)
         {
@@ -750,7 +758,7 @@ public sealed class GenericPolicyRepository(SkolenzaDbContext context) : IGeneri
                 continue;
             }
             var matching = scopes
-                .Where(x => x.PolicyVersionId == item.Version.Id && ScopeMatches(x, staffMember, locations, workMode, date))
+                .Where(x => x.PolicyVersionId == item.Version.Id && ScopeMatches(x, staffMember, locations, workMode, positionId, date))
                 .ToList();
             if (matching.Count == 0)
             {
@@ -998,9 +1006,9 @@ public sealed class GenericPolicyRepository(SkolenzaDbContext context) : IGeneri
                                           join department in context.Departments.AsNoTracking()
                                               on staffMember.DepartmentId equals (int?)department.Id into departmentRows
                                           from department in departmentRows.DefaultIfEmpty()
-                                          join designation in context.Designations.AsNoTracking()
-                                              on staffMember.DesignationId equals (int?)designation.Id into designationRows
-                                          from designation in designationRows.DefaultIfEmpty()
+                                          join position in StaffProfessionalStructureRepository.CurrentPositionIdentities(context, effectiveDate)
+                                              on staffMember.Id equals position.StaffMemberId into positionRows
+                                          from position in positionRows.DefaultIfEmpty()
                                           select new
                                           {
                                               staffMember.Id,
@@ -1012,8 +1020,8 @@ public sealed class GenericPolicyRepository(SkolenzaDbContext context) : IGeneri
                                               StaffEmploymentTypeName = staffEmploymentType != null ? staffEmploymentType.TypeName : null,
                                               staffMember.DepartmentId,
                                               DepartmentName = department != null ? department.DepartmentName : null,
-                                              staffMember.DesignationId,
-                                              DesignationName = designation != null ? designation.DesignationName : null
+                                              StaffPositionMasterId = position != null ? (int?)position.StaffPositionMasterId : null,
+                                              PositionName = position != null ? position.PositionName : null
                                           }).ToListAsync(cancellationToken);
         var eligibleStaffMembers = eligibleStaffMemberRows.Select(staffMember => new PolicyAssignmentCandidateDataDTO(
             staffMember.Id,
@@ -1023,8 +1031,8 @@ public sealed class GenericPolicyRepository(SkolenzaDbContext context) : IGeneri
             staffMember.StaffEmploymentTypeName,
             staffMember.DepartmentId,
             staffMember.DepartmentName,
-            staffMember.DesignationId,
-            staffMember.DesignationName,
+            staffMember.StaffPositionMasterId,
+            staffMember.PositionName,
             assignedSet.Contains(staffMember.Id))).ToList();
 
         var staffEmploymentTypes = eligibleStaffMembers.Where(x => x.StaffEmploymentTypeId.HasValue)
@@ -1035,16 +1043,16 @@ public sealed class GenericPolicyRepository(SkolenzaDbContext context) : IGeneri
             .GroupBy(x => new { Id = x.DepartmentId!.Value, x.DepartmentName })
             .Select(x => new PolicyAssignmentFilterOptionDTO(x.Key.Id, x.Key.DepartmentName ?? string.Empty, x.Count()))
             .OrderBy(x => x.Name).ToList();
-        var designations = eligibleStaffMembers
-            .Where(x => x.DesignationId.HasValue && (!dto.DepartmentId.HasValue || x.DepartmentId == dto.DepartmentId))
-            .GroupBy(x => new { Id = x.DesignationId!.Value, x.DesignationName })
-            .Select(x => new PolicyAssignmentFilterOptionDTO(x.Key.Id, x.Key.DesignationName ?? string.Empty, x.Count()))
+        var positions = eligibleStaffMembers
+            .Where(x => x.StaffPositionMasterId.HasValue && (!dto.DepartmentId.HasValue || x.DepartmentId == dto.DepartmentId))
+            .GroupBy(x => new { Id = x.StaffPositionMasterId!.Value, x.PositionName })
+            .Select(x => new PolicyAssignmentFilterOptionDTO(x.Key.Id, x.Key.PositionName ?? string.Empty, x.Count()))
             .OrderBy(x => x.Name).ToList();
 
         IEnumerable<PolicyAssignmentCandidateDataDTO> filtered = eligibleStaffMembers;
         if (dto.StaffEmploymentTypeId.HasValue) filtered = filtered.Where(x => x.StaffEmploymentTypeId == dto.StaffEmploymentTypeId);
         if (dto.DepartmentId.HasValue) filtered = filtered.Where(x => x.DepartmentId == dto.DepartmentId);
-        if (dto.DesignationId.HasValue) filtered = filtered.Where(x => x.DesignationId == dto.DesignationId);
+        if (dto.StaffPositionMasterId.HasValue) filtered = filtered.Where(x => x.StaffPositionMasterId == dto.StaffPositionMasterId);
         if (!dto.IncludeAssigned) filtered = filtered.Where(x => !x.IsAssigned);
         if (!string.IsNullOrWhiteSpace(dto.Search))
         {
@@ -1052,7 +1060,7 @@ public sealed class GenericPolicyRepository(SkolenzaDbContext context) : IGeneri
             filtered = filtered.Where(x => x.StaffMemberCode.Contains(search, StringComparison.OrdinalIgnoreCase)
                 || x.StaffMemberName.Contains(search, StringComparison.OrdinalIgnoreCase));
         }
-        var ordered = filtered.OrderBy(x => x.DepartmentName).ThenBy(x => x.DesignationName)
+        var ordered = filtered.OrderBy(x => x.DepartmentName).ThenBy(x => x.PositionName)
             .ThenBy(x => x.StaffMemberCode).ThenBy(x => x.StaffMemberName).ToList();
         var pageNumber = Math.Max(1, dto.PageNumber);
         var pageSize = Math.Clamp(dto.PageSize, 1, 200);
@@ -1060,7 +1068,7 @@ public sealed class GenericPolicyRepository(SkolenzaDbContext context) : IGeneri
         return new PolicyAssignmentCandidateDataPageDTO(policyVersion.PolicyId,
             policyVersion.PolicyVersionId, policyVersion.PolicyCode, policyVersion.PolicyName,
             policyVersion.VersionNumber, effectiveDate, ordered.Count, page,
-            staffEmploymentTypes, departments, designations);
+            staffEmploymentTypes, departments, positions);
     }
 
     public async Task<IReadOnlyList<PolicyAssignmentExportRowDTO>> GetAssignmentExportAsync(
@@ -1083,10 +1091,10 @@ public sealed class GenericPolicyRepository(SkolenzaDbContext context) : IGeneri
                           join department in context.Departments.AsNoTracking()
                               on staffMember.DepartmentId equals (int?)department.Id into departments
                           from department in departments.DefaultIfEmpty()
-                          join designation in context.Designations.AsNoTracking()
-                              on staffMember.DesignationId equals (int?)designation.Id into designations
-                          from designation in designations.DefaultIfEmpty()
-                          orderby department.DepartmentName, designation.DesignationName,
+                          join position in StaffProfessionalStructureRepository.CurrentPositionIdentities(context, DateOnly.FromDateTime(DateTime.UtcNow))
+                              on staffMember.Id equals position.StaffMemberId into positions
+                          from position in positions.DefaultIfEmpty()
+                          orderby department.DepartmentName, position.PositionName,
                               staffMember.EmployementCode, staffMember.FirstName
                           select new
                           {
@@ -1098,7 +1106,7 @@ public sealed class GenericPolicyRepository(SkolenzaDbContext context) : IGeneri
                               staffMember.LastName,
                               StaffEmploymentTypeName = staffEmploymentType != null ? staffEmploymentType.TypeName : null,
                               DepartmentName = department != null ? department.DepartmentName : null,
-                              DesignationName = designation != null ? designation.DesignationName : null,
+                              PositionName = position != null ? position.PositionName : null,
                               assignment.AssignmentSource,
                               assignment.EffectiveFrom,
                               assignment.EffectiveTo,
@@ -1108,7 +1116,7 @@ public sealed class GenericPolicyRepository(SkolenzaDbContext context) : IGeneri
         return rows.Select(row => new PolicyAssignmentExportRowDTO(row.Id, row.StaffMemberId,
             row.EmployementCode ?? string.Empty,
             BuildStaffMemberDisplayName(row.FirstName, row.MiddleName, row.LastName) ?? "Unnamed staffMember",
-            row.StaffEmploymentTypeName, row.DepartmentName, row.DesignationName, row.AssignmentSource,
+            row.StaffEmploymentTypeName, row.DepartmentName, row.PositionName, row.AssignmentSource,
             row.EffectiveFrom, row.EffectiveTo, row.IsMandatory, row.IsActive,
             row.IsActive && !isArchived,
             isArchived && row.IsActive ? "VERSION_ARCHIVED" : row.IsActive ? null : "ASSIGNMENT_REMOVED"))
@@ -1268,10 +1276,11 @@ public sealed class GenericPolicyRepository(SkolenzaDbContext context) : IGeneri
         var scopeLeaveTypes = await context.PolicyApplicabilityLeaveTypes.AsNoTracking().Where(x => scopeIds.Contains(x.PolicyApplicabilityId)).ToListAsync(cancellationToken);
         var scopes = scopeEntities.Select(x => new PolicyApplicabilityResponseDTO(x.Id, x.ApplicabilityMode, x.Priority,
                 x.CountryId, x.StateId, x.DistrictId, x.LocalityId, x.CampusId,
-                x.StaffEmploymentTypeId, x.DepartmentId, x.DesignationId, x.StaffMemberId, x.GenderId,
+                x.StaffEmploymentTypeId, x.DepartmentId, x.StaffMemberId, x.GenderId,
                 x.WorkArrangementType, x.EmploymentStatus, x.MinimumServiceDays,
                 x.EffectiveFrom, x.EffectiveTo,
-                scopeLeaveTypes.Where(link => link.PolicyApplicabilityId == x.Id).Select(link => link.LeaveTypeId).ToList())).ToList();
+                scopeLeaveTypes.Where(link => link.PolicyApplicabilityId == x.Id).Select(link => link.LeaveTypeId).ToList())
+            { StaffPositionMasterId = x.StaffPositionMasterId }).ToList();
         var leaveTypes = await (from link in context.PolicyVersionLeaveTypes.AsNoTracking()
                                 join leaveType in context.LeaveTypes.AsNoTracking() on link.LeaveTypeId equals leaveType.Id
                                 where link.PolicyVersionId == version.Id && link.InstitutionId == institutionId && link.IsActive
@@ -1408,7 +1417,7 @@ public sealed class GenericPolicyRepository(SkolenzaDbContext context) : IGeneri
             IEnumerable<PolicyRuleInputDTO> rules, IEnumerable<PolicyApplicabilityInputDTO> scopes, DateTime now)
     {
         var addedRules = rules.Select(input => (Entity: new PolicyRule { InstitutionId = institutionId, PolicyVersionId = versionId, PolicyRuleTypeId = input.PolicyRuleTypeId, RuleName = input.RuleName.Trim(), RuleOrder = input.RuleOrder, RuleConfiguration = input.RuleConfiguration, IsActive = true, AddedById = actorId, AddedDateTime = now }, Input: input)).ToList();
-        var addedScopes = scopes.Select(input => (Entity: new PolicyApplicability { InstitutionId = institutionId, PolicyVersionId = versionId, ApplicabilityMode = input.ApplicabilityMode, CountryId = input.CountryId, StateId = input.StateId, DistrictId = input.DistrictId, LocalityId = input.LocalityId, CampusId = input.CampusId, StaffEmploymentTypeId = input.StaffEmploymentTypeId, DepartmentId = input.DepartmentId, DesignationId = input.DesignationId, StaffMemberId = input.ResolvedStaffMemberId ?? input.StaffMemberId, GenderId = input.GenderId, WorkArrangementType = input.WorkArrangementType, EmploymentStatus = input.EmploymentStatus, MinimumServiceDays = input.MinimumServiceDays, Priority = input.Priority, EffectiveFrom = input.EffectiveFrom, EffectiveTo = input.EffectiveTo, IsActive = true, AddedById = actorId, AddedDateTime = now }, Input: input)).ToList();
+        var addedScopes = scopes.Select(input => (Entity: new PolicyApplicability { InstitutionId = institutionId, PolicyVersionId = versionId, ApplicabilityMode = input.ApplicabilityMode, CountryId = input.CountryId, StateId = input.StateId, DistrictId = input.DistrictId, LocalityId = input.LocalityId, CampusId = input.CampusId, StaffEmploymentTypeId = input.StaffEmploymentTypeId, DepartmentId = input.DepartmentId, StaffPositionMasterId = input.StaffPositionMasterId, StaffMemberId = input.ResolvedStaffMemberId ?? input.StaffMemberId, GenderId = input.GenderId, WorkArrangementType = input.WorkArrangementType, EmploymentStatus = input.EmploymentStatus, MinimumServiceDays = input.MinimumServiceDays, Priority = input.Priority, EffectiveFrom = input.EffectiveFrom, EffectiveTo = input.EffectiveTo, IsActive = true, AddedById = actorId, AddedDateTime = now }, Input: input)).ToList();
         context.PolicyRules.AddRange(addedRules.Select(x => x.Entity));
         context.PolicyApplicabilities.AddRange(addedScopes.Select(x => x.Entity));
         return (addedRules, addedScopes);
@@ -1552,7 +1561,7 @@ public sealed class GenericPolicyRepository(SkolenzaDbContext context) : IGeneri
                 x.CampusId,
                 x.StaffEmploymentTypeId,
                 x.DepartmentId,
-                x.DesignationId,
+                x.StaffPositionMasterId,
                 x.StaffMemberId,
                 x.GenderId,
                 x.WorkArrangementType,
@@ -1619,11 +1628,34 @@ public sealed class GenericPolicyRepository(SkolenzaDbContext context) : IGeneri
                 x.IsStaffMemberVisible
             })
             .ToListAsync(cancellationToken);
+        object checksumApplicability = applicability.Any(x => x.StaffPositionMasterId.HasValue)
+            ? applicability
+            : applicability.Select(x => new
+            {
+                x.ApplicabilityMode,
+                x.CountryId,
+                x.StateId,
+                x.DistrictId,
+                x.LocalityId,
+                x.CampusId,
+                x.StaffEmploymentTypeId,
+                x.DepartmentId,
+                // Preserve the original approval fingerprint envelope; no legacy DB field is read.
+                DesignationId = (int?)null,
+                x.StaffMemberId,
+                x.GenderId,
+                x.WorkArrangementType,
+                x.EmploymentStatus,
+                x.MinimumServiceDays,
+                x.Priority,
+                x.EffectiveFrom,
+                x.EffectiveTo
+            }).ToList();
         var canonicalJson = JsonSerializer.Serialize(new
         {
             Version = version,
             Rules = rules,
-            Applicability = applicability,
+            Applicability = checksumApplicability,
             Attendance = attendance,
             VersionLeaveTypes = versionLeaveTypes,
             RuleLeaveTypes = ruleLeaveTypes,
@@ -1920,6 +1952,7 @@ public sealed class GenericPolicyRepository(SkolenzaDbContext context) : IGeneri
     {
         foreach (var scope in scopes)
         {
+
             State? state = null;
             District? district = null;
             Locality? locality = null;
@@ -1981,15 +2014,14 @@ public sealed class GenericPolicyRepository(SkolenzaDbContext context) : IGeneri
             {
                 throw new ValidationErrorException("DepartmentId is invalid for this institution.");
             }
-            if (scope.DesignationId.HasValue)
+
+            if (scope.StaffPositionMasterId.HasValue && !await context.StaffPositionMasters.AsNoTracking()
+                .AnyAsync(position => position.Id == scope.StaffPositionMasterId &&
+                    position.InstitutionId == institutionId && position.IsActive && !position.IsSoftDeleted &&
+                    (!scope.DepartmentId.HasValue || !position.DepartmentId.HasValue || position.DepartmentId == scope.DepartmentId),
+                    cancellationToken))
             {
-                var designation = await context.Designations.AsNoTracking().FirstOrDefaultAsync(
-                    x => x.Id == scope.DesignationId && x.InstitutionId == institutionId && !x.IsSoftDeleted,
-                    cancellationToken) ?? throw new ValidationErrorException("DesignationId is invalid for this institution.");
-                if (scope.DepartmentId.HasValue && designation.DepartmentId != scope.DepartmentId)
-                {
-                    throw new ValidationErrorException("DesignationId does not belong to DepartmentId.");
-                }
+                throw new ValidationErrorException("StaffPositionMasterId is invalid for this institution or department.");
             }
             if (scope.StaffEmploymentTypeId.HasValue && !await context.StaffEmploymentTypes.AsNoTracking().AnyAsync(
                 x => x.Id == scope.StaffEmploymentTypeId && x.InstitutionId == institutionId && x.IsSoftDeleted != true,
@@ -2019,7 +2051,7 @@ public sealed class GenericPolicyRepository(SkolenzaDbContext context) : IGeneri
         if (scope.StateId.HasValue) return 400;
         if (scope.CountryId.HasValue) return 300;
         if (scope.StaffEmploymentTypeId.HasValue) return 200;
-        if (scope.DepartmentId.HasValue || scope.DesignationId.HasValue) return 100;
+        if (scope.DepartmentId.HasValue) return 100;
         return 0;
     }
 
@@ -2069,14 +2101,25 @@ public sealed class GenericPolicyRepository(SkolenzaDbContext context) : IGeneri
             .ToListAsync(cancellationToken);
         var workModeByStaffMember = workModes.GroupBy(x => x.StaffMemberId)
             .ToDictionary(x => x.Key, x => (short?)x.First().WorkMode);
+        var positions = await database.StaffPositionAssignments.AsNoTracking()
+            .Where(x => x.InstitutionId == institutionId && staffMemberIds.Contains(x.StaffMemberId)
+                && x.IsPrimary && x.IsActive && x.EffectiveFrom <= effectiveDate
+                && (!x.EffectiveTo.HasValue || x.EffectiveTo >= effectiveDate))
+            .OrderByDescending(x => x.EffectiveFrom)
+            .ThenByDescending(x => x.Id)
+            .Select(x => new { x.StaffMemberId, x.StaffPositionMasterId })
+            .ToListAsync(cancellationToken);
+        var positionByStaffMember = positions.GroupBy(x => x.StaffMemberId)
+            .ToDictionary(x => x.Key, x => (int?)x.First().StaffPositionMasterId);
         var eligible = new HashSet<long>();
         foreach (var staffMember in staffMembers)
         {
             var staffMemberLocations = locationsByStaffMember.GetValueOrDefault(staffMember.Id,
                 Array.Empty<Campus>());
             var workMode = workModeByStaffMember.GetValueOrDefault(staffMember.Id);
+            var positionId = positionByStaffMember.GetValueOrDefault(staffMember.Id);
             var matching = scopes.Where(x => ScopeMatches(x, staffMember, staffMemberLocations,
-                workMode, effectiveDate)).ToList();
+                workMode, positionId, effectiveDate)).ToList();
             if (matching.Count == 0)
             {
                 continue;
@@ -2094,7 +2137,7 @@ public sealed class GenericPolicyRepository(SkolenzaDbContext context) : IGeneri
         return eligible;
     }
 
-    private static bool ScopeMatches(PolicyApplicability x, StaffMember e, IReadOnlyCollection<Campus> locations, short? workMode, DateOnly date)
+    private static bool ScopeMatches(PolicyApplicability x, StaffMember e, IReadOnlyCollection<Campus> locations, short? workMode, int? positionId, DateOnly date)
     {
         var serviceDays = e.DateOfOnBoarding.HasValue
             ? Math.Max(0, date.DayNumber - DateOnly.FromDateTime(e.DateOfOnBoarding.Value).DayNumber)
@@ -2108,13 +2151,13 @@ public sealed class GenericPolicyRepository(SkolenzaDbContext context) : IGeneri
             && (!x.StaffMemberId.HasValue || x.StaffMemberId == e.Id)
             && (!x.StaffEmploymentTypeId.HasValue || x.StaffEmploymentTypeId == e.StaffEmploymentTypeId)
             && (!x.DepartmentId.HasValue || x.DepartmentId == e.DepartmentId)
-            && (!x.DesignationId.HasValue || x.DesignationId == e.DesignationId)
+            && (!x.StaffPositionMasterId.HasValue || x.StaffPositionMasterId == positionId)
             && (!x.GenderId.HasValue || x.GenderId == e.GenderId)
             && (!x.WorkArrangementType.HasValue || x.WorkArrangementType == workMode)
             && (!x.EmploymentStatus.HasValue || (x.EmploymentStatus == 1) == e.IsActive)
             && (!x.MinimumServiceDays.HasValue || serviceDays >= x.MinimumServiceDays);
     }
-    private static PolicyApplicability CloneScope(PolicyApplicability x, long versionId, long actorId) => new() { InstitutionId = x.InstitutionId, PolicyVersionId = versionId, ApplicabilityMode = x.ApplicabilityMode, CountryId = x.CountryId, StateId = x.StateId, DistrictId = x.DistrictId, LocalityId = x.LocalityId, CampusId = x.CampusId, StaffEmploymentTypeId = x.StaffEmploymentTypeId, DepartmentId = x.DepartmentId, DesignationId = x.DesignationId, StaffMemberId = x.StaffMemberId, GenderId = x.GenderId, WorkArrangementType = x.WorkArrangementType, EmploymentStatus = x.EmploymentStatus, MinimumServiceDays = x.MinimumServiceDays, Priority = x.Priority, EffectiveFrom = x.EffectiveFrom, EffectiveTo = x.EffectiveTo, IsActive = x.IsActive, AddedById = actorId, AddedDateTime = DateTime.UtcNow };
+    private static PolicyApplicability CloneScope(PolicyApplicability x, long versionId, long actorId) => new() { InstitutionId = x.InstitutionId, PolicyVersionId = versionId, ApplicabilityMode = x.ApplicabilityMode, CountryId = x.CountryId, StateId = x.StateId, DistrictId = x.DistrictId, LocalityId = x.LocalityId, CampusId = x.CampusId, StaffEmploymentTypeId = x.StaffEmploymentTypeId, DepartmentId = x.DepartmentId, StaffPositionMasterId = x.StaffPositionMasterId, StaffMemberId = x.StaffMemberId, GenderId = x.GenderId, WorkArrangementType = x.WorkArrangementType, EmploymentStatus = x.EmploymentStatus, MinimumServiceDays = x.MinimumServiceDays, Priority = x.Priority, EffectiveFrom = x.EffectiveFrom, EffectiveTo = x.EffectiveTo, IsActive = x.IsActive, AddedById = actorId, AddedDateTime = DateTime.UtcNow };
 
     private sealed record PolicyStatusIds(
         short Draft,

@@ -27,7 +27,6 @@ public partial class StaffMember
 
     public DateTime? DateOfExit { get; set; }
 
-    public int? DesignationId { get; set; }
 
     public int? StaffEmploymentTypeId { get; set; }
 
@@ -85,7 +84,6 @@ public partial class StaffMember
 
     public virtual Country Country { get; set; } = null!;
 
-    public virtual Designation? Designation { get; set; }
 
     public virtual Department? Department { get; set; }
 

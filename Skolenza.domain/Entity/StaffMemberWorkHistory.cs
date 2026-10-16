@@ -11,7 +11,7 @@ public partial class StaffMemberWorkHistory
 
     public string CompanyName { get; set; } = null!;
 
-    public string Designation { get; set; } = null!;
+    public string PreviousPositionTitle { get; set; } = null!;
 
     public decimal? Ctc { get; set; }
 

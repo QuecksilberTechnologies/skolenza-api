@@ -23,7 +23,7 @@ namespace skolenza.application.DTOS.Staff.Experience
 
         // 🔹 Job Info
         public string? CompanyName { get; set; }
-        public string? Designation { get; set; }
+        public string? PreviousPositionTitle { get; set; }
         public string? StaffMemberIdOfCompany { get; set; }
 
         public DateTime? StartDate { get; set; }
@@ -45,7 +45,7 @@ namespace skolenza.application.DTOS.Staff.Experience
 
         // 🔹 Reporting
         public string? ColleagueName { get; set; }
-        public string? ColleagueDesignation { get; set; }
+        public string? ColleaguePositionTitle { get; set; }
         public string? ColleagueContactNumber { get; set; }
 
         public string? ReportingManagerName { get; set; }

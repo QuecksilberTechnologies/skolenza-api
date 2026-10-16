@@ -9,8 +9,8 @@ namespace skolenza.application.DTOs.Staff
         public string? RoleTypeName { get; set; }
         public string? InstitutionName { get; set; }
         public bool? IsPasswordChangeRequired { get; set; }
-        public string? DesignationName { get; set; }
-        public int DesignationId { get; set; }
+        public string? PositionName { get; set; }
+        public int StaffPositionMasterId { get; set; }
         public bool IsOnboard {  get; set; }
         public int DepartmentId { get; set; }
         public int? CountryId { get; set; }

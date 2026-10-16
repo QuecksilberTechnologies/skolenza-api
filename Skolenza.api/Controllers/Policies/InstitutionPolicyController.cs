@@ -400,7 +400,7 @@ public sealed class InstitutionPolicyController(IMediator mediator) : Controller
     /// <summary>Returns only staffMembers eligible under the selected Policy Version applicability.</summary>
     /// <remarks>
     /// Use this when opening the Map Policies popup. StaffMember code, staffMember type, department and
-    /// designation are returned with every row to disambiguate duplicate names. The same
+    /// Position is returned with every row to disambiguate duplicate names. The same
     /// applicability resolution used by assignment validation is applied before paging. Filter
     /// options are calculated from the eligible population. Requires Policy Assignments View
     /// permission.
@@ -416,7 +416,7 @@ public sealed class InstitutionPolicyController(IMediator mediator) : Controller
 
     /// <summary>Exports the complete staffMember mapping list for a Policy Version.</summary>
     /// <remarks>
-    /// The CSV includes staffMember code, staffMember name, staffMember type, department, designation,
+    /// The CSV includes staffMember code, staffMember name, staffMember type, department, Position,
     /// effective dates and active state. It is not paged. Requires Policy Assignments Export
     /// permission resolved through the existing dynamic permission pipeline.
     /// </remarks>

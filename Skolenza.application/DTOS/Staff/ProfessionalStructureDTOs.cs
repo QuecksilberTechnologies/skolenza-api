@@ -2,6 +2,15 @@ using skolenza.application.DTOs.BaseDTO;
 
 namespace skolenza.application.DTOS.Staff;
 
+/// <summary>Canonical effective primary Position used by staff-facing read contracts.</summary>
+public sealed class StaffPositionIdentityReadModel
+{
+    public long InstitutionId { get; set; }
+    public long StaffMemberId { get; set; }
+    public int StaffPositionMasterId { get; set; }
+    public string PositionName { get; set; } = string.Empty;
+}
+
 public enum StaffProfessionalMasterType
 {
     JobFamily = 1,
@@ -88,7 +97,6 @@ public sealed class StaffPositionMasterRequestDTO : PermissionRequestDTO
     public int StaffJobFamilyMasterId { get; set; }
     public int InstitutionStaffCategoryMasterId { get; set; }
     public int? DepartmentId { get; set; }
-    public int? DesignationId { get; set; }
     public string Code { get; set; } = string.Empty;
     public string Name { get; set; } = string.Empty;
     public string? Description { get; set; }
@@ -119,7 +127,6 @@ public sealed class StaffPositionMasterResponseDTO
     public short StaffCategoryId { get; set; }
     public string StaffCategoryName { get; set; } = string.Empty;
     public int? DepartmentId { get; set; }
-    public int? DesignationId { get; set; }
     public string Code { get; set; } = string.Empty;
     public string Name { get; set; } = string.Empty;
     public string? Description { get; set; }

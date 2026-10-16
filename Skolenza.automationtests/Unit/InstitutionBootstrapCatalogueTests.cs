@@ -34,26 +34,4 @@ public sealed class InstitutionBootstrapCatalogueTests
         });
     }
 
-    [Test]
-    public void Designation_seed_helper_maps_the_authoritative_catalogue_to_department_id()
-    {
-        var departmentMap = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase)
-        {
-            [DepartmentConstants.ExecutiveOfficeName] = 31
-        };
-
-        var designation = DesignationsSeedHelper
-            .GetRuntimeDesignationsToSeed(11, 22, departmentMap)
-            .Single();
-
-        Assert.Multiple(() =>
-        {
-            Assert.That(designation.InstitutionId, Is.EqualTo(11));
-            Assert.That(designation.AddedById, Is.EqualTo(22));
-            Assert.That(designation.DepartmentId, Is.EqualTo(31));
-            Assert.That(
-                designation.DesignationName,
-                Is.EqualTo(DesignationConstants.InstitutionAdministratorName));
-        });
-    }
 }

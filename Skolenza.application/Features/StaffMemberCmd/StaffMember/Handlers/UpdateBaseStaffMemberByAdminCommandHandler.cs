@@ -6,6 +6,7 @@
 // ================================================================
 
 using skolenza.application.Common.Helpers.RequestHelper;
+using skolenza.application.Constants;
 using skolenza.application.DTOS.Staff.BaseStaffMember;
 using skolenza.application.Exceptions;
 using skolenza.application.Interfaces;
@@ -130,8 +131,7 @@ public class UpdateBaseStaffMemberByAdminCommandHandler
                 if (!string.IsNullOrWhiteSpace(request.DTO.Remark))
                     staffMember.Remark = request.DTO.Remark.Trim();
 
-                if (request.DTO.DesignationId.HasValue)
-                    staffMember.DesignationId = request.DTO.DesignationId.Value;
+
 
                 if (request.DTO.DepartmentId.HasValue)
                     staffMember.DepartmentId = request.DTO.DepartmentId.Value;

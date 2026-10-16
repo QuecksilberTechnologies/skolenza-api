@@ -1062,7 +1062,6 @@ BEGIN
     FOR identity IN
         SELECT * FROM (VALUES
             ('INSTITUTION_DEPARTMENTS','DEPARTMENT'),
-            ('INSTITUTION_DESIGNATIONS','DESIGNATION'),
             ('INSTITUTION_ROLES_PERMISSIONS','ROLE'),
             ('INSTITUTION_STAFF_MEMBER_TYPES','STAFF_MEMBER_TYPE')
         ) AS codes(legacy_code,canonical_code)
@@ -1144,58 +1143,6 @@ WHERE NOT EXISTS
     SELECT 1
     FROM skolenza."Module"
     WHERE "ModuleCode" = 'DEPARTMENT'
-);
-
--- Backup Module Id 26: DESIGNATION
-INSERT INTO skolenza."Module"
-(
-    "InstitutionId",
-    "ModuleCode",
-    "ModuleName",
-    "DisplayName",
-    "URLPath",
-    "ParentModuleId",
-    "IsLeafNode",
-    "IsModuleDisplayInUI",
-    "IsCommonMenu",
-    "IsActive",
-    "ImageIconWeb",
-    "ImageIconMobile",
-    "ItemPriority",
-    "Remark",
-    "AddedById",
-    "AddedDateTime",
-    "UpdatedById",
-    "UpdatedDateTime",
-    "ModuleScope",
-    "PageName"
-)
-SELECT
-    NULL,
-    'DESIGNATION',
-    'Designations',
-    'Designations',
-    '/designations',
-    (SELECT "Id" FROM skolenza."Module" WHERE "ModuleCode" = 'INSTITUTION_MGMT'),
-    TRUE,
-    TRUE,
-    FALSE,
-    TRUE,
-    NULL,
-    NULL,
-    0,
-    NULL,
-    NULL,
-    '2026-08-31 09:58:18.302026+00',
-    NULL,
-    NULL,
-    1,
-    'institution-designations'
-WHERE NOT EXISTS
-(
-    SELECT 1
-    FROM skolenza."Module"
-    WHERE "ModuleCode" = 'DESIGNATION'
 );
 
 -- Backup Module Id 27: ROLE
@@ -5356,7 +5303,6 @@ FROM skolenza."Module" parent
 WHERE child."ModuleScope" = 1
   AND parent."ModuleScope" = 1
   AND ((child."ModuleCode" = 'DEPARTMENT' AND parent."ModuleCode" = 'INSTITUTION_DEPARTMENT')
-    OR (child."ModuleCode" = 'DESIGNATION' AND parent."ModuleCode" = 'INSTITUTION_DESIGNATION')
     OR (child."ModuleCode" = 'ROLE' AND parent."ModuleCode" = 'INSTITUTION_ROLE')
     OR (child."ModuleCode" = 'STAFF_MEMBER_TYPE' AND parent."ModuleCode" = 'EMP_MGMT'));
 
@@ -5385,7 +5331,6 @@ DECLARE
     institution_parent_id integer;
     staffMember_parent_id integer;
     department_parent_id integer;
-    designation_parent_id integer;
     role_parent_id integer;
     import_operation_id integer;
     export_operation_id integer;
@@ -5426,10 +5371,6 @@ BEGIN
          'bi bi-building','business',510,
          'Department navigation group for institution department management.',
          'institution-department'),
-        ('INSTITUTION_DESIGNATION','Institution-Designation','Institution Designation',
-         'bi bi-person-badge','ribbon',520,
-         'Designation navigation group for institution designation management.',
-         'institution-designation'),
         ('INSTITUTION_ROLE','Institution-Role','Institution Role',
          'bi bi-shield-lock','shield-account',530,
          'Role navigation group for institution role and permission management.',
@@ -5463,8 +5404,6 @@ BEGIN
     FROM (VALUES
         ('INSTITUTION_DEPARTMENT','Institution-Department','Institution Department','bi bi-building','business',510,
          'Department navigation group for institution department management.','institution-department'),
-        ('INSTITUTION_DESIGNATION','Institution-Designation','Institution Designation','bi bi-person-badge','ribbon',520,
-         'Designation navigation group for institution designation management.','institution-designation'),
         ('INSTITUTION_ROLE','Institution-Role','Institution Role','bi bi-shield-lock','shield-account',530,
          'Role navigation group for institution role and permission management.','institution-role')
     ) AS definition(code,module_name,display_name,web_icon,mobile_icon,priority,remark,page_name)
@@ -5473,8 +5412,6 @@ BEGIN
 
     SELECT "Id" INTO department_parent_id FROM skolenza."Module"
     WHERE "ModuleCode"='INSTITUTION_DEPARTMENT' AND "ModuleScope"=1 ORDER BY "Id" LIMIT 1;
-    SELECT "Id" INTO designation_parent_id FROM skolenza."Module"
-    WHERE "ModuleCode"='INSTITUTION_DESIGNATION' AND "ModuleScope"=1 ORDER BY "Id" LIMIT 1;
     SELECT "Id" INTO role_parent_id FROM skolenza."Module"
     WHERE "ModuleCode"='INSTITUTION_ROLE' AND "ModuleScope"=1 ORDER BY "Id" LIMIT 1;
 
@@ -5483,20 +5420,18 @@ BEGIN
     SET "ParentModuleId"=CASE "ModuleCode"
             WHEN 'STAFF_DIRECTORY' THEN staffMember_parent_id
             WHEN 'DEPARTMENT' THEN department_parent_id
-            WHEN 'DESIGNATION' THEN designation_parent_id
             WHEN 'ROLE' THEN role_parent_id
             WHEN 'STAFF_MEMBER_TYPE' THEN staffMember_parent_id
             ELSE institution_parent_id END,
         "UpdatedById"=1,"UpdatedDateTime"=CURRENT_TIMESTAMP
     WHERE "ModuleScope"=1
-      AND "ModuleCode" IN ('STAFF_DIRECTORY','DEPARTMENT','DESIGNATION',
+      AND "ModuleCode" IN ('STAFF_DIRECTORY','DEPARTMENT',
           'ROLE','STAFF_MEMBER_TYPE');
 
     UPDATE skolenza."InstitutionEnabledModule" enabled
     SET "ParentModuleId"=CASE module."ModuleCode"
             WHEN 'STAFF_DIRECTORY' THEN staffMember_parent_id
             WHEN 'DEPARTMENT' THEN department_parent_id
-            WHEN 'DESIGNATION' THEN designation_parent_id
             WHEN 'ROLE' THEN role_parent_id
             WHEN 'STAFF_MEMBER_TYPE' THEN staffMember_parent_id
             ELSE institution_parent_id END,
@@ -5504,7 +5439,7 @@ BEGIN
     FROM skolenza."Module" module
     WHERE enabled."ModuleId"=module."Id"
       AND module."ModuleScope"=1
-      AND module."ModuleCode" IN ('STAFF_DIRECTORY','DEPARTMENT','DESIGNATION',
+      AND module."ModuleCode" IN ('STAFF_DIRECTORY','DEPARTMENT',
           'ROLE','STAFF_MEMBER_TYPE');
 
     SELECT "Id" INTO export_operation_id
@@ -5530,7 +5465,6 @@ BEGIN
            TRUE, TRUE, FALSE, TRUE, seed.priority, 1, CURRENT_TIMESTAMP, 1, seed.page_name
     FROM (VALUES
         ('DEPARTMENT','Departments','Departments','/departments',510,'institution-departments'),
-        ('DESIGNATION','Designations','Designations','/designations',520,'institution-designations'),
         ('ROLE','Roles-Permissions','Roles & Permissions','/roles',530,'institution-roles-permissions'),
         ('STAFF_MEMBER_TYPE','StaffMember-Types','StaffMember Types','/staff-employment-types',540,'institution-staff-employment-types'),
         ('INSTITUTION_STAFF_MEMBER_CODE','StaffMember-Code-Pattern','StaffMember Code Pattern','/institution/staffMember-code-pattern',550,'institution-staffMember-code')
@@ -5574,7 +5508,7 @@ BEGIN
     FROM skolenza."Module" module
     WHERE module."ModuleScope" = 1
       AND module."ModuleCode" IN
-          ('STAFF_DIRECTORY','DEPARTMENT','DESIGNATION',
+          ('STAFF_DIRECTORY','DEPARTMENT',
            'ROLE','STAFF_MEMBER_TYPE')
       AND NOT EXISTS
       (
@@ -5591,7 +5525,7 @@ BEGIN
       AND mapping."OperationId"=import_operation_id
       AND module."ModuleScope"=1
       AND module."ModuleCode" IN
-          ('STAFF_DIRECTORY','DEPARTMENT','DESIGNATION',
+          ('STAFF_DIRECTORY','DEPARTMENT',
            'ROLE','STAFF_MEMBER_TYPE');
 
     INSERT INTO skolenza."ModuleOperationMapping"
@@ -5603,7 +5537,7 @@ BEGIN
     FROM skolenza."Module" module
     WHERE module."ModuleScope" = 1
       AND module."ModuleCode" IN
-          ('STAFF_DIRECTORY','DEPARTMENT','DESIGNATION',
+          ('STAFF_DIRECTORY','DEPARTMENT',
            'ROLE','STAFF_MEMBER_TYPE')
       AND NOT EXISTS
       (
@@ -5620,7 +5554,7 @@ BEGIN
       AND mapping."OperationId"=export_operation_id
       AND module."ModuleScope"=1
       AND module."ModuleCode" IN
-          ('STAFF_DIRECTORY','DEPARTMENT','DESIGNATION',
+          ('STAFF_DIRECTORY','DEPARTMENT',
            'ROLE','STAFF_MEMBER_TYPE');
 
     -- Make bulk modules available to the same subscription plans that already
@@ -5635,7 +5569,7 @@ BEGIN
       ON staffMember_list."Id" = plan."ModuleId" AND staffMember_list."ModuleCode" = 'STAFF_DIRECTORY'
     JOIN skolenza."Module" target
       ON target."ModuleScope" = 1
-     AND target."ModuleCode" IN ('DEPARTMENT','DESIGNATION',
+     AND target."ModuleCode" IN ('DEPARTMENT',
                                   'ROLE','STAFF_MEMBER_TYPE')
     WHERE plan."IsActive" = TRUE
       AND NOT EXISTS
@@ -5654,7 +5588,6 @@ BEGIN
            1, CURRENT_TIMESTAMP
     FROM (VALUES
         ('DEPARTMENT','INSTITUTION_DEPARTMENT'),
-        ('DESIGNATION','INSTITUTION_DESIGNATION'),
         ('ROLE','INSTITUTION_ROLE')
     ) AS hierarchy(child_code,parent_code)
     JOIN skolenza."Module" child
@@ -5677,7 +5610,6 @@ BEGIN
         "UpdatedDateTime"=CURRENT_TIMESTAMP
     FROM (VALUES
         ('DEPARTMENT','INSTITUTION_DEPARTMENT'),
-        ('DESIGNATION','INSTITUTION_DESIGNATION'),
         ('ROLE','INSTITUTION_ROLE')
     ) AS hierarchy(child_code,parent_code)
     JOIN skolenza."Module" parent
@@ -5707,7 +5639,6 @@ BEGIN
     FROM (VALUES
         ('BULK_STAFF_MEMBERS','STAFF_DIRECTORY'),
         ('BULK_DEPARTMENTS','DEPARTMENT'),
-        ('BULK_DESIGNATIONS','DESIGNATION'),
         ('BULK_ROLES','ROLE'),
         ('BULK_STAFF_MEMBER_TYPES','STAFF_MEMBER_TYPE')
     ) AS move(child_code,target_code)
@@ -5730,7 +5661,6 @@ BEGIN
     FROM (VALUES
         ('BULK_STAFF_MEMBERS','STAFF_DIRECTORY'),
         ('BULK_DEPARTMENTS','DEPARTMENT'),
-        ('BULK_DESIGNATIONS','DESIGNATION'),
         ('BULK_ROLES','ROLE'),
         ('BULK_STAFF_MEMBER_TYPES','STAFF_MEMBER_TYPE')
     ) AS move(child_code,target_code)
@@ -5755,7 +5685,7 @@ SELECT module."ModuleCode", module."Id", operation."OperationName",
 FROM skolenza."Module" module
 JOIN skolenza."ModuleOperationMapping" mapping ON mapping."ModuleId" = module."Id"
 JOIN skolenza."Operation" operation ON operation."Id" = mapping."OperationId"
-WHERE module."ModuleCode" IN ('STAFF_DIRECTORY','DEPARTMENT','DESIGNATION',
+WHERE module."ModuleCode" IN ('STAFF_DIRECTORY','DEPARTMENT',
     'ROLE','STAFF_MEMBER_TYPE','INSTITUTION_STAFF_MEMBER_CODE')
 ORDER BY module."ModuleCode", operation."OperationType";
 
@@ -5790,7 +5720,7 @@ JOIN skolenza."Module" module
   ON module."Id"=plan_mapping."ModuleId"
  AND module."ModuleScope"=1 AND module."IsActive"
 WHERE module."ModuleCode" IN
-    ('INSTITUTION_DEPARTMENT','DEPARTMENT','INSTITUTION_DESIGNATION','DESIGNATION',
+    ('INSTITUTION_DEPARTMENT','DEPARTMENT',
      'INSTITUTION_ROLE','ROLE','STAFF_MEMBER_TYPE')
   AND NOT EXISTS
   (
@@ -5813,7 +5743,7 @@ JOIN skolenza."Operation" operation
 WHERE enabled_module."IsEnabled"
   AND module."IsLeafNode" AND module."ModuleScope"=1
   AND NOT COALESCE(mapping."IsCommonItem",FALSE)
-  AND module."ModuleCode" IN ('DEPARTMENT','DESIGNATION','ROLE','STAFF_MEMBER_TYPE')
+  AND module."ModuleCode" IN ('DEPARTMENT','ROLE','STAFF_MEMBER_TYPE')
   AND NOT EXISTS
   (
       SELECT 1 FROM skolenza."InstitutionEnabledOperation" existing
@@ -5838,7 +5768,7 @@ JOIN skolenza."Module" module ON module."Id"=enabled_operation."ModuleId"
 WHERE admin_role."RoleType"=1
   AND admin_role."IsActive" AND NOT admin_role."IsSoftDeleted"
   AND NOT admin_role."IsSystemDefault"
-  AND module."ModuleCode" IN ('DEPARTMENT','DESIGNATION','ROLE','STAFF_MEMBER_TYPE')
+  AND module."ModuleCode" IN ('DEPARTMENT','ROLE','STAFF_MEMBER_TYPE')
   AND NOT EXISTS
   (
       SELECT 1 FROM skolenza."RoleModuleAndPermission" existing

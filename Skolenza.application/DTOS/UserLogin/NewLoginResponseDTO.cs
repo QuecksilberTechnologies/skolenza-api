@@ -182,14 +182,14 @@ public sealed class NewLoginUserContextDTO
     public string? DepartmentName { get; set; }
 
     /// <summary>
-    /// Gets or sets the designation identifier when the staffMember has an active designation assignment.
+    /// Gets or sets the Position identifier when the staffMember has an active Position assignment.
     /// </summary>
-    public int? DesignationId { get; set; }
+    public int? StaffPositionMasterId { get; set; }
 
     /// <summary>
-    /// Gets or sets the designation name when the staffMember has an active designation assignment.
+    /// Gets or sets the Position name when the staffMember has an active Position assignment.
     /// </summary>
-    public string? DesignationName { get; set; }
+    public string? PositionName { get; set; }
 
     #endregion
 

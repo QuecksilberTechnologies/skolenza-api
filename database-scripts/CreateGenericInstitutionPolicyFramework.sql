@@ -157,7 +157,7 @@ CREATE TABLE IF NOT EXISTS skolenza."PolicyApplicability"
     "CampusId" bigint,
     "StaffEmploymentTypeId" integer,
     "DepartmentId" integer,
-    "DesignationId" integer,
+    "StaffPositionMasterId" integer,
     "StaffMemberId" bigint,
     "GenderId" integer,
     "WorkArrangementType" smallint,
@@ -403,7 +403,7 @@ BEGIN
     IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname='FK_PolicyApplicability_Campus') THEN ALTER TABLE skolenza."PolicyApplicability" ADD CONSTRAINT "FK_PolicyApplicability_Campus" FOREIGN KEY ("CampusId") REFERENCES skolenza."Campus"("Id") ON DELETE RESTRICT; END IF;
     IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname='FK_PolicyApplicability_StaffEmploymentType') THEN ALTER TABLE skolenza."PolicyApplicability" ADD CONSTRAINT "FK_PolicyApplicability_StaffEmploymentType" FOREIGN KEY ("StaffEmploymentTypeId") REFERENCES skolenza."StaffEmploymentType"("Id") ON DELETE RESTRICT; END IF;
     IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname='FK_PolicyApplicability_Department') THEN ALTER TABLE skolenza."PolicyApplicability" ADD CONSTRAINT "FK_PolicyApplicability_Department" FOREIGN KEY ("DepartmentId") REFERENCES skolenza."Department"("Id") ON DELETE RESTRICT; END IF;
-    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname='FK_PolicyApplicability_Designation') THEN ALTER TABLE skolenza."PolicyApplicability" ADD CONSTRAINT "FK_PolicyApplicability_Designation" FOREIGN KEY ("DesignationId") REFERENCES skolenza."Designation"("Id") ON DELETE RESTRICT; END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname='FK_PolicyApplicability_StaffPositionMaster') THEN ALTER TABLE skolenza."PolicyApplicability" ADD CONSTRAINT "FK_PolicyApplicability_StaffPositionMaster" FOREIGN KEY ("StaffPositionMasterId") REFERENCES skolenza."StaffPositionMaster"("Id") ON DELETE RESTRICT; END IF;
     IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname='FK_PolicyApplicability_StaffMember') THEN ALTER TABLE skolenza."PolicyApplicability" ADD CONSTRAINT "FK_PolicyApplicability_StaffMember" FOREIGN KEY ("StaffMemberId") REFERENCES skolenza."StaffMember"("Id") ON DELETE RESTRICT; END IF;
     IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname='FK_PolicyApplicability_Gender') THEN ALTER TABLE skolenza."PolicyApplicability" ADD CONSTRAINT "FK_PolicyApplicability_Gender" FOREIGN KEY ("GenderId") REFERENCES skolenza."Gender"("Id") ON DELETE RESTRICT; END IF;
     IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname='FK_PolicyAssignment_Version') THEN ALTER TABLE skolenza."PolicyAssignment" ADD CONSTRAINT "FK_PolicyAssignment_Version" FOREIGN KEY ("PolicyVersionId") REFERENCES skolenza."PolicyVersion"("Id") ON DELETE RESTRICT; END IF;

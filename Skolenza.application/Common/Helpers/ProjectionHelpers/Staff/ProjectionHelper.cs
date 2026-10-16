@@ -70,7 +70,7 @@ namespace skolenza.application.Common.Helpers.ProjectionHelpers.Staff
         //        ReportingManagerEmail = e.ReportingManagerEmail ?? string.Empty,
         //        WorkedWithName = e.WorkedWithName ?? string.Empty,
         //        WorkedWithContactNumber = e.WorkedWithContactNumber ?? string.Empty,
-        //        WorkedWithDesignation = e.WorkedWithDesignation ?? string.Empty,
+        //        WorkedWithPositionTitle = e.WorkedWithPositionTitle ?? string.Empty,
         //        ExperienceLetterPath = e.ExperienceLetterPath ?? string.Empty,
         //        Comment = e.Comment ?? string.Empty,
         //        AddedById = SafeEncrypt(e.AddedById, encryptionService, institutionKey),
@@ -208,7 +208,7 @@ namespace skolenza.application.Common.Helpers.ProjectionHelpers.Staff
 
             // 🧹 Null safety (only fields present in DTO)
             entity.FullName ??= string.Empty;
-            entity.DesignationType ??= string.Empty;
+            entity.PositionName ??= string.Empty;
             entity.DepartmentType ??= string.Empty;
             entity.StaffMemberCode ??= string.Empty;
           
@@ -403,7 +403,7 @@ namespace skolenza.application.Common.Helpers.ProjectionHelpers.Staff
             entity.MobileNumber ??= string.Empty;
             entity.PersonalEmail ??= string.Empty;
             entity.CountryCode ??= string.Empty;
-            entity.Designation ??= string.Empty;
+            entity.PositionName ??= string.Empty;
             entity.Department ??= string.Empty;
             entity.StaffEmploymentTypeName ??= string.Empty;
             entity.ProfileImage ??= string.Empty;
@@ -714,22 +714,6 @@ namespace skolenza.application.Common.Helpers.ProjectionHelpers.Staff
         //        UpdatedById = SafeEncrypt(e.UpdatedById?.ToString(), encryptionService, institutionKey),
         //        RoleName = e.RoleName ?? string.Empty,
         //        Remark = e.Remark ?? string.Empty,
-        //        IsActive = e.IsActive
-        //    }).ToList();
-        //}
-
-        //public static List<GetDesignationResponseDTO> ToGetDesignationResponseDTOs(List<GetDesignationResponseDTO> entities, IEncryptionService encryptionService, string institutionKey)
-        //{
-        //    if (entities == null || entities.Count == 0)
-        //        return new List<GetDesignationResponseDTO>();
-
-        //    return entities.Select(e => new GetDesignationResponseDTO
-        //    {
-        //        Id = SafeEncrypt(e.Id?.ToString(), encryptionService, institutionKey),
-        //        AddedById = SafeEncrypt(e.AddedById?.ToString(), encryptionService, institutionKey),
-        //        UpdatedById = SafeEncrypt(e.UpdatedById?.ToString(), encryptionService, institutionKey),
-        //        DepartmentName = e.DepartmentName ?? string.Empty,
-        //        Description = e.Description ?? string.Empty,
         //        IsActive = e.IsActive
         //    }).ToList();
         //}

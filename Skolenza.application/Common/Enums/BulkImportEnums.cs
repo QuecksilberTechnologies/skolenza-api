@@ -4,7 +4,8 @@ namespace skolenza.application.Common.Enums;
 public enum BulkImportMaster
 {
     Department = 1,
-    Designation = 2,
+    // Persisted jobs retain this numeric slot; it must never be reassigned or executed.
+    RetiredWorkTitle = 2,
     Role = 3,
     StaffEmploymentType = 4,
     StaffMember = 5,

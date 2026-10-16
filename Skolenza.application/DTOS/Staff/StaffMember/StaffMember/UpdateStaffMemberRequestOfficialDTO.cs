@@ -32,7 +32,6 @@ namespace skolenza.application.DTOS.Staff.BaseStaffMember
         [MaxLength(100)]
         public string? Description { get; set; }
         public DateTime? DateOfBirth { get; set; }
-        public int? DesignationId { get; set; }
         public bool? IsMarried { get; set; }
         public string? EmergencyContactNumber { get; set; }
         public string? EmergencyContactPerson { get; set; }

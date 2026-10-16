@@ -290,7 +290,7 @@ public sealed class StaffMemberProfileCharacterizationTests
         var experience = new GetStaffMemberExperienceResponseDTO
         {
             CompanyName = "Example Ltd",
-            Designation = "Engineer",
+            PreviousPositionTitle = "Engineer",
             StartDate = DateTime.UtcNow.AddYears(-2),
             EndDate = DateTime.UtcNow.AddYears(-1),
             IsInfoVerified = false,

@@ -407,8 +407,13 @@ BEGIN
        OR "StaffMemberId" IN (SELECT "Id" FROM pg_temp.institution_cleanup_staffMember)
        OR "ManagerId" IN (SELECT "Id" FROM pg_temp.institution_cleanup_staffMember)
        OR "DepartmentId" IN (SELECT "Id" FROM skolenza."Department" WHERE "InstitutionId" = v_institution_id)
-       OR "DesignationId" IN (SELECT "Id" FROM skolenza."Designation" WHERE "InstitutionId" = v_institution_id)
+       OR "StaffPositionMasterId" IN
+          (SELECT "Id" FROM skolenza."StaffPositionMaster" WHERE "InstitutionId" = v_institution_id)
        OR "ReportingTypeId" IN (SELECT "Id" FROM skolenza."ReportingType" WHERE "InstitutionId" = v_institution_id);
+
+    DELETE FROM skolenza."StaffCapabilityAssignment" WHERE "InstitutionId" = v_institution_id;
+    DELETE FROM skolenza."StaffDutyAssignment" WHERE "InstitutionId" = v_institution_id;
+    DELETE FROM skolenza."StaffPositionAssignment" WHERE "InstitutionId" = v_institution_id;
 
     DELETE FROM skolenza."StaffMemberLocationAssignment"
     WHERE "InstitutionId" = v_institution_id
@@ -548,7 +553,14 @@ BEGIN
 
     DELETE FROM skolenza."InstitutionDevice" WHERE "InstitutionId" = v_institution_id;
     DELETE FROM skolenza."Campus" WHERE "InstitutionId" = v_institution_id;
-    DELETE FROM skolenza."Designation" WHERE "InstitutionId" = v_institution_id;
+    DELETE FROM skolenza."StaffPositionCapability" WHERE "InstitutionId" = v_institution_id;
+    DELETE FROM skolenza."StaffPositionDuty" WHERE "InstitutionId" = v_institution_id;
+    DELETE FROM skolenza."StaffPositionMaster" WHERE "InstitutionId" = v_institution_id;
+    DELETE FROM skolenza."StaffCategoryJobFamily" WHERE "InstitutionId" = v_institution_id;
+    DELETE FROM skolenza."StaffCapabilityMaster" WHERE "InstitutionId" = v_institution_id;
+    DELETE FROM skolenza."StaffDutyDefinitionMaster" WHERE "InstitutionId" = v_institution_id;
+    DELETE FROM skolenza."InstitutionStaffCategoryMaster" WHERE "InstitutionId" = v_institution_id;
+    DELETE FROM skolenza."StaffJobFamilyMaster" WHERE "InstitutionId" = v_institution_id;
     DELETE FROM skolenza."Department" WHERE "InstitutionId" = v_institution_id;
     DELETE FROM skolenza."ReportingType" WHERE "InstitutionId" = v_institution_id;
 

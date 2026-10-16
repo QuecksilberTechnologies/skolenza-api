@@ -85,7 +85,7 @@ namespace skolenza.persistance.Repositories
         //        StaffMemberId = entity.StaffMemberId.ToString(),
 
         //        CompanyName = entity.CompanyName,
-        //        Designation = entity.Designation,
+        //        PreviousPositionTitle = entity.PreviousPositionTitle,
         //        StaffMemberIdOfCompany = entity.StaffMemberIdOfCompany,
         //        Ctc = entity.Ctc,
 
@@ -105,7 +105,7 @@ namespace skolenza.persistance.Repositories
         //        Remark = entity.Remark,
 
         //        ColleagueName = entity.ColleagueName,
-        //        ColleagueDesignation = entity.ColleagueDesignation,
+        //        ColleaguePositionTitle = entity.ColleaguePositionTitle,
         //        ColleagueContactNumber = entity.ColleagueContactNumber,
 
         //        ReportingManagerName = entity.ReportingManagerName,
@@ -224,7 +224,7 @@ namespace skolenza.persistance.Repositories
                 baseQuery = sortBy switch
                 {
                     "companyname" => isDescending ? baseQuery.OrderByDescending(x => x.CompanyName) : baseQuery.OrderBy(x => x.CompanyName),
-                    "designation" => isDescending ? baseQuery.OrderByDescending(x => x.Designation) : baseQuery.OrderBy(x => x.Designation),
+                    "previouspositiontitle" => isDescending ? baseQuery.OrderByDescending(x => x.PreviousPositionTitle) : baseQuery.OrderBy(x => x.PreviousPositionTitle),
                     "startdate" => isDescending ? baseQuery.OrderByDescending(x => x.StartDate) : baseQuery.OrderBy(x => x.StartDate),
                     "enddate" => isDescending ? baseQuery.OrderByDescending(x => x.EndDate) : baseQuery.OrderBy(x => x.EndDate),
                     _ => isDescending ? baseQuery.OrderByDescending(x => x.Id) : baseQuery.OrderBy(x => x.Id)
@@ -263,7 +263,7 @@ namespace skolenza.persistance.Repositories
                         Id = exp.Id,
 
                         CompanyName = exp.CompanyName,
-                        Designation = exp.Designation,
+                        PreviousPositionTitle = exp.PreviousPositionTitle,
                         StaffMemberIdOfCompany = exp.StaffMemberIdOfCompany,
                         Ctc = exp.Ctc,
 
@@ -283,7 +283,7 @@ namespace skolenza.persistance.Repositories
                         Remark = exp.Remark,
 
                         ColleagueName = exp.ColleagueName,
-                        ColleagueDesignation = exp.ColleagueDesignation,
+                        ColleaguePositionTitle = exp.ColleaguePositionTitle,
                         ColleagueContactNumber = exp.ColleagueContactNumber,
 
                         ReportingManagerName = exp.ReportingManagerName,

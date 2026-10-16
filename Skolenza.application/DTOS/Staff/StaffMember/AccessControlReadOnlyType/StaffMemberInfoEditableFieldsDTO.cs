@@ -46,7 +46,7 @@ namespace skolenza.application.DTOs.Staff.AccessControlReadOnlyType
         public int? DepartmentId { get; set; }    // Optional Dropdown
 
         [AccessControl(ReadOnly = true)]
-        public int? DesignationId { get; set; }   // Optional Dropdown
+        public int? StaffPositionMasterId { get; set; }   // Optional Dropdown
 
         [AccessControl(ReadOnly = true)]
         public required int StaffEmploymentTypeId { get; set; }   // Dropdown: e.g., Intern, Full-Time, Contractor

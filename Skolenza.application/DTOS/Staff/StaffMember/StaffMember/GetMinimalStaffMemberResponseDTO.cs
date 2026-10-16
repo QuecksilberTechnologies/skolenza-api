@@ -26,9 +26,9 @@ namespace skolenza.application.DTOS.Staff.BaseStaffMember
         public string? Nationality { get; set; }
         public string? StaffEmploymentTypeName { get; set; }
         public string? DepartmentName { get; set; }
-        public string? DesignationName { get; set; }
+        public string? PositionName { get; set; }
         public int DepartmentId { get; set; }
-        public int DesignationId { get; set; }
+        public int StaffPositionMasterId { get; set; }
         public string? OfficialEmail { get; set; }
         public bool IsActive { get; set; }
        // public bool IsOnboard { get; set; }

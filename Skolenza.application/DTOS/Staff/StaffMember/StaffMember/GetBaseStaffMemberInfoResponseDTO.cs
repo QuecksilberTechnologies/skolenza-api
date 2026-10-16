@@ -17,7 +17,7 @@ namespace skolenza.application.DTOS.Staff.BaseStaffMember
             public string? MiddleName { get; set; }
             public string? FirstName { get; set; } = string.Empty;
             public int GenderId { get; set; }
-            public string? DesignationName { get; set; }
+            public string? PositionName { get; set; }
             public string? DepartmentName { get; set; }
             public string? EmergencyContactPerson { get; set; }
             public string? EmergencyContactNumber { get; set; }
@@ -40,7 +40,7 @@ namespace skolenza.application.DTOS.Staff.BaseStaffMember
             public DateTime? DateOfBirth { get; set; }  
             public DateTime? DateOfOnBoarding { get; set; }  
             public DateTime? DateOfExit { get; set; }
-            public int DesignationId { get; set; }
+            public int StaffPositionMasterId { get; set; }
             public string? GenderName { get; set; }
             public int StaffEmploymentTypeId { get; set; }
             public short? StaffCategoryId { get; set; }

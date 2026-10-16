@@ -224,7 +224,7 @@ public sealed class PolicyApplicability
     public long? CampusId { get; set; }
     public int? StaffEmploymentTypeId { get; set; }
     public int? DepartmentId { get; set; }
-    public int? DesignationId { get; set; }
+    public int? StaffPositionMasterId { get; set; }
     public long? StaffMemberId { get; set; }
     public int? GenderId { get; set; }
     public short? WorkArrangementType { get; set; }

@@ -1083,8 +1083,11 @@ namespace skolenza.persistance.Repositories
 
 
                 //  Step 8: ONE-TIME lookup tables (Dictionary = O(1))
-                var designationLookup = await _context.Designations
-                    .ToDictionaryAsync(x => x.Id, x => x.DesignationName);
+                var pageStaffIds = staffMembers.Select(row => row.StaffMember.Id).ToList();
+                var positionLookup = await StaffProfessionalStructureRepository.CurrentPositionIdentities(
+                        _context, DateOnly.FromDateTime(DateTime.UtcNow))
+                    .Where(position => pageStaffIds.Contains(position.StaffMemberId))
+                    .ToDictionaryAsync(position => position.StaffMemberId);
 
                 var departmentLookup = await _context.Departments
                     .ToDictionaryAsync(x => x.Id, x => x.DepartmentName);
@@ -1122,8 +1125,8 @@ namespace skolenza.persistance.Repositories
                         GenderId = x.StaffMember.GenderId ?? 0,
                         GenderName = genderLookup.GetValueOrDefault(x.StaffMember.GenderId ?? 0),
 
-                        DesignationId = x.StaffMember.DesignationId ?? 0,
-                        DesignationName = designationLookup.GetValueOrDefault(x.StaffMember.DesignationId ?? 0),
+                        StaffPositionMasterId = positionLookup.GetValueOrDefault(x.StaffMember.Id)?.StaffPositionMasterId ?? 0,
+                        PositionName = positionLookup.GetValueOrDefault(x.StaffMember.Id)?.PositionName,
 
                         DepartmentId = x.StaffMember.DepartmentId ?? 0,
                         DepartmentName = departmentLookup.GetValueOrDefault(x.StaffMember.DepartmentId ?? 0),
@@ -1207,9 +1210,9 @@ namespace skolenza.persistance.Repositories
                         on emp.GenderId equals (long?)gender.Id into genderJoin
                     from g in genderJoin.DefaultIfEmpty()
 
-                    join designation in _context.Designations
-                        on emp.DesignationId equals (long?)designation.Id into desigJoin
-                    from d in desigJoin.DefaultIfEmpty()
+                    join position in StaffProfessionalStructureRepository.CurrentPositionIdentities(_context, DateOnly.FromDateTime(DateTime.UtcNow))
+                        on emp.Id equals position.StaffMemberId into positionJoin
+                    from d in positionJoin.DefaultIfEmpty()
 
                     join empType in _context.StaffEmploymentTypes
                         on emp.StaffEmploymentTypeId equals (long?)empType.Id into typeJoin
@@ -1242,7 +1245,8 @@ namespace skolenza.persistance.Repositories
                         cont,
                         dist,
                         GenderName = g != null ? g.GenderName : "",
-                        DesignationName = d != null ? d.DesignationName : "",
+                        PositionId = d != null ? (int?)d.StaffPositionMasterId : null,
+                        PositionName = d != null ? d.PositionName : "",
                         StaffEmploymentTypeName = et != null ? et.TypeName : "",
                         DepartmentName = dep != null ? dep.DepartmentName : "",
                         CountryName = c != null ? c.CountryName : "",
@@ -1286,8 +1290,15 @@ namespace skolenza.persistance.Repositories
                 if (dto.DepartmentId > 0)
                     baseQuery = baseQuery.Where(x => x.emp.DepartmentId == dto.DepartmentId);
 
-                if (dto.DesignationId > 0)
-                    baseQuery = baseQuery.Where(x => x.emp.DesignationId == dto.DesignationId);
+                if (dto.StaffPositionMasterId > 0)
+                {
+                    var today = DateOnly.FromDateTime(DateTime.UtcNow);
+                    baseQuery = baseQuery.Where(x => _context.StaffPositionAssignments.Any(assignment =>
+                        assignment.InstitutionId == institutionId && assignment.StaffMemberId == x.emp.Id &&
+                        assignment.StaffPositionMasterId == dto.StaffPositionMasterId &&
+                        assignment.IsPrimary && assignment.IsActive && assignment.EffectiveFrom <= today &&
+                        (!assignment.EffectiveTo.HasValue || assignment.EffectiveTo >= today)));
+                }
 
                 if (dto.StaffEmploymentTypeId.HasValue && dto.StaffEmploymentTypeId.Value > 0)
                     baseQuery = baseQuery.Where(x => x.emp.StaffEmploymentTypeId == dto.StaffEmploymentTypeId.Value);
@@ -1420,8 +1431,8 @@ namespace skolenza.persistance.Repositories
                         RoleId = 1,                              //  role join nahi hai
                         RoleType = null,
 
-                        DesignationId = x.emp.DesignationId ?? 0,
-                        Designation = x.DesignationName,
+                        StaffPositionMasterId = x.PositionId ?? 0,
+                        PositionName = x.PositionName,
 
                         DepartmentId = x.emp.DepartmentId ?? 0,
                         Department = x.DepartmentName,
@@ -1453,12 +1464,12 @@ namespace skolenza.persistance.Repositories
                         GenderId = x.emp.GenderId ?? 0,
                         StaffEmploymentTypeId = x.emp.StaffEmploymentTypeId ?? 0,
                         StaffCategoryId = x.emp.StaffCategoryId,
-                        DesignationId = x.emp.DesignationId ?? 0,
+                        StaffPositionMasterId = x.PositionId,
                         DepartmentId = x.emp.DepartmentId ?? 0,
                         GenderName = x.GenderName,
                         MobileNumber  = x.emp?.MobileNumber,
                         StaffEmploymentTypeName = x.StaffEmploymentTypeName,
-                        DesignationName = x.DesignationName,
+                        PositionName = x.PositionName,
                         DepartmentName = x.DepartmentName,
                         OfficialEmail = x.emp.OfficialEmail,
                         StaffMemberImagePath = img?.FilePath,
@@ -1557,11 +1568,10 @@ namespace skolenza.persistance.Repositories
                         on emp.GenderId equals (long?)gender.Id into genderJoin
                     from g in genderJoin.DefaultIfEmpty()
 
-                        //  Designation
-                    join designation in _context.Designations
-                        .Where(x => x.IsActive == true && x.IsSoftDeleted != true)
-                        on emp.DesignationId equals (long?)designation.Id into desigJoin
-                    from d in desigJoin.DefaultIfEmpty()
+                        //  Position
+                    join position in StaffProfessionalStructureRepository.CurrentPositionIdentities(_context, DateOnly.FromDateTime(DateTime.UtcNow))
+                        on emp.Id equals position.StaffMemberId into positionJoin
+                    from d in positionJoin.DefaultIfEmpty()
 
                         //  StaffMember Type
                     join empType in _context.StaffEmploymentTypes
@@ -1611,7 +1621,8 @@ namespace skolenza.persistance.Repositories
                         RoleName = r != null ? r.RoleName : null,
                         RoleType = r != null ? r.RoleType : (int?)null,
 
-                        DesignationName = d != null ? d.DesignationName : string.Empty,
+                        PositionId = d != null ? (int?)d.StaffPositionMasterId : null,
+                        PositionName = d != null ? d.PositionName : string.Empty,
                         StaffEmploymentTypeName = et != null ? et.TypeName : string.Empty,
                         DepartmentName = dep != null ? dep.DepartmentName : string.Empty,
                         CountryCode = c != null ? c.CountryCode : string.Empty
@@ -1677,8 +1688,8 @@ namespace skolenza.persistance.Repositories
 
                 StaffMemberId = staffMemberData.emp.Id.ToString(),
 
-                DesignationId = staffMemberData.emp.DesignationId ?? 0,
-                Designation = staffMemberData.DesignationName,
+                StaffPositionMasterId = staffMemberData.PositionId ?? 0,
+                PositionName = staffMemberData.PositionName,
 
                 DepartmentId = staffMemberData.emp.DepartmentId ?? 0,
                 Department = staffMemberData.DepartmentName,
@@ -1704,11 +1715,10 @@ namespace skolenza.persistance.Repositories
                 await (
                     from emp in _context.StaffMembers.AsNoTracking()
 
-                        //  Designation (Active + Not Deleted)
-                    join designation in _context.Designations
-                        .Where(x => x.IsActive == true && x.IsSoftDeleted != true)
-                        on emp.DesignationId equals (long?)designation.Id into desigJoin
-                    from d in desigJoin.DefaultIfEmpty()
+                        //  Position (Active + Not Deleted)
+                    join position in StaffProfessionalStructureRepository.CurrentPositionIdentities(_context, DateOnly.FromDateTime(DateTime.UtcNow))
+                        on emp.Id equals position.StaffMemberId into positionJoin
+                    from d in positionJoin.DefaultIfEmpty()
 
                         //  Department (Active + Not Deleted)
                     join department in _context.Departments
@@ -1739,8 +1749,8 @@ namespace skolenza.persistance.Repositories
                             (emp.MiddleName ?? string.Empty) + " " +
                             (emp.LastName ?? string.Empty),
 
-                        Designation = emp.DesignationId,
-                        DesignationType = d != null ? d.DesignationName : string.Empty,
+                        StaffPositionMasterId = d != null ? (int?)d.StaffPositionMasterId : null,
+                        PositionName = d != null ? d.PositionName : string.Empty,
 
                         Department = emp.DepartmentId,
                         DepartmentType = dep != null ? dep.DepartmentName : string.Empty,
@@ -1849,7 +1859,6 @@ namespace skolenza.persistance.Repositories
                         x.LastName,
                         x.DateOfBirth,
                         x.DateOfOnBoarding,
-                        x.DesignationId,
                         x.DepartmentId,
                         x.OfficialEmail,
                         x.CountryId,
@@ -1873,7 +1882,7 @@ namespace skolenza.persistance.Repositories
                     .Select(x => new
                     {
                         x.CompanyName,
-                        x.Designation,
+                        x.PreviousPositionTitle,
                         x.StartDate,
                         x.EndDate,
                         x.IsInfoVerified,
@@ -1956,10 +1965,13 @@ namespace skolenza.persistance.Repositories
                             staffMember.LastName,
                             staffMember.DateOfBirth,
                             staffMember.DateOfOnBoarding,
-                            staffMember.DesignationId,
                             staffMember.DepartmentId,
                             staffMember.OfficialEmail,
-                            hasPrimaryImage)
+                            hasPrimaryImage,
+                            await _context.StaffPositionAssignments.AsNoTracking().AnyAsync(assignment =>
+                                assignment.StaffMemberId == staffMemberId && assignment.IsPrimary && assignment.IsActive &&
+                                assignment.EffectiveFrom <= DateOnly.FromDateTime(DateTime.UtcNow) &&
+                                (!assignment.EffectiveTo.HasValue || assignment.EffectiveTo >= DateOnly.FromDateTime(DateTime.UtcNow))))
                     };
 
                 var overviewSection = StaffMemberProfileCompletionCalculator.CreateSection(
@@ -1971,7 +1983,7 @@ namespace skolenza.persistance.Repositories
                     "Experience",
                     experienceRows.Select(x => StaffMemberProfileCompletionCalculator.CalculateRowPercentage(
                         !string.IsNullOrWhiteSpace(x.CompanyName),
-                        !string.IsNullOrWhiteSpace(x.Designation),
+                        !string.IsNullOrWhiteSpace(x.PreviousPositionTitle),
                         x.StartDate.HasValue,
                         x.EndDate.HasValue)).ToArray(),
                     experienceRows.Select(x => x.IsInfoVerified).ToArray(),
@@ -2051,9 +2063,9 @@ namespace skolenza.persistance.Repositories
                         on emp.DepartmentId equals dept.Id into deptJoin
                     from department in deptJoin.DefaultIfEmpty()
 
-                    join desig in _context.Designations.AsNoTracking()
-                        on emp.DesignationId equals desig.Id into desigJoin
-                    from designation in desigJoin.DefaultIfEmpty()
+                    join positionIdentity in StaffProfessionalStructureRepository.CurrentPositionIdentities(_context, DateOnly.FromDateTime(DateTime.UtcNow))
+                        on emp.Id equals positionIdentity.StaffMemberId into positionJoin
+                    from position in positionJoin.DefaultIfEmpty()
 
                     join country in _context.Countries.AsNoTracking()
                         on emp.CountryId equals country.Id into countryJoin
@@ -2065,7 +2077,6 @@ namespace skolenza.persistance.Repositories
                        && et.IsActive == true
                        && et.IsSoftDeleted != true
                        && (department == null || (department.IsActive && department.IsSoftDeleted != true))
-                       && (designation == null || (designation.IsActive && designation.IsSoftDeleted != true))
 
                     select new GetMinimalStaffMemberResponseDTO
                     {
@@ -2081,8 +2092,8 @@ namespace skolenza.persistance.Repositories
                         GenderName = gender != null ? gender.GenderName : null,
                         DepartmentId = emp.DepartmentId ?? 0,
                         DepartmentName = department != null ? department.DepartmentName : null,
-                        DesignationId = emp.DesignationId ?? 0,
-                        DesignationName = designation != null ? designation.DesignationName : null,
+                        StaffPositionMasterId = position != null ? position.StaffPositionMasterId : 0,
+                        PositionName = position != null ? position.PositionName : null,
                         CountryId = nation != null ? nation.Id : 0,
                         Nationality = nation != null ? nation.CountryName : null,
                         CountryCode = nation != null ? nation.CountryCode : null,
@@ -2207,8 +2218,8 @@ namespace skolenza.persistance.Repositories
         await (from emp in _context.StaffMembers.AsNoTracking()
                where emp.Id == staffMember.Id
 
-               join d in _context.Designations
-                   on emp.DesignationId equals d.Id into desigJoin
+               join d in StaffProfessionalStructureRepository.CurrentPositionIdentities(_context, DateOnly.FromDateTime(DateTime.UtcNow))
+                   on emp.Id equals d.StaffMemberId into desigJoin
                from desig in desigJoin.DefaultIfEmpty()
 
                join g in _context.Genders
@@ -2248,8 +2259,8 @@ namespace skolenza.persistance.Repositories
                    GenderId = emp.GenderId ?? 0,
                    GenderName = gender != null ? gender.GenderName : null,
 
-                   DesignationId = emp.DesignationId ?? 0,
-                   DesignationName = desig != null ? desig.DesignationName : null,
+                   StaffPositionMasterId = desig != null ? desig.StaffPositionMasterId : 0,
+                   PositionName = desig != null ? desig.PositionName : null,
 
                    DepartmentId = emp.DepartmentId ?? 0,
                    DepartmentName = department != null ? department.DepartmentName : null,
@@ -2364,8 +2375,8 @@ namespace skolenza.persistance.Repositories
                     (from emp in _context.StaffMembers.AsNoTracking()
                      where emp.Id == staffMemberId
 
-                     join d in _context.Designations
-                         on emp.DesignationId equals d.Id into desigJoin
+                     join d in StaffProfessionalStructureRepository.CurrentPositionIdentities(_context, DateOnly.FromDateTime(DateTime.UtcNow))
+                         on emp.Id equals d.StaffMemberId into desigJoin
                      from desig in desigJoin.DefaultIfEmpty()
 
                      join g in _context.Genders
@@ -2400,8 +2411,8 @@ namespace skolenza.persistance.Repositories
                          OfficialEmail = emp.OfficialEmail,
                          GenderId = emp.GenderId ?? 0,
                          GenderName = gender != null ? gender.GenderName : null,
-                         DesignationId = emp.DesignationId ?? 0,
-                         DesignationName = desig != null ? desig.DesignationName : null,
+                         StaffPositionMasterId = desig != null ? desig.StaffPositionMasterId : 0,
+                         PositionName = desig != null ? desig.PositionName : null,
                          DepartmentId = emp.DepartmentId ?? 0,
                          DepartmentName = department != null ? department.DepartmentName : null,
                          RoleId = r.Id,

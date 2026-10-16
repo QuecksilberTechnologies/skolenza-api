@@ -82,10 +82,10 @@ public sealed class SuperAdminDashboardRepository(
                                   .Where(x => x.InstitutionId == institutionId && !x.IsSoftDeleted)
                               on staffMember.DepartmentId equals (int?)department.Id into departments
                           from department in departments.DefaultIfEmpty()
-                          join designation in context.Designations.AsNoTracking()
-                                  .Where(x => x.InstitutionId == institutionId && !x.IsSoftDeleted)
-                              on staffMember.DesignationId equals (int?)designation.Id into designations
-                          from designation in designations.DefaultIfEmpty()
+                          join position in StaffProfessionalStructureRepository.CurrentPositionIdentities(context, DateOnly.FromDateTime(DateTime.UtcNow))
+                                  .Where(x => x.InstitutionId == institutionId)
+                              on staffMember.Id equals position.StaffMemberId into positions
+                          from position in positions.DefaultIfEmpty()
                           where staffMember.InstitutionId == institutionId &&
                               !staffMember.IsSoftDeleted &&
                               staffMember.DateOfExit.HasValue &&
@@ -99,7 +99,7 @@ public sealed class SuperAdminDashboardRepository(
                               staffMember.MiddleName,
                               staffMember.LastName,
                               DepartmentName = department == null ? null : department.DepartmentName,
-                              DesignationName = designation == null ? null : designation.DesignationName,
+                              PositionName = position == null ? null : position.PositionName,
                               DateOfExit = staffMember.DateOfExit!.Value
                           })
             .Take(limit)
@@ -109,7 +109,7 @@ public sealed class SuperAdminDashboardRepository(
             Encode(row.Id),
             FullName(row.FirstName, row.MiddleName, row.LastName),
             row.DepartmentName,
-            row.DesignationName,
+            row.PositionName,
             row.DateOfExit)).ToList();
     }
 
@@ -174,9 +174,9 @@ public sealed class SuperAdminDashboardRepository(
         join department in context.Departments.AsNoTracking().Where(x => x.InstitutionId == institutionId && !x.IsSoftDeleted)
             on staffMember.DepartmentId equals (int?)department.Id into departments
         from department in departments.DefaultIfEmpty()
-        join designation in context.Designations.AsNoTracking().Where(x => x.InstitutionId == institutionId && !x.IsSoftDeleted)
-            on staffMember.DesignationId equals (int?)designation.Id into designations
-        from designation in designations.DefaultIfEmpty()
+        join position in StaffProfessionalStructureRepository.CurrentPositionIdentities(context, DateOnly.FromDateTime(DateTime.UtcNow)).Where(x => x.InstitutionId == institutionId)
+            on staffMember.Id equals position.StaffMemberId into positions
+        from position in positions.DefaultIfEmpty()
         let roleName = (from userRole in context.UserRoles.AsNoTracking()
                         join role in context.Roles.AsNoTracking() on userRole.RoleId equals role.Id
                         where userRole.StaffMemberId == staffMember.Id && userRole.IsActive && userRole.IsSoftDeleted != true
@@ -187,7 +187,7 @@ public sealed class SuperAdminDashboardRepository(
         {
             StaffMember = staffMember,
             DepartmentName = department == null ? null : department.DepartmentName,
-            DesignationName = designation == null ? null : designation.DesignationName,
+            PositionName = position == null ? null : position.PositionName,
             RoleName = roleName
         };
 
@@ -197,7 +197,7 @@ public sealed class SuperAdminDashboardRepository(
             Encode(row.StaffMember.Id),
             FullName(row.StaffMember.FirstName, row.StaffMember.MiddleName, row.StaffMember.LastName),
             row.DepartmentName,
-            row.DesignationName,
+            row.PositionName,
             row.RoleName,
             date);
     }
@@ -231,7 +231,7 @@ public sealed class SuperAdminDashboardRepository(
     {
         public required skolenza.domain.Entity.StaffMember StaffMember { get; init; }
         public string? DepartmentName { get; init; }
-        public string? DesignationName { get; init; }
+        public string? PositionName { get; init; }
         public string? RoleName { get; init; }
     }
 }

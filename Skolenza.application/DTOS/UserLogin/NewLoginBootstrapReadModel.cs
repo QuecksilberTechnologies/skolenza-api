@@ -74,14 +74,14 @@ public sealed class NewLoginBootstrapReadModel
     public string? DepartmentName { get; set; }
 
     /// <summary>
-    /// Gets or sets the active designation identifier when assigned.
+    /// Gets or sets the effective primary Position identifier when assigned.
     /// </summary>
-    public int? DesignationId { get; set; }
+    public int? StaffPositionMasterId { get; set; }
 
     /// <summary>
-    /// Gets or sets the active designation name when assigned.
+    /// Gets or sets the effective primary Position name when assigned.
     /// </summary>
-    public string? DesignationName { get; set; }
+    public string? PositionName { get; set; }
 
     #endregion
 

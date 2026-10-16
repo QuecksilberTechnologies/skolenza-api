@@ -103,8 +103,8 @@ public class CreateExperienceInfoCommandHandler
                     request.DTO.CompanyName,
                     "Company name");
                 skolenza.application.Common.Helpers.StaffMemberProfileValidationHelper.RequireText(
-                    request.DTO.Designation,
-                    "Designation");
+                    request.DTO.PreviousPositionTitle,
+                    "PreviousPositionTitle");
                 if (!request.DTO.StartDate.HasValue)
                     throw new ValidationErrorException("Start date is required.");
                 skolenza.application.Common.Helpers.StaffMemberProfileValidationHelper.ValidateDateRange(
@@ -138,7 +138,7 @@ public class CreateExperienceInfoCommandHandler
                 {
                     StaffMemberId = staffMemberId,
                     CompanyName = request.DTO.CompanyName,
-                    Designation = request.DTO.Designation,
+                    PreviousPositionTitle = request.DTO.PreviousPositionTitle,
                     StaffMemberIdOfCompany = request.DTO.StaffMemberIdOfCompany,
                     Ctc = request.DTO.Ctc,
                     StartDate = request.DTO.StartDate,
@@ -152,7 +152,7 @@ public class CreateExperienceInfoCommandHandler
                     ReasonForLeaving = request.DTO.ReasonForLeaving,
                     Remark = request.DTO.Remark,
                     ColleagueName = request.DTO.ColleagueName,
-                    ColleagueDesignation = request.DTO.ColleagueDesignation,
+                    ColleaguePositionTitle = request.DTO.ColleaguePositionTitle,
                     ColleagueContactNumber = request.DTO.ColleagueContactNumber,
 
                     ReportingManagerName = request.DTO.ReportingManagerName,
@@ -282,7 +282,7 @@ public class CreateExperienceInfoCommandHandler
                     Id = exp.Id,
                     StaffMemberId = exp.StaffMemberId.ToString(),
                     CompanyName = exp.CompanyName,
-                    Designation = exp.Designation,
+                    PreviousPositionTitle = exp.PreviousPositionTitle,
                     StaffMemberIdOfCompany = exp.StaffMemberIdOfCompany,
                     Ctc = exp.Ctc,
                     StartDate = exp.StartDate,
@@ -296,7 +296,7 @@ public class CreateExperienceInfoCommandHandler
                     ReasonForLeaving = exp.ReasonForLeaving,
                     Remark = exp.Remark,
                     ColleagueName = exp.ColleagueName,
-                    ColleagueDesignation = exp.ColleagueDesignation,
+                    ColleaguePositionTitle = exp.ColleaguePositionTitle,
                     ColleagueContactNumber = exp.ColleagueContactNumber,
                     ReportingManagerName = exp.ReportingManagerName,
                     ReportingManagerNumber = exp.ReportingManagerNumber,

@@ -23,7 +23,7 @@ namespace skolenza.application.DTOS.StaffManagerMappings
         public int ReportingTypeId { get; set; } // Primary / Secondary
 
         public int? DepartmentId { get; set; }
-        public int? DesignationId { get; set; }
+        public int? StaffPositionMasterId { get; set; }
 
         public DateTime EffectiveFrom { get; set; }
         public DateTime? EffectiveTo { get; set; }
