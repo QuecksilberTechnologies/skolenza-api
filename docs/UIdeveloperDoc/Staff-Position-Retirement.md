@@ -38,12 +38,22 @@ The persisted legacy bulk master slot `2` is reserved as `RetiredWorkTitle` and 
 
 ## Deployment order
 
-1. Deploy Position-only API and Angular together while stage 1 compatibility columns still exist.
-2. Verify login, staff list/create/edit/profile, policy assignment and permissions against Development.
+1. Stage the approved Position-only API and existing Position UI while stage 1 compatibility columns still exist. Before starting that API, back up the target and run `database-scripts/migrations/20261017_PreparePositionHistoryColumns.sql`. This renames only three external-work-history text columns, retains their values and is repeatable. Coordinate the API switch: an old binary expecting the previous column names must not remain active against the renamed history schema.
+2. Verify login, staff list/create/edit/profile, policy assignment and permissions against Development. History preparation is independent of destructive master retirement, so these checks no longer depend on first dropping the legacy table.
 3. Stop writes, take a full backup, then run stage 2 of `database-scripts/migrations/20261016_RetireDesignationIntoPositions.sql`.
 4. Repeat smoke checks. Apply the same controlled sequence to Render.
 
-Stage 2 renames history columns and hard-drops legacy foreign keys/table. Running it before the new API deployment would break the currently deployed legacy binary.
+Stage 2 reuses the same idempotent history preparation script and hard-drops legacy foreign keys/table. It remains gated by deployment acceptance. Do not run destructive Stage 2 merely to make history reads work.
+
+### 17 October local reconciliation
+
+- User explicitly approved local history renames while preserving the legacy table and leaving Render unchanged. A full local backup was taken; both history tables had zero rows before/after, with matching fingerprints. Repeating the preparation script succeeded.
+- The Position-only local API now returns both saved staff rows, including Mathematics Teacher, and the UI teacher summary/profile display Position without Designation.
+- Experience's existing `StaffMemberIdOfInstitution` database column is mapped explicitly to the API model's `StaffMemberIdOfCompany`; the mismatch was caught by the seeded rollback test. No text or identity data was rewritten.
+- Dashboard Department Headcount ordering now occurs before DTO construction so EF translates it to PostgreSQL. The read contract and permission pipeline are unchanged.
+- Protected pre-change profile/contact/role gate: 78/78. Dashboard/Staff gate: 23/23. Post-change combined gate: 109/109, zero failed/skipped, including seeded history preservation/idempotency and actual PostgreSQL headcounts.
+- Local UI pagination still reports zero entries despite displaying two rows. The directory On Leave card displays a placeholder count. These are handed to the UI developer; no Angular changes were made.
+- [Current local regression evidence](../testing/staff/position-history-preparation/2026-10-17.md). Render preparation, deployment and destructive Stage 2 remain pending.
 
 ## Tested and deployed status
 

@@ -67,3 +67,20 @@ Staff create and official update use `institutionStaffCategoryMasterId` plus `st
 Migration: `database-scripts/migrations/20261013_AddInstitutionStaffCategoryHierarchy.sql`. It is idempotent, seeds local copies from platform templates, derives current mappings, and backfills Staff and Position local category references. Rollback is available under `database-scripts/rollback`. The migration ran on local and Render databases on 2026-10-13; API/UI deployment still requires the corresponding commits to be published before browser acceptance.
 
 For a business-user explanation with screenshots and current Red Rose setup evidence, see [Staff and Academic Setup — Hinglish Walkthrough](STAFF_AND_ACADEMIC_SETUP_WALKTHROUGH_HINGLISH.md).
+## 2026-10-17 onboarding correction
+
+Host-created category IDs are not limited to the original five seeds. Apply
+`database-scripts/migrations/20261017_AllowHostManagedStaffCategories.sql` before
+onboarding staff under extended categories. It preserves the authoritative
+catalogue FK. This continuation applied it to local only; deployment is pending.
+
+`POST /api/Staff/create` keeps its existing inputs and permission pipeline. The
+creation response now resolves the saved primary Position after assignment and
+returns the institution category name. No Angular implementation is required for
+the additive response correction. Existing consumers must continue using the
+API-backed category/family/Position catalogues and dynamic permission discovery.
+
+Local acceptance: [scenario and exact limits](../testing/staff/host-category-onboarding/2026-10-17.md).
+Teacher account creation, named academic allocation and approved delivery progress
+passed locally. Welcome email was rejected by the external provider's IP policy;
+first login and teacher-role grants have not passed. No Angular changes were made.

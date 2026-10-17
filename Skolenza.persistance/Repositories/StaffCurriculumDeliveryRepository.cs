@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using skolenza.application.DTOS.Staff;
+using skolenza.application.DTOS.Pagination;
 using skolenza.application.Exceptions;
 using skolenza.domain.Entity;
 
@@ -17,6 +18,20 @@ public sealed partial class StaffAcademicStructureRepository
     public async Task<List<CurriculumFrameworkResponseDTO>> GetCurriculumFrameworksAsync(long institutionId, CancellationToken cancellationToken = default) =>
         await ProjectFrameworks(context.CurriculumFrameworks.AsNoTracking().Where(item => item.InstitutionId == institutionId && !item.IsSoftDeleted))
             .ToListAsync(cancellationToken);
+
+    /// <summary>Returns one institution-scoped page of curriculum frameworks.</summary>
+    public Task<PagedResponseDTO<CurriculumFrameworkResponseDTO>> GetCurriculumFrameworksAsync(
+        long institutionId,
+        int pageNumber,
+        int pageSize,
+        CancellationToken cancellationToken = default)
+    {
+        return ProjectFrameworks(context.CurriculumFrameworks.AsNoTracking()
+                .Where(item => item.InstitutionId == institutionId && !item.IsSoftDeleted))
+            .OrderBy(item => item.Name)
+            .ThenBy(item => item.Id)
+            .ToPageAsync(pageNumber, pageSize, cancellationToken);
+    }
 
     public async Task<CurriculumFrameworkResponseDTO> SaveCurriculumFrameworkAsync(CurriculumFrameworkRequestDTO request, long institutionId, long actorId, CancellationToken cancellationToken = default)
     {
@@ -51,17 +66,97 @@ public sealed partial class StaffAcademicStructureRepository
 
     public async Task<List<CurriculumUnitResponseDTO>> GetCurriculumUnitsAsync(long frameworkId, long institutionId, CancellationToken cancellationToken = default)
     {
-        if (!await context.CurriculumFrameworks.AsNoTracking().AnyAsync(item => item.Id == frameworkId && item.InstitutionId == institutionId && !item.IsSoftDeleted, cancellationToken))
-            throw new KeyNotFoundException("Curriculum framework was not found.");
-        var units = await (from unit in context.CurriculumUnits.AsNoTracking()
-                           join offering in context.CourseOfferings.AsNoTracking() on unit.CourseOfferingId equals offering.Id
-                           where unit.InstitutionId == institutionId && unit.CurriculumFrameworkId == frameworkId && !unit.IsSoftDeleted
-                           orderby unit.Sequence, unit.Name
-                           select new CurriculumUnitResponseDTO { Id = unit.Id, CurriculumFrameworkId = unit.CurriculumFrameworkId, CourseOfferingId = unit.CourseOfferingId, CourseOfferingName = offering.Name, ParentCurriculumUnitId = unit.ParentCurriculumUnitId, Code = unit.Code, Name = unit.Name, Description = unit.Description, Sequence = unit.Sequence, PlannedPeriods = unit.PlannedPeriods, LearningOutcome = unit.LearningOutcome, IsActive = unit.IsActive }).ToListAsync(cancellationToken);
+        await EnsureFrameworkAvailableAsync(frameworkId, institutionId, cancellationToken);
+        var units = await ProjectUnits(frameworkId, institutionId).ToListAsync(cancellationToken);
         var ids = units.Select(item => item.Id).ToList();
         var topics = await context.CurriculumTopics.AsNoTracking().Where(item => ids.Contains(item.CurriculumUnitId) && !item.IsSoftDeleted).OrderBy(item => item.Sequence).Select(item => Topic(item)).ToListAsync(cancellationToken);
         foreach (var unit in units) unit.Topics = topics.Where(item => item.CurriculumUnitId == unit.Id).ToList();
         return units;
+    }
+
+    /// <summary>Returns unit headers only; topics have independent pagination.</summary>
+    public async Task<PagedResponseDTO<CurriculumUnitResponseDTO>> GetCurriculumUnitsAsync(
+        long frameworkId,
+        long institutionId,
+        int pageNumber,
+        int pageSize,
+        CancellationToken cancellationToken = default)
+    {
+        await EnsureFrameworkAvailableAsync(frameworkId, institutionId, cancellationToken);
+        return await ProjectUnits(frameworkId, institutionId)
+            .OrderBy(item => item.Sequence)
+            .ThenBy(item => item.Name)
+            .ThenBy(item => item.Id)
+            .ToPageAsync(pageNumber, pageSize, cancellationToken);
+    }
+
+    /// <summary>Returns a page of topics from one institution-owned unit.</summary>
+    public async Task<PagedResponseDTO<CurriculumTopicResponseDTO>> GetCurriculumTopicsAsync(
+        long unitId,
+        long institutionId,
+        int pageNumber,
+        int pageSize,
+        CancellationToken cancellationToken = default)
+    {
+        if (!await context.CurriculumUnits.AsNoTracking().AnyAsync(
+                item => item.Id == unitId && item.InstitutionId == institutionId && !item.IsSoftDeleted,
+                cancellationToken))
+        {
+            throw new KeyNotFoundException("Curriculum unit was not found.");
+        }
+
+        return await context.CurriculumTopics.AsNoTracking()
+            .Where(item => item.CurriculumUnitId == unitId && item.InstitutionId == institutionId && !item.IsSoftDeleted)
+            .OrderBy(item => item.Sequence)
+            .ThenBy(item => item.Name)
+            .ThenBy(item => item.Id)
+            .Select(item => new CurriculumTopicResponseDTO
+            {
+                Id = item.Id,
+                CurriculumUnitId = item.CurriculumUnitId,
+                Code = item.Code,
+                Name = item.Name,
+                Description = item.Description,
+                Sequence = item.Sequence,
+                PlannedPeriods = item.PlannedPeriods,
+                LearningOutcome = item.LearningOutcome,
+                IsActive = item.IsActive
+            })
+            .ToPageAsync(pageNumber, pageSize, cancellationToken);
+    }
+
+    private async Task EnsureFrameworkAvailableAsync(long frameworkId, long institutionId, CancellationToken token)
+    {
+        if (!await context.CurriculumFrameworks.AsNoTracking().AnyAsync(
+                item => item.Id == frameworkId && item.InstitutionId == institutionId && !item.IsSoftDeleted,
+                token))
+        {
+            throw new KeyNotFoundException("Curriculum framework was not found.");
+        }
+    }
+
+    private IQueryable<CurriculumUnitResponseDTO> ProjectUnits(long frameworkId, long institutionId)
+    {
+        return from unit in context.CurriculumUnits.AsNoTracking()
+               join offering in context.CourseOfferings.AsNoTracking() on unit.CourseOfferingId equals offering.Id
+               where unit.InstitutionId == institutionId && unit.CurriculumFrameworkId == frameworkId && !unit.IsSoftDeleted
+               orderby unit.Sequence, unit.Name, unit.Id
+               select new CurriculumUnitResponseDTO
+               {
+                   Id = unit.Id,
+                   CurriculumFrameworkId = unit.CurriculumFrameworkId,
+                   CourseOfferingId = unit.CourseOfferingId,
+                   CourseOfferingName = offering.Name,
+                   ParentCurriculumUnitId = unit.ParentCurriculumUnitId,
+                   Code = unit.Code,
+                   Name = unit.Name,
+                   Description = unit.Description,
+                   Sequence = unit.Sequence,
+                   PlannedPeriods = unit.PlannedPeriods,
+                   LearningOutcome = unit.LearningOutcome,
+                   IsActive = unit.IsActive,
+                   Topics = null
+               };
     }
 
     public async Task<CurriculumUnitResponseDTO> SaveCurriculumUnitAsync(CurriculumUnitRequestDTO request, long institutionId, long actorId, CancellationToken cancellationToken = default)
@@ -129,6 +224,19 @@ public sealed partial class StaffAcademicStructureRepository
 
     public Task<List<LessonPlanResponseDTO>> GetLessonPlansAsync(long institutionId, CancellationToken cancellationToken = default) => ProjectPlans(institutionId).ToListAsync(cancellationToken);
 
+    /// <summary>Returns plans with their complete selected-topic set for one page.</summary>
+    public Task<PagedResponseDTO<LessonPlanResponseDTO>> GetLessonPlansAsync(
+        long institutionId,
+        int pageNumber,
+        int pageSize,
+        CancellationToken cancellationToken = default)
+    {
+        return ProjectPlans(institutionId)
+            .OrderByDescending(item => item.PlannedDate)
+            .ThenByDescending(item => item.Id)
+            .ToPageAsync(pageNumber, pageSize, cancellationToken);
+    }
+
     public Task<List<StaffTeachingAssignmentResponseDTO>> GetTeachingAssignmentsAsync(long institutionId, CancellationToken cancellationToken = default) =>
         (from assignment in context.StaffTeachingAssignments.AsNoTracking()
          join staff in context.StaffMembers.AsNoTracking() on assignment.StaffMemberId equals staff.Id
@@ -189,10 +297,64 @@ public sealed partial class StaffAcademicStructureRepository
 
     public async Task<List<LessonDeliveryResponseDTO>> GetLessonDeliveriesAsync(long institutionId, CancellationToken cancellationToken = default)
     {
-        var rows = await (from log in context.LessonDeliveryLogs.AsNoTracking() join status in context.AcademicWorkflowStatuses.AsNoTracking() on log.WorkflowStatusId equals status.Id where log.InstitutionId == institutionId && !log.IsSoftDeleted orderby log.DeliveredDate descending select new LessonDeliveryResponseDTO { Id = log.Id, LessonPlanId = log.LessonPlanId, DeliveredDate = log.DeliveredDate, CoverageNotes = log.CoverageNotes, Homework = log.Homework, EvidenceReference = log.EvidenceReference, ExceptionReason = log.ExceptionReason, ReplanAction = log.ReplanAction, WorkflowStatusId = log.WorkflowStatusId, WorkflowStatusName = status.Name, IsActive = log.IsActive }).ToListAsync(cancellationToken);
-        var ids = rows.Select(item => item.Id).ToList(); var coverage = await context.LessonDeliveryCoverages.AsNoTracking().Where(item => ids.Contains(item.LessonDeliveryLogId)).ToListAsync(cancellationToken);
-        foreach (var row in rows) row.Coverage = coverage.Where(item => item.LessonDeliveryLogId == row.Id).Select(item => new LessonDeliveryCoverageRequestDTO { CurriculumTopicId = item.CurriculumTopicId, CompletionPercent = item.CompletionPercent }).ToList();
+        var rows = await ProjectDeliveries(institutionId).ToListAsync(cancellationToken);
+        await LoadDeliveryCoverageAsync(rows, cancellationToken);
         return rows;
+    }
+
+    /// <summary>Pages delivery headers before loading complete coverage for that page.</summary>
+    public async Task<PagedResponseDTO<LessonDeliveryResponseDTO>> GetLessonDeliveriesAsync(
+        long institutionId,
+        int pageNumber,
+        int pageSize,
+        CancellationToken cancellationToken = default)
+    {
+        var page = await ProjectDeliveries(institutionId)
+            .OrderByDescending(item => item.DeliveredDate)
+            .ThenByDescending(item => item.Id)
+            .ToPageAsync(pageNumber, pageSize, cancellationToken);
+        await LoadDeliveryCoverageAsync(page.Data, cancellationToken);
+        return page;
+    }
+
+    private IQueryable<LessonDeliveryResponseDTO> ProjectDeliveries(long institutionId)
+    {
+        return from log in context.LessonDeliveryLogs.AsNoTracking()
+               join status in context.AcademicWorkflowStatuses.AsNoTracking() on log.WorkflowStatusId equals status.Id
+               where log.InstitutionId == institutionId && !log.IsSoftDeleted
+               orderby log.DeliveredDate descending, log.Id descending
+               select new LessonDeliveryResponseDTO
+               {
+                   Id = log.Id,
+                   LessonPlanId = log.LessonPlanId,
+                   DeliveredDate = log.DeliveredDate,
+                   CoverageNotes = log.CoverageNotes,
+                   Homework = log.Homework,
+                   EvidenceReference = log.EvidenceReference,
+                   ExceptionReason = log.ExceptionReason,
+                   ReplanAction = log.ReplanAction,
+                   WorkflowStatusId = log.WorkflowStatusId,
+                   WorkflowStatusName = status.Name,
+                   IsActive = log.IsActive
+               };
+    }
+
+    private async Task LoadDeliveryCoverageAsync(List<LessonDeliveryResponseDTO> rows, CancellationToken token)
+    {
+        var ids = rows.Select(item => item.Id).ToList();
+        var coverage = await context.LessonDeliveryCoverages.AsNoTracking()
+            .Where(item => ids.Contains(item.LessonDeliveryLogId))
+            .ToListAsync(token);
+        foreach (var row in rows)
+        {
+            row.Coverage = coverage.Where(item => item.LessonDeliveryLogId == row.Id)
+                .Select(item => new LessonDeliveryCoverageRequestDTO
+                {
+                    CurriculumTopicId = item.CurriculumTopicId,
+                    CompletionPercent = item.CompletionPercent
+                })
+                .ToList();
+        }
     }
 
     public async Task<LessonDeliveryResponseDTO> SaveLessonDeliveryAsync(LessonDeliveryRequestDTO request, long institutionId, long actorId, CancellationToken cancellationToken = default)
@@ -226,17 +388,56 @@ public sealed partial class StaffAcademicStructureRepository
 
     public async Task<List<SyllabusProgressResponseDTO>> GetSyllabusProgressAsync(long institutionId, long? courseOfferingId, CancellationToken cancellationToken = default)
     {
+        var result = await GetSyllabusProgressAsync(institutionId, courseOfferingId,
+            PaginationDefaults.PageNumber, int.MaxValue, cancellationToken);
+        return result.Data;
+    }
+
+    /// <summary>Pages units while retaining every approved coverage input for each returned unit.</summary>
+    public async Task<PagedResponseDTO<SyllabusProgressResponseDTO>> GetSyllabusProgressAsync(
+        long institutionId,
+        long? courseOfferingId,
+        int pageNumber,
+        int pageSize,
+        CancellationToken cancellationToken = default)
+    {
         var approved = await StatusIdAsync("APPROVED", cancellationToken);
         var query = from unit in context.CurriculumUnits.AsNoTracking()
                     join framework in context.CurriculumFrameworks.AsNoTracking() on unit.CurriculumFrameworkId equals framework.Id
                     join offering in context.CourseOfferings.AsNoTracking() on unit.CourseOfferingId equals offering.Id
                     where unit.InstitutionId == institutionId && !unit.IsSoftDeleted && !framework.IsSoftDeleted && (!courseOfferingId.HasValue || unit.CourseOfferingId == courseOfferingId)
                     select new { unit, framework, offering };
-        var units = await query.ToListAsync(cancellationToken); var unitIds = units.Select(item => item.unit.Id).ToList();
+        var page = await query.OrderBy(item => item.unit.Id)
+            .ToPageAsync(pageNumber, pageSize, cancellationToken);
+        var units = page.Data;
+        var unitIds = units.Select(item => item.unit.Id).ToList();
         var topics = await context.CurriculumTopics.AsNoTracking().Where(item => unitIds.Contains(item.CurriculumUnitId) && !item.IsSoftDeleted && item.IsActive).ToListAsync(cancellationToken);
         var topicIds = topics.Select(item => item.Id).ToList();
         var coverage = await (from item in context.LessonDeliveryCoverages.AsNoTracking() join log in context.LessonDeliveryLogs.AsNoTracking() on item.LessonDeliveryLogId equals log.Id where log.InstitutionId == institutionId && log.WorkflowStatusId == approved && !log.IsSoftDeleted && topicIds.Contains(item.CurriculumTopicId) select item).ToListAsync(cancellationToken);
-        return units.Select(row => { var unitTopics = topics.Where(item => item.CurriculumUnitId == row.unit.Id).ToList(); var completed = unitTopics.Select(topic => coverage.Where(item => item.CurriculumTopicId == topic.Id).Select(item => item.CompletionPercent).DefaultIfEmpty(0).Max()).ToList(); return new SyllabusProgressResponseDTO { CurriculumFrameworkId = row.framework.Id, CurriculumFrameworkName = row.framework.Name, CourseOfferingId = row.offering.Id, CourseOfferingName = row.offering.Name, CurriculumUnitId = row.unit.Id, CurriculumUnitName = row.unit.Name, TopicCount = unitTopics.Count, CompletionPercent = completed.Count == 0 ? 0 : Math.Round(completed.Average(), 2) }; }).ToList();
+        var data = units.Select(row =>
+        {
+            var unitTopics = topics.Where(item => item.CurriculumUnitId == row.unit.Id).ToList();
+            var completed = unitTopics.Select(topic => coverage
+                .Where(item => item.CurriculumTopicId == topic.Id)
+                .Select(item => item.CompletionPercent)
+                .DefaultIfEmpty(0)
+                .Max()).ToList();
+            return new SyllabusProgressResponseDTO
+            {
+                CurriculumFrameworkId = row.framework.Id,
+                CurriculumFrameworkName = row.framework.Name,
+                CourseOfferingId = row.offering.Id,
+                CourseOfferingName = row.offering.Name,
+                CurriculumUnitId = row.unit.Id,
+                CurriculumUnitName = row.unit.Name,
+                TopicCount = unitTopics.Count,
+                CompletionPercent = completed.Count == 0 ? 0 : Math.Round(completed.Average(), 2)
+            };
+        }).ToList();
+        return new PagedResponseDTO<SyllabusProgressResponseDTO>(data, page.TotalCount, page.PageNumber, page.PageSize)
+        {
+            TotalPages = page.TotalPages
+        };
     }
 
     public async Task DeleteCurriculumFrameworkAsync(long id, long institutionId, long actorId, CancellationToken cancellationToken = default)

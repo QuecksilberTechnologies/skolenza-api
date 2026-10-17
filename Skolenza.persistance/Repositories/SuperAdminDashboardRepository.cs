@@ -122,11 +122,16 @@ public sealed class SuperAdminDashboardRepository(
             .GroupJoin(context.StaffMembers.AsNoTracking().Where(x => x.InstitutionId == institutionId && x.IsActive && !x.IsSoftDeleted),
                 department => department.Id,
                 staffMember => staffMember.DepartmentId,
-                (department, staffMembers) => new DepartmentHeadcountDTO(
+                (department, staffMembers) => new
+                {
                     department.Id,
                     department.DepartmentName,
-                    staffMembers.Count()))
-            .OrderByDescending(x => x.Headcount).ThenBy(x => x.DepartmentName).ToListAsync(cancellationToken);
+                    Headcount = staffMembers.Count()
+                })
+            .OrderByDescending(x => x.Headcount)
+            .ThenBy(x => x.DepartmentName)
+            .Select(x => new DepartmentHeadcountDTO(x.Id, x.DepartmentName, x.Headcount))
+            .ToListAsync(cancellationToken);
     }
 
     public async Task<IReadOnlyList<DashboardLeaveDTO>> GetCurrentlyOnLeaveAsync(long institutionId, DateOnly today, CancellationToken cancellationToken)

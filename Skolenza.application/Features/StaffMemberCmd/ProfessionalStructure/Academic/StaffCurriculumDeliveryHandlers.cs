@@ -9,25 +9,26 @@ namespace skolenza.application.Features.StaffMemberCmd.ProfessionalStructure.Aca
 #region Requests
 
 public sealed record GetAcademicWorkflowStatusesQuery(CurriculumDeliveryPermissionRequestDTO DTO) : IRequest<ApiResponse<List<AcademicWorkflowStatusOptionDTO>>>;
-public sealed record GetCurriculumFrameworksQuery(CurriculumDeliveryPermissionRequestDTO DTO) : IRequest<ApiResponse<List<CurriculumFrameworkResponseDTO>>>;
+public sealed record GetCurriculumFrameworksQuery(CurriculumDeliveryPagedRequestDTO DTO) : IRequest<ApiResponse<List<CurriculumFrameworkResponseDTO>>>;
 public sealed record SaveCurriculumFrameworkCommand(CurriculumFrameworkRequestDTO DTO) : IRequest<ApiResponse<CurriculumFrameworkResponseDTO>>;
 public sealed record ReviewCurriculumFrameworkCommand(WorkflowReviewRequestDTO DTO) : IRequest<ApiResponse<CurriculumFrameworkResponseDTO>>;
 public sealed record DeleteCurriculumFrameworkCommand(long Id, CurriculumDeliveryPermissionRequestDTO DTO) : IRequest<ApiResponse<bool>>;
-public sealed record GetCurriculumUnitsQuery(long FrameworkId, CurriculumDeliveryPermissionRequestDTO DTO) : IRequest<ApiResponse<List<CurriculumUnitResponseDTO>>>;
+public sealed record GetCurriculumUnitsQuery(long FrameworkId, CurriculumDeliveryPagedRequestDTO DTO) : IRequest<ApiResponse<List<CurriculumUnitResponseDTO>>>;
 public sealed record SaveCurriculumUnitCommand(CurriculumUnitRequestDTO DTO) : IRequest<ApiResponse<CurriculumUnitResponseDTO>>;
 public sealed record DeleteCurriculumUnitCommand(long Id, CurriculumDeliveryPermissionRequestDTO DTO) : IRequest<ApiResponse<bool>>;
+public sealed record GetCurriculumTopicsQuery(long UnitId, CurriculumDeliveryPagedRequestDTO DTO) : IRequest<ApiResponse<List<CurriculumTopicResponseDTO>>>;
 public sealed record SaveCurriculumTopicCommand(CurriculumTopicRequestDTO DTO) : IRequest<ApiResponse<CurriculumTopicResponseDTO>>;
 public sealed record DeleteCurriculumTopicCommand(long Id, CurriculumDeliveryPermissionRequestDTO DTO) : IRequest<ApiResponse<bool>>;
-public sealed record GetLessonPlansQuery(CurriculumDeliveryPermissionRequestDTO DTO) : IRequest<ApiResponse<List<LessonPlanResponseDTO>>>;
+public sealed record GetLessonPlansQuery(CurriculumDeliveryPagedRequestDTO DTO) : IRequest<ApiResponse<List<LessonPlanResponseDTO>>>;
 public sealed record GetCurriculumTeachingAssignmentsQuery(CurriculumDeliveryPermissionRequestDTO DTO) : IRequest<ApiResponse<List<StaffTeachingAssignmentResponseDTO>>>;
 public sealed record SaveLessonPlanCommand(LessonPlanRequestDTO DTO) : IRequest<ApiResponse<LessonPlanResponseDTO>>;
 public sealed record ReviewLessonPlanCommand(WorkflowReviewRequestDTO DTO) : IRequest<ApiResponse<LessonPlanResponseDTO>>;
 public sealed record DeleteLessonPlanCommand(long Id, CurriculumDeliveryPermissionRequestDTO DTO) : IRequest<ApiResponse<bool>>;
-public sealed record GetLessonDeliveriesQuery(CurriculumDeliveryPermissionRequestDTO DTO) : IRequest<ApiResponse<List<LessonDeliveryResponseDTO>>>;
+public sealed record GetLessonDeliveriesQuery(CurriculumDeliveryPagedRequestDTO DTO) : IRequest<ApiResponse<List<LessonDeliveryResponseDTO>>>;
 public sealed record SaveLessonDeliveryCommand(LessonDeliveryRequestDTO DTO) : IRequest<ApiResponse<LessonDeliveryResponseDTO>>;
 public sealed record ReviewLessonDeliveryCommand(WorkflowReviewRequestDTO DTO) : IRequest<ApiResponse<LessonDeliveryResponseDTO>>;
 public sealed record DeleteLessonDeliveryCommand(long Id, CurriculumDeliveryPermissionRequestDTO DTO) : IRequest<ApiResponse<bool>>;
-public sealed record GetSyllabusProgressQuery(long? CourseOfferingId, CurriculumDeliveryPermissionRequestDTO DTO) : IRequest<ApiResponse<List<SyllabusProgressResponseDTO>>>;
+public sealed record GetSyllabusProgressQuery(long? CourseOfferingId, CurriculumDeliveryPagedRequestDTO DTO) : IRequest<ApiResponse<List<SyllabusProgressResponseDTO>>>;
 
 #endregion
 
@@ -66,8 +67,18 @@ public sealed class GetCurriculumFrameworksQueryHandler(
         CancellationToken token)
     {
         var actor = await CurriculumDeliveryContext.ResolveAsync(common);
-        var data = await unit.StaffAcademicStructureRepository.GetCurriculumFrameworksAsync(actor.InstitutionId, token);
-        return ApiResponse<List<CurriculumFrameworkResponseDTO>>.Success(data, "Curriculum frameworks retrieved successfully.");
+        var page = await unit.StaffAcademicStructureRepository.GetCurriculumFrameworksAsync(
+            actor.InstitutionId,
+            request.DTO.PageNumber,
+            request.DTO.PageSize,
+            token);
+        return ApiResponse<List<CurriculumFrameworkResponseDTO>>.SuccessPaginated(
+            page.Data,
+            page.PageNumber,
+            page.PageSize,
+            page.TotalCount,
+            page.TotalPages,
+            "Curriculum frameworks retrieved successfully.");
     }
 }
 public sealed class SaveCurriculumFrameworkCommandHandler(
@@ -94,8 +105,18 @@ public sealed class GetCurriculumUnitsQueryHandler(
         CancellationToken token)
     {
         var actor = await CurriculumDeliveryContext.ResolveAsync(common);
-        var data = await unit.StaffAcademicStructureRepository.GetCurriculumUnitsAsync(request.FrameworkId, actor.InstitutionId, token);
-        return ApiResponse<List<CurriculumUnitResponseDTO>>.Success(data, "Curriculum units retrieved successfully.");
+        var page = await unit.StaffAcademicStructureRepository.GetCurriculumUnitsAsync(
+            request.FrameworkId, actor.InstitutionId,
+            request.DTO.PageNumber,
+            request.DTO.PageSize,
+            token);
+        return ApiResponse<List<CurriculumUnitResponseDTO>>.SuccessPaginated(
+            page.Data,
+            page.PageNumber,
+            page.PageSize,
+            page.TotalCount,
+            page.TotalPages,
+            "Curriculum units retrieved successfully.");
     }
 }
 public sealed class ReviewCurriculumFrameworkCommandHandler(
@@ -132,6 +153,32 @@ public sealed class SaveCurriculumUnitCommandHandler(
         return ApiResponse<CurriculumUnitResponseDTO>.Success(data, "Curriculum unit saved successfully.");
     }
 }
+public sealed class GetCurriculumTopicsQueryHandler(
+    IUnitOfWork unit,
+    ICommonRequestService common)
+    : IRequestHandler<GetCurriculumTopicsQuery, ApiResponse<List<CurriculumTopicResponseDTO>>>
+{
+    public async Task<ApiResponse<List<CurriculumTopicResponseDTO>>> Handle(
+        GetCurriculumTopicsQuery request,
+        CancellationToken token)
+    {
+        var actor = await CurriculumDeliveryContext.ResolveAsync(common);
+        var page = await unit.StaffAcademicStructureRepository.GetCurriculumTopicsAsync(
+            request.UnitId,
+            actor.InstitutionId,
+            request.DTO.PageNumber,
+            request.DTO.PageSize,
+            token);
+        return ApiResponse<List<CurriculumTopicResponseDTO>>.SuccessPaginated(
+            page.Data,
+            page.PageNumber,
+            page.PageSize,
+            page.TotalCount,
+            page.TotalPages,
+            "Curriculum topics retrieved successfully.");
+    }
+}
+
 public sealed class SaveCurriculumTopicCommandHandler(
     IUnitOfWork unit,
     ICommonRequestService common)
@@ -156,8 +203,18 @@ public sealed class GetLessonPlansQueryHandler(
         CancellationToken token)
     {
         var actor = await CurriculumDeliveryContext.ResolveAsync(common);
-        var data = await unit.StaffAcademicStructureRepository.GetLessonPlansAsync(actor.InstitutionId, token);
-        return ApiResponse<List<LessonPlanResponseDTO>>.Success(data, "Lesson plans retrieved successfully.");
+        var page = await unit.StaffAcademicStructureRepository.GetLessonPlansAsync(
+            actor.InstitutionId,
+            request.DTO.PageNumber,
+            request.DTO.PageSize,
+            token);
+        return ApiResponse<List<LessonPlanResponseDTO>>.SuccessPaginated(
+            page.Data,
+            page.PageNumber,
+            page.PageSize,
+            page.TotalCount,
+            page.TotalPages,
+            "Lesson plans retrieved successfully.");
     }
 }
 public sealed class GetCurriculumTeachingAssignmentsQueryHandler(
@@ -212,8 +269,18 @@ public sealed class GetLessonDeliveriesQueryHandler(
         CancellationToken token)
     {
         var actor = await CurriculumDeliveryContext.ResolveAsync(common);
-        var data = await unit.StaffAcademicStructureRepository.GetLessonDeliveriesAsync(actor.InstitutionId, token);
-        return ApiResponse<List<LessonDeliveryResponseDTO>>.Success(data, "Lesson deliveries retrieved successfully.");
+        var page = await unit.StaffAcademicStructureRepository.GetLessonDeliveriesAsync(
+            actor.InstitutionId,
+            request.DTO.PageNumber,
+            request.DTO.PageSize,
+            token);
+        return ApiResponse<List<LessonDeliveryResponseDTO>>.SuccessPaginated(
+            page.Data,
+            page.PageNumber,
+            page.PageSize,
+            page.TotalCount,
+            page.TotalPages,
+            "Lesson deliveries retrieved successfully.");
     }
 }
 public sealed class SaveLessonDeliveryCommandHandler(
@@ -254,8 +321,18 @@ public sealed class GetSyllabusProgressQueryHandler(
         CancellationToken token)
     {
         var actor = await CurriculumDeliveryContext.ResolveAsync(common);
-        var data = await unit.StaffAcademicStructureRepository.GetSyllabusProgressAsync(actor.InstitutionId, request.CourseOfferingId, token);
-        return ApiResponse<List<SyllabusProgressResponseDTO>>.Success(data, "Syllabus progress retrieved successfully.");
+        var page = await unit.StaffAcademicStructureRepository.GetSyllabusProgressAsync(
+            actor.InstitutionId, request.CourseOfferingId,
+            request.DTO.PageNumber,
+            request.DTO.PageSize,
+            token);
+        return ApiResponse<List<SyllabusProgressResponseDTO>>.SuccessPaginated(
+            page.Data,
+            page.PageNumber,
+            page.PageSize,
+            page.TotalCount,
+            page.TotalPages,
+            "Syllabus progress retrieved successfully.");
     }
 }
 

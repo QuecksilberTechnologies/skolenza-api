@@ -1,4 +1,6 @@
 using skolenza.application.DTOs.BaseDTO;
+using skolenza.application.DTOS.Pagination;
+using System.Text.Json.Serialization;
 
 namespace skolenza.application.DTOS.Staff;
 
@@ -10,6 +12,16 @@ public sealed class AcademicWorkflowStatusOptionDTO
 }
 
 public sealed class CurriculumDeliveryPermissionRequestDTO : PermissionRequestDTO;
+
+/// <summary>Permission context and paging for curriculum list endpoints.</summary>
+public sealed class CurriculumDeliveryPagedRequestDTO : PermissionPagedRequestDTO
+{
+    public CurriculumDeliveryPagedRequestDTO()
+    {
+        PageNumber = PaginationDefaults.PageNumber;
+        PageSize = PaginationDefaults.PageSize;
+    }
+}
 
 public sealed class CurriculumFrameworkRequestDTO : PermissionRequestDTO
 {
@@ -82,7 +94,12 @@ public sealed class CurriculumUnitResponseDTO
     public short PlannedPeriods { get; set; }
     public string? LearningOutcome { get; set; }
     public bool IsActive { get; set; }
-    public List<CurriculumTopicResponseDTO> Topics { get; set; } = [];
+    /// <summary>
+    /// Nested topics remain available on single-record write responses. Paged unit lists
+    /// omit this field; retrieve topics independently through the unit topics endpoint.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public List<CurriculumTopicResponseDTO>? Topics { get; set; } = [];
 }
 
 public sealed class CurriculumTopicResponseDTO

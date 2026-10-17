@@ -44,6 +44,7 @@ $stages = @(
     [pscustomobject]@{ Order = 7; Name = 'host-institution-master-data'; Script = '../SeedHostInstitutionMasterData.sql' },
     [pscustomobject]@{ Order = 8; Name = 'dependent-master'; Script = '05-dependent-master/001-employee-identity-catalog.sql' },
     [pscustomobject]@{ Order = 9; Name = 'verification'; Script = '99-verification/001-verify-canonical-seed.sql' }
+    [pscustomobject]@{ Order = 10; Name = 'host-managed-staff-category-range'; Script = '../migrations/20261017_AllowHostManagedStaffCategories.sql' }
 )
 
 function Read-ConnectionSetting([string] $path) {

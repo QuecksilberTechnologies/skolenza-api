@@ -5,12 +5,58 @@ using skolenza.application.Wrappers;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Routing;
 using NUnit.Framework;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using skolenza.persistance.Data.Context;
+using skolenza.persistance.Repositories;
 
 namespace skolenza.automationtests.Unit;
 
 [TestFixture]
 public sealed class SuperAdminDashboardApiContractTests
 {
+    [Test]
+    [Category("DashboardDatabase")]
+    public async Task Department_headcount_executes_in_PostgreSQL_and_preserves_tenant_counts_and_order()
+    {
+        var settingsPath = Environment.GetEnvironmentVariable("SKOLENZA_HOST_DB_SETTINGS");
+        if (string.IsNullOrWhiteSpace(settingsPath))
+        {
+            Assert.Ignore("Opt-in local PostgreSQL read-only probe.");
+        }
+
+        var configuration = new ConfigurationBuilder().AddJsonFile(settingsPath!).Build();
+        await using var db = new SkolenzaDbContext(new DbContextOptionsBuilder<SkolenzaDbContext>()
+            .UseNpgsql(configuration.GetConnectionString("DefaultConnection")).Options);
+        var institutionId = await db.Departments
+            .Where(x => x.IsActive && !x.IsSoftDeleted && x.InstitutionId.HasValue)
+            .Select(x => x.InstitutionId!.Value)
+            .FirstAsync();
+        var departments = await db.Departments.AsNoTracking()
+            .Where(x => x.InstitutionId == institutionId && x.IsActive && !x.IsSoftDeleted)
+            .ToListAsync();
+        var staff = await db.StaffMembers.AsNoTracking()
+            .Where(x => x.InstitutionId == institutionId && x.IsActive && !x.IsSoftDeleted)
+            .Select(x => x.DepartmentId)
+            .ToListAsync();
+        var repository = new SuperAdminDashboardRepository(db, null!);
+
+        var actual = await repository.GetDepartmentHeadcountAsync(institutionId, CancellationToken.None);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(actual.Select(x => x.DepartmentId), Is.EquivalentTo(departments.Select(x => x.Id)));
+            Assert.That(actual.Select(x => x.Headcount), Is.Ordered.Descending);
+            foreach (var row in actual)
+            {
+                Assert.That(row.Headcount, Is.EqualTo(staff.Count(id => id == row.DepartmentId)));
+                Assert.That(row.DepartmentName, Is.EqualTo(departments.Single(x => x.Id == row.DepartmentId).DepartmentName));
+            }
+        });
+        var anotherInstitution = await repository.GetDepartmentHeadcountAsync(long.MaxValue, CancellationToken.None);
+        Assert.That(anotherInstitution, Is.Empty);
+    }
+
     [Test]
     public void Dashboard_controller_exposes_legacy_and_generic_data_routes()
     {

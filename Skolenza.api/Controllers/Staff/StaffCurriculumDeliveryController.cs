@@ -15,7 +15,11 @@ public sealed class StaffCurriculumDeliveryController(IMediator mediator) : Cont
     [HttpGet("workflow-statuses")]
     public async Task<IActionResult> GetWorkflowStatuses([FromQuery] CurriculumDeliveryPermissionRequestDTO dto, CancellationToken token) => Ok(await mediator.Send(new GetAcademicWorkflowStatusesQuery(dto), token));
     [HttpGet("frameworks")]
-    public async Task<IActionResult> GetFrameworks([FromQuery] CurriculumDeliveryPermissionRequestDTO dto, CancellationToken token) => Ok(await mediator.Send(new GetCurriculumFrameworksQuery(dto), token));
+    /// <summary>Returns one page; defaults to PageNumber=1 and PageSize=10.</summary>
+    public async Task<IActionResult> GetFrameworks([FromQuery] CurriculumDeliveryPagedRequestDTO dto, CancellationToken token)
+    {
+        return Ok(await mediator.Send(new GetCurriculumFrameworksQuery(dto), token));
+    }
     [HttpPost("frameworks")]
     public async Task<IActionResult> CreateFramework([FromBody] CurriculumFrameworkRequestDTO dto, CancellationToken token) => Ok(await mediator.Send(new SaveCurriculumFrameworkCommand(dto), token));
     [HttpPut("frameworks/{id:long}")]
@@ -35,7 +39,11 @@ public sealed class StaffCurriculumDeliveryController(IMediator mediator) : Cont
         return Ok(await mediator.Send(new DeleteCurriculumFrameworkCommand(id, dto), token));
     }
     [HttpGet("frameworks/{frameworkId:long}/units")]
-    public async Task<IActionResult> GetUnits(long frameworkId, [FromQuery] CurriculumDeliveryPermissionRequestDTO dto, CancellationToken token) => Ok(await mediator.Send(new GetCurriculumUnitsQuery(frameworkId, dto), token));
+    /// <summary>Returns one page; defaults to PageNumber=1 and PageSize=10.</summary>
+    public async Task<IActionResult> GetUnits(long frameworkId, [FromQuery] CurriculumDeliveryPagedRequestDTO dto, CancellationToken token)
+    {
+        return Ok(await mediator.Send(new GetCurriculumUnitsQuery(frameworkId, dto), token));
+    }
     [HttpPost("units")]
     public async Task<IActionResult> CreateUnit([FromBody] CurriculumUnitRequestDTO dto, CancellationToken token) => Ok(await mediator.Send(new SaveCurriculumUnitCommand(dto), token));
     [HttpPut("units/{id:long}")]
@@ -48,6 +56,19 @@ public sealed class StaffCurriculumDeliveryController(IMediator mediator) : Cont
     {
         return Ok(await mediator.Send(new DeleteCurriculumUnitCommand(id, dto), token));
     }
+    /// <summary>
+    /// Returns an independently paged topic list for an institution-owned unit.
+    /// Defaults to PageNumber=1 and PageSize=10; uses the existing View permission pipeline.
+    /// </summary>
+    [HttpGet("units/{unitId:long}/topics")]
+    public async Task<IActionResult> GetTopics(
+        long unitId,
+        [FromQuery] CurriculumDeliveryPagedRequestDTO dto,
+        CancellationToken token)
+    {
+        return Ok(await mediator.Send(new GetCurriculumTopicsQuery(unitId, dto), token));
+    }
+
     [HttpPost("topics")]
     public async Task<IActionResult> CreateTopic([FromBody] CurriculumTopicRequestDTO dto, CancellationToken token) => Ok(await mediator.Send(new SaveCurriculumTopicCommand(dto), token));
     [HttpPut("topics/{id:long}")]
@@ -61,7 +82,11 @@ public sealed class StaffCurriculumDeliveryController(IMediator mediator) : Cont
         return Ok(await mediator.Send(new DeleteCurriculumTopicCommand(id, dto), token));
     }
     [HttpGet("lesson-plans")]
-    public async Task<IActionResult> GetLessonPlans([FromQuery] CurriculumDeliveryPermissionRequestDTO dto, CancellationToken token) => Ok(await mediator.Send(new GetLessonPlansQuery(dto), token));
+    /// <summary>Returns one page; defaults to PageNumber=1 and PageSize=10.</summary>
+    public async Task<IActionResult> GetLessonPlans([FromQuery] CurriculumDeliveryPagedRequestDTO dto, CancellationToken token)
+    {
+        return Ok(await mediator.Send(new GetLessonPlansQuery(dto), token));
+    }
     [HttpGet("teaching-assignments")]
     public async Task<IActionResult> GetTeachingAssignments([FromQuery] CurriculumDeliveryPermissionRequestDTO dto, CancellationToken token) => Ok(await mediator.Send(new GetCurriculumTeachingAssignmentsQuery(dto), token));
     [HttpPost("lesson-plans")]
@@ -79,7 +104,11 @@ public sealed class StaffCurriculumDeliveryController(IMediator mediator) : Cont
         return Ok(await mediator.Send(new DeleteLessonPlanCommand(id, dto), token));
     }
     [HttpGet("lesson-deliveries")]
-    public async Task<IActionResult> GetLessonDeliveries([FromQuery] CurriculumDeliveryPermissionRequestDTO dto, CancellationToken token) => Ok(await mediator.Send(new GetLessonDeliveriesQuery(dto), token));
+    /// <summary>Returns one page; defaults to PageNumber=1 and PageSize=10.</summary>
+    public async Task<IActionResult> GetLessonDeliveries([FromQuery] CurriculumDeliveryPagedRequestDTO dto, CancellationToken token)
+    {
+        return Ok(await mediator.Send(new GetLessonDeliveriesQuery(dto), token));
+    }
     [HttpPost("lesson-deliveries")]
     public async Task<IActionResult> CreateLessonDelivery([FromBody] LessonDeliveryRequestDTO dto, CancellationToken token) => Ok(await mediator.Send(new SaveLessonDeliveryCommand(dto), token));
     [HttpPut("lesson-deliveries/{id:long}")]
@@ -95,5 +124,9 @@ public sealed class StaffCurriculumDeliveryController(IMediator mediator) : Cont
         return Ok(await mediator.Send(new DeleteLessonDeliveryCommand(id, dto), token));
     }
     [HttpGet("syllabus-progress")]
-    public async Task<IActionResult> GetSyllabusProgress([FromQuery] long? courseOfferingId, [FromQuery] CurriculumDeliveryPermissionRequestDTO dto, CancellationToken token) => Ok(await mediator.Send(new GetSyllabusProgressQuery(courseOfferingId, dto), token));
+    /// <summary>Returns one page; defaults to PageNumber=1 and PageSize=10.</summary>
+    public async Task<IActionResult> GetSyllabusProgress([FromQuery] long? courseOfferingId, [FromQuery] CurriculumDeliveryPagedRequestDTO dto, CancellationToken token)
+    {
+        return Ok(await mediator.Send(new GetSyllabusProgressQuery(courseOfferingId, dto), token));
+    }
 }

@@ -1,0 +1,91 @@
+[
+  {
+    "pages": 1,
+    "http": 200,
+    "size": 10,
+    "page": 1,
+    "case": "frameworks",
+    "count": 2,
+    "profileMetadataPresent": false,
+    "total": 2
+  },
+  {
+    "pages": 1,
+    "http": 200,
+    "size": 10,
+    "page": 1,
+    "case": "lesson-plans",
+    "count": 1,
+    "profileMetadataPresent": false,
+    "total": 1
+  },
+  {
+    "pages": 1,
+    "http": 200,
+    "size": 10,
+    "page": 1,
+    "case": "lesson-deliveries",
+    "count": 2,
+    "profileMetadataPresent": false,
+    "total": 2
+  },
+  {
+    "pages": 23,
+    "http": 200,
+    "size": 10,
+    "page": 1,
+    "case": "syllabus-progress",
+    "count": 10,
+    "profileMetadataPresent": false,
+    "total": 223
+  },
+  {
+    "pages": 23,
+    "counts": [
+      10,
+      10
+    ],
+    "overlap": 0,
+    "total": 222,
+    "topicsFieldPresent": false,
+    "http": 200,
+    "case": "units-pages-1-and-2"
+  },
+  {
+    "pages": 2,
+    "http": 200,
+    "case": "topics-independent-custom-page-size",
+    "counts": [
+      2,
+      1
+    ],
+    "total": 3
+  },
+  {
+    "size": 10,
+    "http": 200,
+    "case": "nonpositive-defaults",
+    "page": 1
+  },
+  {
+    "case": "anonymous-topics",
+    "http": 401
+  },
+  {
+    "case": "missing-permission",
+    "http": 403
+  },
+  {
+    "case": "missing-unit",
+    "http": 404
+  },
+  {
+    "case": "malformed-page",
+    "http": 400
+  },
+  {
+    "independentTopicsRoutePresent": true,
+    "http": 200,
+    "case": "swagger"
+  }
+]

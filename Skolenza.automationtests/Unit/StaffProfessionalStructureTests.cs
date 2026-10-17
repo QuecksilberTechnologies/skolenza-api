@@ -7,6 +7,7 @@ using skolenza.persistance.Data.Context;
 using skolenza.application.DTOS.Staff;
 using skolenza.persistance.Repositories;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace skolenza.automationtests.Unit;
 
@@ -14,6 +15,52 @@ namespace skolenza.automationtests.Unit;
 [Category("StaffProfessionalStructure")]
 public sealed class StaffProfessionalStructureTests
 {
+    [Test]
+    [Category("PositionCutoverDatabase")]
+    public async Task New_staff_creation_materializes_without_a_Position_then_resolves_its_assignment()
+    {
+        var settingsPath = Environment.GetEnvironmentVariable("SKOLENZA_HOST_DB_SETTINGS");
+        if (string.IsNullOrWhiteSpace(settingsPath))
+        {
+            Assert.Ignore("Opt-in real database rollback test.");
+        }
+        var configuration = new ConfigurationBuilder().AddJsonFile(settingsPath!).Build();
+        await using var db = new SkolenzaDbContext(new DbContextOptionsBuilder<SkolenzaDbContext>()
+            .UseNpgsql(configuration.GetConnectionString("DefaultConnection")).Options);
+        await using var transaction = await db.Database.BeginTransactionAsync();
+        try
+        {
+            var template = await db.StaffMembers.FirstAsync(item => item.IsActive && !item.IsSoftDeleted);
+            var staff = (StaffMember)db.Entry(template).CurrentValues.ToObject();
+            staff.Id = 0;
+            staff.FirstName = "Position";
+            staff.LastName = "Rollback Probe";
+            staff.OfficialEmail = "position-" + Guid.NewGuid().ToString("N") + "@example.test";
+            staff.EmployementCode = "PROBE-" + Guid.NewGuid().ToString("N")[..12];
+            staff.DateOfOnBoarding = DateTime.UtcNow;
+            var roleId = await db.Roles.Where(item => item.InstitutionId == staff.InstitutionId && item.IsActive)
+                .Select(item => item.Id).FirstAsync();
+            var repository = new BaseStaffMemberRepository(db, null!, NullLogger<BaseStaffMemberRepository>.Instance, null!, null!);
+            var result = await repository.CreateStaffMemberAsync(staff,
+                new LoginCredential { InstitutionId = staff.InstitutionId, LoginId = staff.OfficialEmail, IsActive = true, StaffMember = staff },
+                new UserRole { StaffMember = staff, RoleId = roleId, RoleStartDate = DateTime.UtcNow, IsActive = true, IsPrimaryRole = true, AddedById = template.Id, AddedDateTime = DateTime.UtcNow });
+            Assert.That(result.StaffPositionMasterId, Is.Zero);
+
+            var position = await db.StaffPositionMasters.FirstAsync(item => item.InstitutionId == staff.InstitutionId &&
+                item.InstitutionStaffCategoryMasterId == staff.InstitutionStaffCategoryMasterId && item.IsActive && !item.IsSoftDeleted);
+            var professional = new StaffProfessionalStructureRepository(db);
+            await professional.AssignPrimaryPositionAsync(staff.InstitutionId!.Value, staff.Id, position.Id,
+                DateOnly.FromDateTime(DateTime.UtcNow), template.Id);
+            var profile = await professional.GetStaffProfileAsync(staff.InstitutionId.Value, staff.Id);
+            Assert.That(profile?.StaffPositionMasterId, Is.EqualTo(position.Id));
+            Assert.That(profile?.PositionName, Is.EqualTo(position.Name));
+        }
+        finally
+        {
+            await transaction.RollbackAsync();
+        }
+    }
+
     [Test]
     [Category("PositionCutoverDatabase")]
     public async Task Scheduling_a_future_Position_keeps_the_current_Position_effective_until_the_change_date()

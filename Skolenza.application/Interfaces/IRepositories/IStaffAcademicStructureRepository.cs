@@ -1,4 +1,5 @@
 using skolenza.application.DTOS.Staff;
+using skolenza.application.DTOS.Pagination;
 
 namespace skolenza.application.Interfaces.IRepositories;
 
@@ -44,22 +45,28 @@ public interface IStaffAcademicStructureRepository
     Task DeleteClassTeacherAssignmentAsync(long id, long institutionId, CancellationToken cancellationToken = default);
     Task<List<AcademicWorkflowStatusOptionDTO>> GetWorkflowStatusesAsync(CancellationToken cancellationToken = default);
     Task<List<CurriculumFrameworkResponseDTO>> GetCurriculumFrameworksAsync(long institutionId, CancellationToken cancellationToken = default);
+    Task<PagedResponseDTO<CurriculumFrameworkResponseDTO>> GetCurriculumFrameworksAsync(long institutionId, int pageNumber, int pageSize, CancellationToken cancellationToken = default);
     Task<CurriculumFrameworkResponseDTO> SaveCurriculumFrameworkAsync(CurriculumFrameworkRequestDTO request, long institutionId, long actorId, CancellationToken cancellationToken = default);
     Task<CurriculumFrameworkResponseDTO> ReviewCurriculumFrameworkAsync(WorkflowReviewRequestDTO request, long institutionId, long actorId, CancellationToken cancellationToken = default);
     Task DeleteCurriculumFrameworkAsync(long id, long institutionId, long actorId, CancellationToken cancellationToken = default);
     Task<List<CurriculumUnitResponseDTO>> GetCurriculumUnitsAsync(long frameworkId, long institutionId, CancellationToken cancellationToken = default);
+    Task<PagedResponseDTO<CurriculumUnitResponseDTO>> GetCurriculumUnitsAsync(long frameworkId, long institutionId, int pageNumber, int pageSize, CancellationToken cancellationToken = default);
+    Task<PagedResponseDTO<CurriculumTopicResponseDTO>> GetCurriculumTopicsAsync(long unitId, long institutionId, int pageNumber, int pageSize, CancellationToken cancellationToken = default);
     Task<CurriculumUnitResponseDTO> SaveCurriculumUnitAsync(CurriculumUnitRequestDTO request, long institutionId, long actorId, CancellationToken cancellationToken = default);
     Task DeleteCurriculumUnitAsync(long id, long institutionId, long actorId, CancellationToken cancellationToken = default);
     Task<CurriculumTopicResponseDTO> SaveCurriculumTopicAsync(CurriculumTopicRequestDTO request, long institutionId, long actorId, CancellationToken cancellationToken = default);
     Task DeleteCurriculumTopicAsync(long id, long institutionId, long actorId, CancellationToken cancellationToken = default);
     Task<List<LessonPlanResponseDTO>> GetLessonPlansAsync(long institutionId, CancellationToken cancellationToken = default);
+    Task<PagedResponseDTO<LessonPlanResponseDTO>> GetLessonPlansAsync(long institutionId, int pageNumber, int pageSize, CancellationToken cancellationToken = default);
     Task<List<StaffTeachingAssignmentResponseDTO>> GetTeachingAssignmentsAsync(long institutionId, CancellationToken cancellationToken = default);
     Task<LessonPlanResponseDTO> SaveLessonPlanAsync(LessonPlanRequestDTO request, long institutionId, long actorId, CancellationToken cancellationToken = default);
     Task<LessonPlanResponseDTO> ReviewLessonPlanAsync(WorkflowReviewRequestDTO request, long institutionId, long actorId, CancellationToken cancellationToken = default);
     Task DeleteLessonPlanAsync(long id, long institutionId, long actorId, CancellationToken cancellationToken = default);
     Task<List<LessonDeliveryResponseDTO>> GetLessonDeliveriesAsync(long institutionId, CancellationToken cancellationToken = default);
+    Task<PagedResponseDTO<LessonDeliveryResponseDTO>> GetLessonDeliveriesAsync(long institutionId, int pageNumber, int pageSize, CancellationToken cancellationToken = default);
     Task<LessonDeliveryResponseDTO> SaveLessonDeliveryAsync(LessonDeliveryRequestDTO request, long institutionId, long actorId, CancellationToken cancellationToken = default);
     Task<LessonDeliveryResponseDTO> ReviewLessonDeliveryAsync(WorkflowReviewRequestDTO request, long institutionId, long actorId, CancellationToken cancellationToken = default);
     Task DeleteLessonDeliveryAsync(long id, long institutionId, long actorId, CancellationToken cancellationToken = default);
     Task<List<SyllabusProgressResponseDTO>> GetSyllabusProgressAsync(long institutionId, long? courseOfferingId, CancellationToken cancellationToken = default);
+    Task<PagedResponseDTO<SyllabusProgressResponseDTO>> GetSyllabusProgressAsync(long institutionId, long? courseOfferingId, int pageNumber, int pageSize, CancellationToken cancellationToken = default);
 }

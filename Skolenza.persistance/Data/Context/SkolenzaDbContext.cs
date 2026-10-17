@@ -1379,7 +1379,9 @@ namespace skolenza.persistance.Data.Context
                 .HasPrecision(18, 2)
                 .HasColumnName("CTC");
             entity.Property(e => e.PreviousPositionTitle).HasMaxLength(100);
-            entity.Property(e => e.StaffMemberIdOfCompany).HasMaxLength(100);
+            entity.Property(e => e.StaffMemberIdOfCompany)
+                .HasMaxLength(100)
+                .HasColumnName("StaffMemberIdOfInstitution");
             entity.Property(e => e.IsActive).HasDefaultValue(true);
             entity.Property(e => e.IsAnyGap).HasDefaultValue(false);
             entity.Property(e => e.IsForeignExperience).HasDefaultValue(false);

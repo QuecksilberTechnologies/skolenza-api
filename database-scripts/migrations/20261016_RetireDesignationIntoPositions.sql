@@ -200,9 +200,8 @@ ALTER TABLE skolenza."PolicyApplicability" DROP COLUMN "DesignationId";
 ALTER TABLE skolenza."StaffPositionMaster" DROP COLUMN "DesignationId";
 ALTER TABLE skolenza."StaffPositionMaster" ADD CONSTRAINT "CK_StaffPositionMaster_PlatformScope"
     CHECK ("InstitutionId" IS NOT NULL OR "DepartmentId" IS NULL);
-ALTER TABLE skolenza."StaffMemberExperience" RENAME COLUMN "Designation" TO "PreviousPositionTitle";
-ALTER TABLE skolenza."StaffMemberExperience" RENAME COLUMN "ColleagueDesignation" TO "ColleaguePositionTitle";
-ALTER TABLE skolenza."StaffMemberWorkHistory" RENAME COLUMN "Designation" TO "PreviousPositionTitle";
+-- Reuse the independently approved, idempotent history preparation step.
+\ir 20261017_PreparePositionHistoryColumns.sql
 DROP TABLE skolenza."Designation";
 CREATE OR REPLACE FUNCTION skolenza.validate_staff_employment_type_institution()
 RETURNS trigger LANGUAGE plpgsql AS $$

@@ -6,11 +6,19 @@ Phase 3 completes curriculum frameworks, units/topics, lesson-plan approval, act
 
 ## API
 
+**2026-10-17 API-only pagination update:** the six collection routes now use
+`PageNumber=1`, `PageSize=10` by default. Topics are independently paged through
+`GET /units/{unitId}/topics`; paged unit headers no longer embed `topics`.
+See [the complete paging contract and UI integration handoff](CURRICULUM_PAGINATION.md).
+Angular was not changed in this update; existing clients must integrate page
+navigation and the independent Topics request before browser acceptance.
+
 Base route: `/api/Staff/curriculum-delivery`; every route requires authentication and the established institution permission pipeline.
 
 - `GET /workflow-statuses`
 - `GET|POST /frameworks`, `PUT|DELETE /frameworks/{id}`, `PUT /frameworks/{id}/review`
 - `GET /frameworks/{id}/units`
+- `GET /units/{unitId}/topics`
 - `POST /units`, `PUT|DELETE /units/{id}`
 - `POST /topics`, `PUT|DELETE /topics/{id}`
 - `GET /teaching-assignments`

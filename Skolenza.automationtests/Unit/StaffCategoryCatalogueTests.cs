@@ -4,6 +4,8 @@ using Microsoft.AspNetCore.Mvc.Routing;
 using NUnit.Framework;
 using skolenza.api.Controllers.Staff;
 using skolenza.application.Constants;
+using Microsoft.Extensions.Configuration;
+using Npgsql;
 
 namespace skolenza.automationtests.Unit;
 
@@ -11,6 +13,68 @@ namespace skolenza.automationtests.Unit;
 [Category("StaffCategoryCatalogue")]
 public sealed class StaffCategoryCatalogueTests
 {
+    [Test]
+    [Category("StaffCategoryCatalogueDatabase")]
+    public async Task Host_managed_category_allows_extended_ids_but_rejects_unknown_categories()
+    {
+        var settingsPath = Environment.GetEnvironmentVariable("SKOLENZA_HOST_DB_SETTINGS");
+        if (string.IsNullOrWhiteSpace(settingsPath))
+        {
+            Assert.Ignore("Opt-in PostgreSQL rollback test.");
+        }
+
+        var configuration = new ConfigurationBuilder().AddJsonFile(settingsPath!).Build();
+        await using var connection = new NpgsqlConnection(configuration.GetConnectionString("DefaultConnection"));
+        await connection.OpenAsync();
+        await using var transaction = await connection.BeginTransactionAsync();
+        try
+        {
+            var repositoryRoot = Path.GetFullPath(Path.Combine(TestContext.CurrentContext.TestDirectory, "..", "..", "..", ".."));
+            var migration = File.ReadAllText(Path.Combine(repositoryRoot, "database-scripts", "migrations", "20261017_AllowHostManagedStaffCategories.sql"));
+            migration = migration.Replace("BEGIN;", string.Empty).Replace("COMMIT;", string.Empty);
+            await using (var apply = new NpgsqlCommand(migration, connection, transaction))
+            {
+                await apply.ExecuteNonQueryAsync();
+            }
+
+            const string validSql = """
+                INSERT INTO skolenza."StaffCategory"
+                    ("Code", "Name", "DisplayOrder", "IsActive", "IsSystemDefined", "AddedDateTime")
+                VALUES (@code, 'Host category rollback probe', 100, true, false, now())
+                RETURNING "Id";
+                """;
+            short categoryId;
+            await using (var insert = new NpgsqlCommand(validSql, connection, transaction))
+            {
+                insert.Parameters.AddWithValue("code", "PROBE_" + Guid.NewGuid().ToString("N"));
+                categoryId = Convert.ToInt16(await insert.ExecuteScalarAsync());
+            }
+            Assert.That(categoryId, Is.GreaterThan(5));
+
+            await using (var update = new NpgsqlCommand("""
+                UPDATE skolenza."StaffMember" SET "StaffCategoryId" = @category
+                WHERE "Id" = (SELECT MIN("Id") FROM skolenza."StaffMember");
+                """, connection, transaction))
+            {
+                update.Parameters.AddWithValue("category", categoryId);
+                Assert.That(await update.ExecuteNonQueryAsync(), Is.EqualTo(1));
+            }
+
+            await transaction.SaveAsync("invalid_category");
+            await using var invalid = new NpgsqlCommand("""
+                UPDATE skolenza."StaffMember" SET "StaffCategoryId" = 32767
+                WHERE "Id" = (SELECT MIN("Id") FROM skolenza."StaffMember");
+                """, connection, transaction);
+            var exception = Assert.ThrowsAsync<PostgresException>(async () => await invalid.ExecuteNonQueryAsync());
+            Assert.That(exception!.SqlState, Is.EqualTo(PostgresErrorCodes.ForeignKeyViolation));
+            await transaction.RollbackAsync("invalid_category");
+        }
+        finally
+        {
+            await transaction.RollbackAsync();
+        }
+    }
+
     [Test]
     public void Proposed_category_ids_remain_stable()
     {

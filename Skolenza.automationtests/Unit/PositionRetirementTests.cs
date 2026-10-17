@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using NUnit.Framework;
 using skolenza.application.Common.Enums;
 using skolenza.application.Common.Helpers;
@@ -17,6 +18,56 @@ namespace skolenza.automationtests.Unit;
 [Category("PositionRetirement")]
 public sealed class PositionRetirementTests
 {
+    [Test]
+    [Category("PositionCutoverDatabase")]
+    public async Task History_preparation_preserves_titles_and_can_repeat_without_retiring_the_master()
+    {
+        var settingsPath = Environment.GetEnvironmentVariable("SKOLENZA_HOST_DB_SETTINGS");
+        if (string.IsNullOrWhiteSpace(settingsPath))
+        {
+            Assert.Ignore("Opt-in local PostgreSQL rollback probe.");
+        }
+
+        var configuration = new ConfigurationBuilder().AddJsonFile(settingsPath!).Build();
+        await using var db = new SkolenzaDbContext(new DbContextOptionsBuilder<SkolenzaDbContext>()
+            .UseNpgsql(configuration.GetConnectionString("DefaultConnection")).Options);
+        await using var transaction = await db.Database.BeginTransactionAsync();
+        try
+        {
+            var staffId = await db.StaffMembers.Where(x => !x.IsSoftDeleted).Select(x => x.Id).FirstAsync();
+            var experience = new StaffMemberExperience
+            {
+                StaffMemberId = staffId,
+                CompanyName = "History rollback probe",
+                PreviousPositionTitle = "Mathematics Teacher",
+                ColleaguePositionTitle = "Academic Coordinator",
+                IsActive = true
+            };
+            db.StaffMemberExperiences.Add(experience);
+            await db.SaveChangesAsync();
+            await db.Database.ExecuteSqlRawAsync("""
+                ALTER TABLE skolenza."StaffMemberExperience" RENAME COLUMN "PreviousPositionTitle" TO "Designation";
+                ALTER TABLE skolenza."StaffMemberExperience" RENAME COLUMN "ColleaguePositionTitle" TO "ColleagueDesignation";
+                ALTER TABLE skolenza."StaffMemberWorkHistory" RENAME COLUMN "PreviousPositionTitle" TO "Designation";
+                """);
+            var script = File.ReadAllText(Path.Combine(FindRepositoryRoot(), "database-scripts", "migrations",
+                "20261017_PreparePositionHistoryColumns.sql"));
+            await db.Database.ExecuteSqlRawAsync(script);
+            await db.Database.ExecuteSqlRawAsync(script);
+            var actual = await db.StaffMemberExperiences.AsNoTracking().SingleAsync(x => x.Id == experience.Id);
+            await db.Set<StaffMemberWorkHistory>().AsNoTracking().ToListAsync();
+            Assert.Multiple(() =>
+            {
+                Assert.That(actual.PreviousPositionTitle, Is.EqualTo("Mathematics Teacher"));
+                Assert.That(actual.ColleaguePositionTitle, Is.EqualTo("Academic Coordinator"));
+            });
+        }
+        finally
+        {
+            await transaction.RollbackAsync();
+        }
+    }
+
     [Test]
     public void Retired_master_and_foreign_keys_are_absent_from_the_runtime_model()
     {

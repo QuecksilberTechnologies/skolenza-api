@@ -121,6 +121,7 @@ Every entry must include:
 | `LOCK-STAFF-PROFESSIONAL-MODEL-017` | Runtime-valid professional master mapping | LOCKED | Staff professional 4/4; API startup/EF model/Swagger/runtime probes | PENDING | [2026-10-12](docs/testing/staff/professional-structure/2026-10-12.md) |
 | `LOCK-STAFF-ACADEMIC-018` | Tenant-owned academic hierarchy and effective staff teaching responsibility | LOCKED | Staff combined 12/12; tenant rollback 2/2; Release API and Angular production builds; authenticated local CRUD/conflict/isolation | DB/API LIVE; AUTHENTICATED UI PENDING | [2026-10-13](docs/testing/staff/academic-structure/2026-10-13.md) |
 | `LOCK-HOST-STAFF-CATEGORY-CATALOGUE-021` | Host-owned Staff Category catalogue and permission-scoped institution setup | LOCKED | Staff gates 14/14; Angular catalogue/interceptor 67/67; backend Release and Angular production builds | Render DB seed PASS; API/UI deployment and authenticated browser acceptance PENDING | [2026-10-14](docs/testing/staff/host-staff-category-catalogue/2026-10-14.md) |
+| `LOCK-CURRICULUM-API-PAGINATION-022` | Permission-scoped curriculum pagination and independent Topics | LOCKED | New paging 9/9; affected Staff and tenant rollback combined 33/33; Release build and local HTTP probes | API deployment and UI integration PENDING | [2026-10-17](docs/testing/staff/curriculum-pagination/2026-10-17.md) |
 
 ## LOCK-TENANT-REG-001: Tenant registration transaction and actionable errors
 
@@ -941,3 +942,49 @@ Evidence: [2026-10-14 scenario](docs/testing/staff/host-staff-category-catalogue
 - Local authenticated Host create/list and Institution dependent configuration: PASS.
 - Cross-Institution isolation comparison: PENDING.
 - Render API route/deployment and authenticated browser acceptance: PENDING; live OpenAPI did not yet expose the new route.
+
+### 2026-10-17 onboarding acceptance addendum
+
+The Host catalogue remains authoritative beyond its original five seed IDs.
+An obsolete StaffMember range check was found to reject a valid Host-created
+category; the additive migration removes only that range and retains the FK.
+The staff insertion response also now safely handles the interval before its
+primary Position exists, and resolves the response identity after assignment.
+
+Protected pre-change Staff/real-DB gates passed 17/17; profile/contact/role gates
+passed 78/78. Category post-change gates passed 23/23 and the combined affected
+suite passed 102/102 with zero failures/skips. New real-DB tests protect extended
+category validity/unknown-category rejection and pre-assignment Position reads.
+Authenticated local onboarding, named allocation and 0/75/100% progress passed.
+
+The expanded final run passed 108/109 with one old opt-in UAE contact probe
+failing at an absent UAE staff-template prerequisite before handler execution.
+This broader result is unaccepted, not relabelled as a clean gate. Welcome email,
+first login, teacher grants, current UI and Render deployment remain unaccepted.
+No Angular work was performed. See the
+[current scenario](docs/testing/staff/host-category-onboarding/2026-10-17.md).
+
+
+## LOCK-CURRICULUM-API-PAGINATION-022: Curriculum collection paging
+
+### Locked behavior
+
+- Frameworks, Units, independently requested Topics, Lesson Plans, Delivery Logs and Syllabus Progress GET collections default to page 1 / 10 records and reuse the existing permission pipeline and root array/totals response envelope.
+- Nonpositive paging inputs normalize to the central defaults. Filtered totals, deterministic ordering, last/empty pages and overflow-safe offsets are preserved by `QueryPagination.ToPageAsync`.
+- Paged Unit headers omit nested Topics. `/api/Staff/curriculum-delivery/units/{unitId}/topics` pages its institution-owned catalogue independently. Unit save responses retain their existing nested Topics.
+- Plan topic selections and Delivery coverage remain complete per returned record. Syllabus progress uses all approved coverage for the paged units, not just the current Delivery page. No staff profile-completion metadata is added.
+- List paging must not truncate write/review record responses or weaken parent ownership, soft-delete scope or existing permission checks.
+
+### Regression gate and evidence
+
+```powershell
+$env:SKOLENZA_HOST_DB_SETTINGS=(Resolve-Path '.\Skolenza.api\appsettings.Development.json').Path
+dotnet test .\Skolenza.automationtests\Skolenza.automationtests.csproj -c Release --no-restore --filter 'TestCategory=StaffAcademicStructure|TestCategory=StaffProfessionalStructure|TestCategory=StaffCategoryCatalogue|TestCategory=StaffCurriculumDelivery|FullyQualifiedName~HostApiRegressionTests.Institution_creation_real_database_rollback_probe' --logger 'console;verbosity=minimal'
+dotnet build .\Skolenza.sln -c Release --no-restore --nologo
+```
+
+Expected local baseline: 33/33 tests, zero failures/skips; Release build zero errors.
+Verify authenticated local page slices, root totals, independent Topics, 401/403/404/400
+responses and Swagger. [Scenario evidence](docs/testing/staff/curriculum-pagination/2026-10-17.md).
+No Angular changes/build were authorized or performed. UI integration and Render
+deployment are pending acceptance, not implied by this local API lock.

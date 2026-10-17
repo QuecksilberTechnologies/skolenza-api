@@ -2092,7 +2092,7 @@ namespace skolenza.persistance.Repositories
                         GenderName = gender != null ? gender.GenderName : null,
                         DepartmentId = emp.DepartmentId ?? 0,
                         DepartmentName = department != null ? department.DepartmentName : null,
-                        StaffPositionMasterId = position != null ? position.StaffPositionMasterId : 0,
+                        StaffPositionMasterId = (int?)position.StaffPositionMasterId ?? 0,
                         PositionName = position != null ? position.PositionName : null,
                         CountryId = nation != null ? nation.Id : 0,
                         Nationality = nation != null ? nation.CountryName : null,
@@ -2259,7 +2259,7 @@ namespace skolenza.persistance.Repositories
                    GenderId = emp.GenderId ?? 0,
                    GenderName = gender != null ? gender.GenderName : null,
 
-                   StaffPositionMasterId = desig != null ? desig.StaffPositionMasterId : 0,
+                   StaffPositionMasterId = (int?)desig.StaffPositionMasterId ?? 0,
                    PositionName = desig != null ? desig.PositionName : null,
 
                    DepartmentId = emp.DepartmentId ?? 0,
@@ -2411,7 +2411,7 @@ namespace skolenza.persistance.Repositories
                          OfficialEmail = emp.OfficialEmail,
                          GenderId = emp.GenderId ?? 0,
                          GenderName = gender != null ? gender.GenderName : null,
-                         StaffPositionMasterId = desig != null ? desig.StaffPositionMasterId : 0,
+                         StaffPositionMasterId = (int?)desig.StaffPositionMasterId ?? 0,
                          PositionName = desig != null ? desig.PositionName : null,
                          DepartmentId = emp.DepartmentId ?? 0,
                          DepartmentName = department != null ? department.DepartmentName : null,

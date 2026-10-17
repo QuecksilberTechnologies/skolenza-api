@@ -233,6 +233,16 @@ public class CreateBaseStaffMemberInfoCommandHandler
                     validation.UserStaffMemberId,
                     cancellationToken);
 
+                // Resolve the response after the assignment exists. The initial insert
+                // intentionally has no Position assignment while its identity is allocated.
+                var professionalProfile = await _unitOfWork.StaffProfessionalStructureRepository.GetStaffProfileAsync(
+                    validation.InstitutionId,
+                    staffMember.Id,
+                    cancellationToken);
+                savedStaffMember.StaffPositionMasterId = professionalProfile?.StaffPositionMasterId ?? 0;
+                savedStaffMember.PositionName = professionalProfile?.PositionName;
+                savedStaffMember.StaffCategoryName = institutionCategory.Name;
+
                 // ===============================
                 // 1️⃣1️⃣ COMMIT
                 // ===============================

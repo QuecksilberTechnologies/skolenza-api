@@ -2,6 +2,10 @@
 - [Bulk import worker graceful host shutdown — 2026-10-14](bulk/worker-graceful-shutdown/2026-10-14.md)
 # Skolenza scenario test reports
 
+- [Curriculum API pagination and independent Topics — 2026-10-17](staff/curriculum-pagination/2026-10-17.md)
+
+- [Position history preparation and dashboard query regression — 2026-10-17](staff/position-history-preparation/2026-10-17.md)
+
 - [Employee email and institution onboarding — 2026-10-12](email/employee-and-institution-onboarding/2026-10-12.md)
 
 - [Institution role persona catalogue — 2026-10-12](role/institution-persona-catalogue/2026-10-12.md)
@@ -70,6 +74,8 @@ test run.
 
 - [Phase 4 timetable/coverage and Phase 5 communication — 2026-10-14](staff-operations/phase-4-5/2026-10-14.md)
 # Current scenario reports
+
+- [Host-created categories and Position onboarding — 2026-10-17](staff/host-category-onboarding/2026-10-17.md)
 
 - [Host Staff Category Catalogue — 2026-10-14](staff/host-staff-category-catalogue/2026-10-14.md)
 
