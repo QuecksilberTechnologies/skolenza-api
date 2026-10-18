@@ -1,4 +1,5 @@
 using skolenza.application.DTOs.BaseDTO;
+using skolenza.application.DTOS.Pagination;
 
 namespace skolenza.application.DTOS.Staff;
 
@@ -19,6 +20,16 @@ public enum StaffProfessionalMasterType
 }
 
 public sealed class StaffProfessionalPermissionRequestDTO : PermissionRequestDTO;
+
+/// <summary>Institution permission context with centrally defined list pagination defaults.</summary>
+public sealed class StaffProfessionalPagedRequestDTO : PermissionPagedRequestDTO
+{
+    public StaffProfessionalPagedRequestDTO()
+    {
+        PageNumber = PaginationDefaults.PageNumber;
+        PageSize = PaginationDefaults.PageSize;
+    }
+}
 
 public sealed class StaffProfessionalDeleteRequestDTO : PermissionRequestDTO
 {

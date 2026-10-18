@@ -2,6 +2,10 @@
 - [Bulk import worker graceful host shutdown — 2026-10-14](bulk/worker-graceful-shutdown/2026-10-14.md)
 # Skolenza scenario test reports
 
+- [Academic pagination and all 17 Staff list API variants — 2026-10-18](staff/academic-pagination/2026-10-18.md)
+
+- [Five Professional Structure tabs: API pagination — 2026-10-18](staff/professional-pagination/2026-10-18.md)
+
 - [Curriculum API pagination and independent Topics — 2026-10-17](staff/curriculum-pagination/2026-10-17.md)
 
 - [Position history preparation and dashboard query regression — 2026-10-17](staff/position-history-preparation/2026-10-17.md)

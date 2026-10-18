@@ -12,7 +12,7 @@ namespace skolenza.application.Features.StaffMemberCmd.ProfessionalStructure;
 
 #region Requests
 
-public sealed record GetInstitutionStaffCategoriesQuery(bool ActiveOnly, StaffProfessionalPermissionRequestDTO DTO)
+public sealed record GetInstitutionStaffCategoriesQuery(bool ActiveOnly, StaffProfessionalPagedRequestDTO DTO)
     : IRequest<ApiResponse<List<InstitutionStaffCategoryResponseDTO>>>;
 
 public sealed record SaveInstitutionStaffCategoryCommand(InstitutionStaffCategoryRequestDTO DTO)
@@ -27,7 +27,7 @@ public sealed record SetInstitutionStaffCategoryActiveCommand(int Id, bool IsAct
 public sealed record GetStaffProfessionalMastersQuery(
     StaffProfessionalMasterType MasterType,
     bool ActiveOnly,
-    StaffProfessionalPermissionRequestDTO DTO)
+    StaffProfessionalPagedRequestDTO DTO)
     : IRequest<ApiResponse<List<StaffProfessionalMasterResponseDTO>>>;
 
 public sealed record SaveStaffProfessionalMasterCommand(
@@ -43,7 +43,7 @@ public sealed record DeleteStaffProfessionalMasterCommand(
 public sealed record GetStaffPositionsQuery(
     bool ActiveOnly,
     int? InstitutionStaffCategoryMasterId,
-    StaffProfessionalPermissionRequestDTO DTO)
+    StaffProfessionalPagedRequestDTO DTO)
     : IRequest<ApiResponse<List<StaffPositionMasterResponseDTO>>>;
 
 public sealed record SaveStaffPositionCommand(StaffPositionMasterRequestDTO DTO)
@@ -68,9 +68,18 @@ public sealed class GetInstitutionStaffCategoriesQueryHandler(IUnitOfWork unitOf
     public async Task<ApiResponse<List<InstitutionStaffCategoryResponseDTO>>> Handle(GetInstitutionStaffCategoriesQuery request, CancellationToken cancellationToken)
     {
         var actor = await ProfessionalStructureRequestContext.ResolveAsync(commonRequestService);
-        var data = await unitOfWork.StaffProfessionalStructureRepository.GetInstitutionCategoriesAsync(
-            actor.InstitutionId, request.ActiveOnly, cancellationToken);
-        return ApiResponse<List<InstitutionStaffCategoryResponseDTO>>.Success(data, "Institution Staff Categories retrieved successfully.");
+        var page = await unitOfWork.StaffProfessionalStructureRepository.GetInstitutionCategoriesAsync(
+            actor.InstitutionId, request.ActiveOnly,
+            request.DTO.PageNumber,
+            request.DTO.PageSize,
+            cancellationToken);
+        return ApiResponse<List<InstitutionStaffCategoryResponseDTO>>.SuccessPaginated(
+            page.Data,
+            page.PageNumber,
+            page.PageSize,
+            page.TotalCount,
+            page.TotalPages,
+            "Institution Staff Categories retrieved successfully.");
     }
 }
 
@@ -120,9 +129,18 @@ public sealed class GetStaffProfessionalMastersQueryHandler(
         CancellationToken cancellationToken)
     {
         var actor = await ProfessionalStructureRequestContext.ResolveAsync(commonRequestService);
-        var data = await unitOfWork.StaffProfessionalStructureRepository.GetMastersAsync(
-            request.MasterType, actor.InstitutionId, request.ActiveOnly, cancellationToken);
-        return ApiResponse<List<StaffProfessionalMasterResponseDTO>>.Success(data, "Professional master records retrieved successfully.");
+        var page = await unitOfWork.StaffProfessionalStructureRepository.GetMastersAsync(
+            request.MasterType, actor.InstitutionId, request.ActiveOnly,
+            request.DTO.PageNumber,
+            request.DTO.PageSize,
+            cancellationToken);
+        return ApiResponse<List<StaffProfessionalMasterResponseDTO>>.SuccessPaginated(
+            page.Data,
+            page.PageNumber,
+            page.PageSize,
+            page.TotalCount,
+            page.TotalPages,
+            "Professional master records retrieved successfully.");
     }
 }
 
@@ -164,9 +182,18 @@ public sealed class GetStaffPositionsQueryHandler(
     public async Task<ApiResponse<List<StaffPositionMasterResponseDTO>>> Handle(GetStaffPositionsQuery request, CancellationToken cancellationToken)
     {
         var actor = await ProfessionalStructureRequestContext.ResolveAsync(commonRequestService);
-        var data = await unitOfWork.StaffProfessionalStructureRepository.GetPositionsAsync(
-            actor.InstitutionId, request.ActiveOnly, request.InstitutionStaffCategoryMasterId, cancellationToken);
-        return ApiResponse<List<StaffPositionMasterResponseDTO>>.Success(data, "Positions retrieved successfully.");
+        var page = await unitOfWork.StaffProfessionalStructureRepository.GetPositionsAsync(
+            actor.InstitutionId, request.ActiveOnly, request.InstitutionStaffCategoryMasterId,
+            request.DTO.PageNumber,
+            request.DTO.PageSize,
+            cancellationToken);
+        return ApiResponse<List<StaffPositionMasterResponseDTO>>.SuccessPaginated(
+            page.Data,
+            page.PageNumber,
+            page.PageSize,
+            page.TotalCount,
+            page.TotalPages,
+            "Positions retrieved successfully.");
     }
 }
 

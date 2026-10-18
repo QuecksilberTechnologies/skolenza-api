@@ -1,3 +1,10 @@
+using System.Reflection;
+using System.Text.Json;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using skolenza.application.DTOs.BaseDTO;
+using skolenza.application.DTOS.Pagination;
+using skolenza.application.Wrappers;
 using NUnit.Framework;
 using Microsoft.EntityFrameworkCore;
 using skolenza.api.Controllers.Staff;
@@ -194,4 +201,218 @@ public sealed class StaffProfessionalStructureTests
             Assert.That(script, Does.Contain("pg_constraint"));
         });
     }
+
+    #region Professional List Pagination
+
+    [TestCase("GetCategories")]
+    [TestCase("GetMasters")]
+    [TestCase("GetPositions")]
+    public void Professional_list_actions_keep_authorization_and_bind_central_paging_defaults(string name)
+    {
+        var action = typeof(StaffProfessionalStructureController).GetMethod(name)!;
+        var dto = action.GetParameters().Single(item => item.Name == "dto");
+        var request = new StaffProfessionalPagedRequestDTO();
+        Assert.Multiple(() =>
+        {
+            Assert.That(dto.ParameterType, Is.EqualTo(typeof(StaffProfessionalPagedRequestDTO)));
+            Assert.That(dto.GetCustomAttribute<FromQueryAttribute>(), Is.Not.Null);
+            Assert.That(request, Is.InstanceOf<PermissionRequestDTO>());
+            Assert.That(request.PageNumber, Is.EqualTo(1));
+            Assert.That(request.PageSize, Is.EqualTo(10));
+            Assert.That(typeof(StaffProfessionalStructureController).GetCustomAttribute<AuthorizeAttribute>(), Is.Not.Null);
+        });
+    }
+
+    [Test]
+    public void Professional_list_envelope_uses_root_totals_without_profile_completion_flags()
+    {
+        var result = ApiResponse<List<StaffProfessionalMasterResponseDTO>>.SuccessPaginated([], 2, 10, 23, 3);
+        using var json = JsonDocument.Parse(JsonSerializer.Serialize(result, new JsonSerializerOptions(JsonSerializerDefaults.Web)));
+        var root = json.RootElement;
+        Assert.Multiple(() =>
+        {
+            Assert.That(root.GetProperty("data").ValueKind, Is.EqualTo(JsonValueKind.Array));
+            Assert.That(root.GetProperty("totalRecords").GetInt32(), Is.EqualTo(23));
+            Assert.That(root.GetProperty("totalPages").GetInt32(), Is.EqualTo(3));
+            Assert.That(root.TryGetProperty("completionPercentage", out _), Is.False);
+            Assert.That(root.TryGetProperty("isPrimaryMarked", out _), Is.False);
+            Assert.That(root.TryGetProperty("hasAllDocUploaded", out _), Is.False);
+        });
+    }
+
+    [Test]
+    [Category("ProfessionalPaginationDatabase")]
+    public async Task Five_professional_catalogues_page_with_filters_full_dependencies_and_beyond_first_page_saves()
+    {
+        var settings = Environment.GetEnvironmentVariable("SKOLENZA_HOST_DB_SETTINGS");
+        if (string.IsNullOrWhiteSpace(settings))
+        {
+            Assert.Ignore("Opt-in PostgreSQL rollback test.");
+        }
+        var configuration = new ConfigurationBuilder().AddJsonFile(settings!).Build();
+        await using var db = new SkolenzaDbContext(new DbContextOptionsBuilder<SkolenzaDbContext>()
+            .UseNpgsql(configuration.GetConnectionString("DefaultConnection")).Options);
+        await using var transaction = await db.Database.BeginTransactionAsync();
+        try
+        {
+            var template = await db.StaffPositionMasters.AsNoTracking().FirstAsync(item => item.InstitutionId.HasValue && !item.IsSoftDeleted);
+            var institutionId = template.InstitutionId!.Value;
+            var actorId = await db.StaffMembers.Where(item => item.InstitutionId == institutionId && !item.IsSoftDeleted).Select(item => item.Id).FirstAsync();
+            var categories = await CreatePagingCatalogueAsync(db, db.InstitutionStaffCategoryMasters, institutionId);
+            var families = await CreatePagingCatalogueAsync(db, db.StaffJobFamilyMasters, institutionId);
+            var capabilities = await CreatePagingCatalogueAsync(db, db.StaffCapabilityMasters, institutionId);
+            var duties = await CreatePagingCatalogueAsync(db, db.StaffDutyDefinitionMasters, institutionId);
+            var positions = await CreatePagingCatalogueAsync(db, db.StaffPositionMasters, institutionId, item =>
+            {
+                item.InstitutionStaffCategoryMasterId = categories[0].Id;
+                item.StaffCategoryId = categories[0].StaffCategoryTypeId;
+                item.StaffJobFamilyMasterId = families[0].Id;
+                item.DepartmentId = null;
+            });
+            db.StaffCategoryJobFamilies.AddRange(families.Select(item => new StaffCategoryJobFamily
+            {
+                InstitutionId = institutionId,
+                InstitutionStaffCategoryMasterId = categories[0].Id,
+                StaffJobFamilyMasterId = item.Id,
+                IsActive = true,
+                AddedById = actorId,
+                AddedDateTime = DateTime.UtcNow
+            }));
+            db.StaffPositionCapabilities.AddRange(positions.SelectMany(position => capabilities.Select(item => new StaffPositionCapability
+            {
+                InstitutionId = institutionId,
+                StaffPositionMasterId = position.Id,
+                StaffCapabilityMasterId = item.Id,
+                IsMandatory = true,
+                AddedById = actorId,
+                AddedDateTime = DateTime.UtcNow
+            })));
+            db.StaffPositionDuties.AddRange(positions.SelectMany(position => duties.Select(item => new StaffPositionDuty
+            {
+                InstitutionId = institutionId,
+                StaffPositionMasterId = position.Id,
+                StaffDutyDefinitionMasterId = item.Id,
+                IsMandatory = false,
+                AddedById = actorId,
+                AddedDateTime = DateTime.UtcNow
+            })));
+            await db.SaveChangesAsync();
+            db.ChangeTracker.Clear();
+            var repository = new StaffProfessionalStructureRepository(db);
+            foreach (var activeOnly in new[] { false, true })
+            {
+                foreach (var type in Enum.GetValues<StaffProfessionalMasterType>())
+                {
+                    var all = (await repository.GetMastersAsync(type, institutionId, activeOnly))
+                        .OrderBy(item => item.DisplayOrder).ThenBy(item => item.Name).ThenBy(item => item.Id).ToList();
+                    await AssertCataloguePagesAsync(all, (page, size) => repository.GetMastersAsync(type, institutionId, activeOnly, page, size));
+                }
+                var allCategories = (await repository.GetInstitutionCategoriesAsync(institutionId, activeOnly))
+                    .OrderBy(item => item.DisplayOrder).ThenBy(item => item.Name).ThenBy(item => item.Id).ToList();
+                await AssertCataloguePagesAsync(allCategories,
+                    (page, size) => repository.GetInstitutionCategoriesAsync(institutionId, activeOnly, page, size));
+                foreach (int? categoryId in new int?[] { null, categories[0].Id })
+                {
+                    var allPositions = (await repository.GetPositionsAsync(institutionId, activeOnly, categoryId))
+                        .OrderBy(item => item.DisplayOrder).ThenBy(item => item.Name).ThenBy(item => item.Id).ToList();
+                    await AssertCataloguePagesAsync(allPositions,
+                        (page, size) => repository.GetPositionsAsync(institutionId, activeOnly, categoryId, page, size));
+                    var probePositions = allPositions.Where(item => positions.Select(position => position.Id).Contains(item.Id)).ToList();
+                    Assert.That(probePositions, Is.Not.Empty);
+                    Assert.That(probePositions.All(item => item.Capabilities.Count == 23 && item.Duties.Count == 23), Is.True);
+                    Assert.That(probePositions.All(item => item.Capabilities.All(capability => capability.IsMandatory) &&
+                        item.Duties.All(duty => !duty.IsMandatory)), Is.True);
+                }
+                Assert.That(allCategories.Single(item => item.Id == categories[0].Id).StaffJobFamilyMasterIds, Has.Count.EqualTo(23));
+            }
+            var savedCategory = await repository.SaveInstitutionCategoryAsync(new InstitutionStaffCategoryRequestDTO
+            {
+                Id = categories[^2].Id,
+                StaffCategoryTypeId = categories[^2].StaffCategoryTypeId,
+                Code = categories[^2].Code,
+                Name = categories[^2].Name,
+                DisplayOrder = categories[^2].DisplayOrder
+            }, institutionId, actorId);
+            var savedPosition = await repository.SavePositionAsync(new StaffPositionMasterRequestDTO
+            {
+                Id = positions[^2].Id,
+                InstitutionStaffCategoryMasterId = categories[0].Id,
+                StaffJobFamilyMasterId = families[0].Id,
+                Code = positions[^2].Code,
+                Name = positions[^2].Name,
+                DisplayOrder = positions[^2].DisplayOrder,
+                Capabilities = [new StaffPositionRequirementRequestDTO { Id = capabilities[0].Id }],
+                Duties = [new StaffPositionRequirementRequestDTO { Id = duties[0].Id }]
+            }, institutionId, actorId);
+            Assert.That(savedCategory.Id, Is.EqualTo(categories[^2].Id));
+            Assert.That(savedPosition.Id, Is.EqualTo(positions[^2].Id));
+            Assert.That(savedPosition.Capabilities, Has.Count.EqualTo(1));
+            foreach (var type in Enum.GetValues<StaffProfessionalMasterType>())
+            {
+                Assert.That((await repository.GetMastersAsync(type, long.MaxValue, false, 1, 10)).TotalCount, Is.Zero);
+            }
+            Assert.That((await repository.GetInstitutionCategoriesAsync(long.MaxValue, false, 1, 10)).Data, Is.Empty);
+            Assert.That((await repository.GetPositionsAsync(long.MaxValue, false, categories[0].Id, 1, 10)).Data, Is.Empty);
+            Assert.That((await repository.GetPositionsAsync(institutionId, false, int.MaxValue, 1, 10)).Data, Is.Empty);
+        }
+        finally
+        {
+            await transaction.RollbackAsync();
+        }
+    }
+
+    private static async Task<List<T>> CreatePagingCatalogueAsync<T>(
+        SkolenzaDbContext db,
+        DbSet<T> set,
+        long institutionId,
+        Action<T>? configure = null)
+        where T : InstitutionMasterEntity
+    {
+        var template = await set.AsNoTracking().FirstAsync(item => item.InstitutionId == institutionId && !item.IsSoftDeleted);
+        var code = "PAGE_" + Guid.NewGuid().ToString("N")[..12];
+        var records = new List<T>();
+        for (var index = 0; index < 23; index++)
+        {
+            var item = (T)db.Entry(template).CurrentValues.ToObject();
+            item.Id = 0;
+            item.Code = code + index;
+            item.Name = code;
+            item.DisplayOrder = 32000;
+            item.IsActive = index % 2 == 0;
+            item.IsSoftDeleted = index == 22;
+            item.AddedDateTime = DateTime.UtcNow;
+            item.UpdatedDateTime = null;
+            item.DeletedDateTime = null;
+            configure?.Invoke(item);
+            records.Add(item);
+        }
+        set.AddRange(records);
+        await db.SaveChangesAsync();
+        db.ChangeTracker.Clear();
+        return records;
+    }
+
+    private static async Task AssertCataloguePagesAsync<T>(List<T> all, Func<int, int, Task<PagedResponseDTO<T>>> read)
+    {
+        Assert.That(all.Count, Is.GreaterThan(10), "Rollback fixture must span multiple pages.");
+        for (var pageNumber = 1; pageNumber <= (int)Math.Ceiling(all.Count / 10d) + 1; pageNumber++)
+        {
+            var page = await read(pageNumber, 10);
+            Assert.Multiple(() =>
+            {
+                Assert.That(JsonSerializer.Serialize(page.Data), Is.EqualTo(JsonSerializer.Serialize(all.Skip((pageNumber - 1) * 10).Take(10).ToList())));
+                Assert.That(page.TotalCount, Is.EqualTo(all.Count));
+                Assert.That(page.TotalPages, Is.EqualTo((int)Math.Ceiling(all.Count / 10d)));
+                Assert.That(page.PageNumber, Is.EqualTo(pageNumber));
+                Assert.That(page.PageSize, Is.EqualTo(10));
+            });
+        }
+        var custom = await read(2, 3);
+        Assert.That(JsonSerializer.Serialize(custom.Data), Is.EqualTo(JsonSerializer.Serialize(all.Skip(3).Take(3).ToList())));
+        var normalized = await read(0, -1);
+        Assert.That(normalized.PageNumber, Is.EqualTo(1));
+        Assert.That(normalized.PageSize, Is.EqualTo(10));
+    }
+
+    #endregion
 }

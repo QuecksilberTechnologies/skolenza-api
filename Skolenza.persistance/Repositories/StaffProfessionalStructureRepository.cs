@@ -1,6 +1,7 @@
 using skolenza.application.Common.Enums;
 using skolenza.application.Constants;
 using skolenza.application.DTOS.Staff;
+using skolenza.application.DTOS.Pagination;
 using skolenza.application.Exceptions;
 using skolenza.application.Interfaces.IRepositories;
 using skolenza.domain.Entity;
@@ -55,10 +56,30 @@ public sealed class StaffProfessionalStructureRepository(SkolenzaDbContext conte
             cancellationToken);
     }
 
-    public async Task<List<InstitutionStaffCategoryResponseDTO>> GetInstitutionCategoriesAsync(
+    public Task<List<InstitutionStaffCategoryResponseDTO>> GetInstitutionCategoriesAsync(
         long institutionId,
         bool activeOnly,
         CancellationToken cancellationToken = default)
+    {
+        return ProjectCategories(institutionId, activeOnly).ToListAsync(cancellationToken);
+    }
+
+    /// <summary>Pages categories while preserving complete family mappings and dependency counts.</summary>
+    public Task<PagedResponseDTO<InstitutionStaffCategoryResponseDTO>> GetInstitutionCategoriesAsync(
+        long institutionId,
+        bool activeOnly,
+        int pageNumber,
+        int pageSize,
+        CancellationToken cancellationToken = default)
+    {
+        return ProjectCategories(institutionId, activeOnly)
+            .OrderBy(item => item.DisplayOrder)
+            .ThenBy(item => item.Name)
+            .ThenBy(item => item.Id)
+            .ToPageAsync(pageNumber, pageSize, cancellationToken);
+    }
+
+    private IQueryable<InstitutionStaffCategoryResponseDTO> ProjectCategories(long institutionId, bool activeOnly)
     {
         var query = context.InstitutionStaffCategoryMasters.AsNoTracking()
             .Where(item => item.InstitutionId == institutionId && !item.IsSoftDeleted);
@@ -67,7 +88,7 @@ public sealed class StaffProfessionalStructureRepository(SkolenzaDbContext conte
             query = query.Where(item => item.IsActive);
         }
 
-        return await query
+        return query
             .OrderBy(item => item.DisplayOrder)
             .ThenBy(item => item.Name)
             .Select(item => new InstitutionStaffCategoryResponseDTO
@@ -98,8 +119,7 @@ public sealed class StaffProfessionalStructureRepository(SkolenzaDbContext conte
                 ActiveStaffCount = context.StaffMembers.Count(staff =>
                     staff.InstitutionId == institutionId &&
                     staff.InstitutionStaffCategoryMasterId == item.Id && staff.IsActive && !staff.IsSoftDeleted)
-            })
-            .ToListAsync(cancellationToken);
+            });
     }
 
     public async Task<InstitutionStaffCategoryResponseDTO> SaveInstitutionCategoryAsync(
@@ -232,11 +252,35 @@ public sealed class StaffProfessionalStructureRepository(SkolenzaDbContext conte
         bool activeOnly,
         CancellationToken cancellationToken = default)
     {
+        return ProjectMasters(type, institutionId, activeOnly).ToListAsync(cancellationToken);
+    }
+
+    /// <summary>Reuses central SQL paging for Job Families, Capabilities and Duties.</summary>
+    public Task<PagedResponseDTO<StaffProfessionalMasterResponseDTO>> GetMastersAsync(
+        StaffProfessionalMasterType type,
+        long institutionId,
+        bool activeOnly,
+        int pageNumber,
+        int pageSize,
+        CancellationToken cancellationToken = default)
+    {
+        return ProjectMasters(type, institutionId, activeOnly)
+            .OrderBy(item => item.DisplayOrder)
+            .ThenBy(item => item.Name)
+            .ThenBy(item => item.Id)
+            .ToPageAsync(pageNumber, pageSize, cancellationToken);
+    }
+
+    private IQueryable<StaffProfessionalMasterResponseDTO> ProjectMasters(
+        StaffProfessionalMasterType type,
+        long institutionId,
+        bool activeOnly)
+    {
         return type switch
         {
-            StaffProfessionalMasterType.JobFamily => QueryMasters(context.StaffJobFamilyMasters, institutionId, activeOnly, cancellationToken),
-            StaffProfessionalMasterType.Capability => QueryCapabilities(institutionId, activeOnly, cancellationToken),
-            StaffProfessionalMasterType.DutyDefinition => QueryDuties(institutionId, activeOnly, cancellationToken),
+            StaffProfessionalMasterType.JobFamily => QueryMasters(context.StaffJobFamilyMasters, institutionId, activeOnly),
+            StaffProfessionalMasterType.Capability => QueryCapabilities(institutionId, activeOnly),
+            StaffProfessionalMasterType.DutyDefinition => QueryDuties(institutionId, activeOnly),
             _ => throw new ValidationErrorException("Unsupported professional master type.")
         };
     }
@@ -312,6 +356,38 @@ public sealed class StaffProfessionalStructureRepository(SkolenzaDbContext conte
         int? institutionStaffCategoryMasterId,
         CancellationToken cancellationToken = default)
     {
+        var positions = await QueryPositions(institutionId, activeOnly, institutionStaffCategoryMasterId)
+            .OrderBy(item => item.DisplayOrder).ThenBy(item => item.Name).ThenBy(item => item.Id)
+            .ToListAsync(cancellationToken);
+        return await ProjectPositionsAsync(positions, institutionId, cancellationToken);
+    }
+
+    /// <summary>Pages Position rows before loading all requirements of the returned Positions.</summary>
+    public async Task<PagedResponseDTO<StaffPositionMasterResponseDTO>> GetPositionsAsync(
+        long institutionId,
+        bool activeOnly,
+        int? institutionStaffCategoryMasterId,
+        int pageNumber,
+        int pageSize,
+        CancellationToken cancellationToken = default)
+    {
+        var page = await QueryPositions(institutionId, activeOnly, institutionStaffCategoryMasterId)
+            .OrderBy(item => item.DisplayOrder)
+            .ThenBy(item => item.Name)
+            .ThenBy(item => item.Id)
+            .ToPageAsync(pageNumber, pageSize, cancellationToken);
+        var data = await ProjectPositionsAsync(page.Data, institutionId, cancellationToken);
+        return new PagedResponseDTO<StaffPositionMasterResponseDTO>(data, page.TotalCount, page.PageNumber, page.PageSize)
+        {
+            TotalPages = page.TotalPages
+        };
+    }
+
+    private IQueryable<StaffPositionMaster> QueryPositions(
+        long institutionId,
+        bool activeOnly,
+        int? institutionStaffCategoryMasterId)
+    {
         var query = context.StaffPositionMasters.AsNoTracking()
             .Where(item => item.InstitutionId == institutionId && !item.IsSoftDeleted);
         if (activeOnly)
@@ -323,8 +399,7 @@ public sealed class StaffProfessionalStructureRepository(SkolenzaDbContext conte
             query = query.Where(item => item.InstitutionStaffCategoryMasterId == institutionStaffCategoryMasterId.Value);
         }
 
-        var positions = await query.OrderBy(item => item.DisplayOrder).ThenBy(item => item.Name).ToListAsync(cancellationToken);
-        return await ProjectPositionsAsync(positions, institutionId, cancellationToken);
+        return query;
     }
 
     public async Task<StaffPositionMasterResponseDTO> SavePositionAsync(
@@ -740,11 +815,10 @@ public sealed class StaffProfessionalStructureRepository(SkolenzaDbContext conte
         IsMandatory = isMandatory
     };
 
-    private static async Task<List<StaffProfessionalMasterResponseDTO>> QueryMasters<TEntity>(
+    private static IQueryable<StaffProfessionalMasterResponseDTO> QueryMasters<TEntity>(
         IQueryable<TEntity> source,
         long institutionId,
-        bool activeOnly,
-        CancellationToken cancellationToken)
+        bool activeOnly)
         where TEntity : InstitutionMasterEntity
     {
         var query = source.AsNoTracking().Where(item => item.InstitutionId == institutionId && !item.IsSoftDeleted);
@@ -752,15 +826,15 @@ public sealed class StaffProfessionalStructureRepository(SkolenzaDbContext conte
         {
             query = query.Where(item => item.IsActive);
         }
-        return await query.OrderBy(item => item.DisplayOrder).ThenBy(item => item.Name)
+        return query.OrderBy(item => item.DisplayOrder).ThenBy(item => item.Name)
             .Select(item => new StaffProfessionalMasterResponseDTO
             {
                 Id = item.Id, Code = item.Code, Name = item.Name, Description = item.Description,
                 DisplayOrder = item.DisplayOrder, IsActive = item.IsActive
-            }).ToListAsync(cancellationToken);
+            });
     }
 
-    private Task<List<StaffProfessionalMasterResponseDTO>> QueryCapabilities(long institutionId, bool activeOnly, CancellationToken cancellationToken)
+    private IQueryable<StaffProfessionalMasterResponseDTO> QueryCapabilities(long institutionId, bool activeOnly)
     {
         var query = context.StaffCapabilityMasters.AsNoTracking().Where(item => item.InstitutionId == institutionId && !item.IsSoftDeleted);
         if (activeOnly) query = query.Where(item => item.IsActive);
@@ -769,10 +843,10 @@ public sealed class StaffProfessionalStructureRepository(SkolenzaDbContext conte
             Id = item.Id, Code = item.Code, Name = item.Name, Description = item.Description, DisplayOrder = item.DisplayOrder,
             IsActive = item.IsActive, RequiresCertification = item.RequiresCertification,
             CertificationValidityRequired = item.CertificationValidityRequired
-        }).ToListAsync(cancellationToken);
+        });
     }
 
-    private Task<List<StaffProfessionalMasterResponseDTO>> QueryDuties(long institutionId, bool activeOnly, CancellationToken cancellationToken)
+    private IQueryable<StaffProfessionalMasterResponseDTO> QueryDuties(long institutionId, bool activeOnly)
     {
         var query = context.StaffDutyDefinitionMasters.AsNoTracking().Where(item => item.InstitutionId == institutionId && !item.IsSoftDeleted);
         if (activeOnly) query = query.Where(item => item.IsActive);
@@ -780,7 +854,7 @@ public sealed class StaffProfessionalStructureRepository(SkolenzaDbContext conte
         {
             Id = item.Id, Code = item.Code, Name = item.Name, Description = item.Description, DisplayOrder = item.DisplayOrder,
             IsActive = item.IsActive, DefaultFrequency = item.DefaultFrequency, RequiresEvidence = item.RequiresEvidence
-        }).ToListAsync(cancellationToken);
+        });
     }
 
     private async Task<StaffProfessionalMasterResponseDTO> SaveCapabilityAsync(StaffProfessionalMasterRequestDTO request, long institutionId, long actorStaffMemberId, CancellationToken cancellationToken)

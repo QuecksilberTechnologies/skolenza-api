@@ -1,0 +1,268 @@
+[
+  {
+    "total": 2,
+    "page": 1,
+    "counts": [
+      2,
+      0
+    ],
+    "http": 200,
+    "profileMetadataPresent": false,
+    "overlap": 0,
+    "pages": 1,
+    "size": 10,
+    "case": "academic-structure/masters/Session"
+  },
+  {
+    "total": 4,
+    "page": 1,
+    "counts": [
+      4,
+      0
+    ],
+    "http": 200,
+    "profileMetadataPresent": false,
+    "overlap": 0,
+    "pages": 1,
+    "size": 10,
+    "case": "academic-structure/masters/Programme"
+  },
+  {
+    "total": 11,
+    "page": 1,
+    "counts": [
+      10,
+      1
+    ],
+    "http": 200,
+    "profileMetadataPresent": false,
+    "overlap": 0,
+    "pages": 2,
+    "size": 10,
+    "case": "academic-structure/masters/Group"
+  },
+  {
+    "total": 21,
+    "page": 1,
+    "counts": [
+      10,
+      10
+    ],
+    "http": 200,
+    "profileMetadataPresent": false,
+    "overlap": 0,
+    "pages": 3,
+    "size": 10,
+    "case": "academic-structure/masters/Section"
+  },
+  {
+    "total": 11,
+    "page": 1,
+    "counts": [
+      10,
+      1
+    ],
+    "http": 200,
+    "profileMetadataPresent": false,
+    "overlap": 0,
+    "pages": 2,
+    "size": 10,
+    "case": "academic-structure/masters/Subject"
+  },
+  {
+    "total": 75,
+    "page": 1,
+    "counts": [
+      10,
+      10
+    ],
+    "http": 200,
+    "profileMetadataPresent": false,
+    "overlap": 0,
+    "pages": 8,
+    "size": 10,
+    "case": "academic-structure/masters/CourseOffering"
+  },
+  {
+    "total": 14,
+    "page": 1,
+    "counts": [
+      10,
+      4
+    ],
+    "http": 200,
+    "profileMetadataPresent": false,
+    "overlap": 0,
+    "pages": 2,
+    "size": 10,
+    "case": "professional-structure/masters/JobFamily"
+  },
+  {
+    "total": 8,
+    "page": 1,
+    "counts": [
+      8,
+      0
+    ],
+    "http": 200,
+    "profileMetadataPresent": false,
+    "overlap": 0,
+    "pages": 1,
+    "size": 10,
+    "case": "professional-structure/categories"
+  },
+  {
+    "total": 11,
+    "page": 1,
+    "counts": [
+      10,
+      1
+    ],
+    "http": 200,
+    "profileMetadataPresent": false,
+    "overlap": 0,
+    "pages": 2,
+    "size": 10,
+    "case": "professional-structure/masters/Capability"
+  },
+  {
+    "total": 12,
+    "page": 1,
+    "counts": [
+      10,
+      2
+    ],
+    "http": 200,
+    "profileMetadataPresent": false,
+    "overlap": 0,
+    "pages": 2,
+    "size": 10,
+    "case": "professional-structure/masters/DutyDefinition"
+  },
+  {
+    "total": 8,
+    "page": 1,
+    "counts": [
+      8,
+      0
+    ],
+    "http": 200,
+    "profileMetadataPresent": false,
+    "overlap": 0,
+    "pages": 1,
+    "size": 10,
+    "case": "professional-structure/positions"
+  },
+  {
+    "total": 2,
+    "page": 1,
+    "counts": [
+      2,
+      0
+    ],
+    "http": 200,
+    "profileMetadataPresent": false,
+    "overlap": 0,
+    "pages": 1,
+    "size": 10,
+    "case": "curriculum-delivery/frameworks"
+  },
+  {
+    "total": 222,
+    "page": 1,
+    "counts": [
+      10,
+      10
+    ],
+    "http": 200,
+    "profileMetadataPresent": false,
+    "overlap": 0,
+    "pages": 23,
+    "size": 10,
+    "case": "curriculum-delivery/frameworks/2/units"
+  },
+  {
+    "total": 3,
+    "page": 1,
+    "counts": [
+      3,
+      0
+    ],
+    "http": 200,
+    "profileMetadataPresent": false,
+    "overlap": 0,
+    "pages": 1,
+    "size": 10,
+    "case": "curriculum-delivery/units/2/topics"
+  },
+  {
+    "total": 1,
+    "page": 1,
+    "counts": [
+      1,
+      0
+    ],
+    "http": 200,
+    "profileMetadataPresent": false,
+    "overlap": 0,
+    "pages": 1,
+    "size": 10,
+    "case": "curriculum-delivery/lesson-plans"
+  },
+  {
+    "total": 2,
+    "page": 1,
+    "counts": [
+      2,
+      0
+    ],
+    "http": 200,
+    "profileMetadataPresent": false,
+    "overlap": 0,
+    "pages": 1,
+    "size": 10,
+    "case": "curriculum-delivery/lesson-deliveries"
+  },
+  {
+    "total": 223,
+    "page": 1,
+    "counts": [
+      10,
+      10
+    ],
+    "http": 200,
+    "profileMetadataPresent": false,
+    "overlap": 0,
+    "pages": 23,
+    "size": 10,
+    "case": "curriculum-delivery/syllabus-progress"
+  },
+  {
+    "page": 1,
+    "http": 200,
+    "size": 10,
+    "case": "academic-nonpositive-defaults"
+  },
+  {
+    "case": "academic-anonymous",
+    "http": 401
+  },
+  {
+    "case": "academic-missing-permission",
+    "http": 403
+  },
+  {
+    "case": "academic-malformed-page",
+    "http": 400
+  },
+  {
+    "case": "academic-unsupported-type",
+    "http": 400
+  },
+  {
+    "pageNumberPresent": true,
+    "http": 200,
+    "case": "swagger-academic-paging",
+    "pageSizePresent": true
+  }
+]

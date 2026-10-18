@@ -1,4 +1,5 @@
 using skolenza.application.DTOS.Staff;
+using skolenza.application.DTOS.Pagination;
 using skolenza.application.Exceptions;
 using skolenza.application.Interfaces.IRepositories;
 using skolenza.domain.Entity;
@@ -45,6 +46,50 @@ public sealed partial class StaffAcademicStructureRepository(SkolenzaDbContext c
         };
 
         return await ProjectMastersAsync(rows, institutionId, cancellationToken);
+    }
+
+    /// <summary>Pages each academic catalogue through the existing central query helper.</summary>
+    public Task<PagedResponseDTO<AcademicMasterResponseDTO>> GetMastersAsync(
+        AcademicMasterType type,
+        long institutionId,
+        bool activeOnly,
+        int pageNumber,
+        int pageSize,
+        CancellationToken cancellationToken = default)
+    {
+        return type switch
+        {
+            AcademicMasterType.Session => PageMastersAsync(context.AcademicSessions, institutionId, activeOnly, pageNumber, pageSize, cancellationToken),
+            AcademicMasterType.Programme => PageMastersAsync(context.AcademicProgrammes, institutionId, activeOnly, pageNumber, pageSize, cancellationToken),
+            AcademicMasterType.Group => PageMastersAsync(context.AcademicGroups, institutionId, activeOnly, pageNumber, pageSize, cancellationToken),
+            AcademicMasterType.Section => PageMastersAsync(context.ClassSections, institutionId, activeOnly, pageNumber, pageSize, cancellationToken),
+            AcademicMasterType.Subject => PageMastersAsync(context.Subjects, institutionId, activeOnly, pageNumber, pageSize, cancellationToken),
+            AcademicMasterType.CourseOffering => PageMastersAsync(context.CourseOfferings, institutionId, activeOnly, pageNumber, pageSize, cancellationToken),
+            _ => throw new ValidationErrorException("Unsupported academic master type.")
+        };
+    }
+
+    private async Task<PagedResponseDTO<AcademicMasterResponseDTO>> PageMastersAsync<TEntity>(
+        DbSet<TEntity> set,
+        long institutionId,
+        bool activeOnly,
+        int pageNumber,
+        int pageSize,
+        CancellationToken cancellationToken)
+        where TEntity : InstitutionAcademicEntity
+    {
+        var page = await Query(set, institutionId, activeOnly)
+            .OrderBy(item => item.Name)
+            .ThenBy(item => item.Id)
+            .ToPageAsync(pageNumber, pageSize, cancellationToken);
+        var data = await ProjectMastersAsync(
+            page.Data.Cast<InstitutionAcademicEntity>().ToList(),
+            institutionId,
+            cancellationToken);
+        return new PagedResponseDTO<AcademicMasterResponseDTO>(data, page.TotalCount, page.PageNumber, page.PageSize)
+        {
+            TotalPages = page.TotalPages
+        };
     }
 
     public async Task<AcademicMasterResponseDTO> SaveMasterAsync(

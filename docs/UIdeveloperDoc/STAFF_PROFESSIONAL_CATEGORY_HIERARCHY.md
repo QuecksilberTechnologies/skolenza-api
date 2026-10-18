@@ -12,6 +12,11 @@ All routes require authentication and use the existing `STAFF_DIRECTORY` menu/op
 
 ## Routes
 
+**2026-10-18 pagination:** all five professional-structure tab lists now use
+the existing central query paging helper. Default `PageNumber=1`, `PageSize=10`.
+See [Professional Structure pagination](STAFF_PROFESSIONAL_PAGINATION.md) for
+query/response examples and the exact Angular integration boundary.
+
 | Method | Route | Operation | Purpose |
 | --- | --- | --- | --- |
 | GET | `/api/Staff/professional-structure/categories?activeOnly=false` | View | List local categories, mapped family IDs and dependency counts |

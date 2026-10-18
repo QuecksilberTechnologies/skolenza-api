@@ -1,4 +1,5 @@
 using skolenza.application.DTOs.BaseDTO;
+using skolenza.application.DTOS.Pagination;
 
 namespace skolenza.application.DTOS.Staff;
 
@@ -13,6 +14,16 @@ public enum AcademicMasterType
 }
 
 public sealed class AcademicStructurePermissionRequestDTO : PermissionRequestDTO;
+
+/// <summary>Institution permission context with the existing central pagination defaults.</summary>
+public sealed class AcademicStructurePagedRequestDTO : PermissionPagedRequestDTO
+{
+    public AcademicStructurePagedRequestDTO()
+    {
+        PageNumber = PaginationDefaults.PageNumber;
+        PageSize = PaginationDefaults.PageSize;
+    }
+}
 
 public sealed class TeachingAssignmentTypeOptionDTO
 {

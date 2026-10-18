@@ -12,13 +12,15 @@ namespace skolenza.api.Controllers.Staff;
 [Route("api/Staff/professional-structure")]
 public sealed class StaffProfessionalStructureController(IMediator mediator) : ControllerBase
 {
-    /// <summary>Used-In-Angular: returns institution-owned Staff Categories with dependency counts.</summary>
+    /// <summary>Used-In-Angular: returns institution-owned Staff Categories and dependency counts; defaults to page 1 / 10 records.</summary>
     [HttpGet("categories")]
     public async Task<IActionResult> GetCategories(
         [FromQuery] bool activeOnly,
-        [FromQuery] StaffProfessionalPermissionRequestDTO dto,
-        CancellationToken cancellationToken) =>
-        Ok(await mediator.Send(new GetInstitutionStaffCategoriesQuery(activeOnly, dto), cancellationToken));
+        [FromQuery] StaffProfessionalPagedRequestDTO dto,
+        CancellationToken cancellationToken)
+    {
+        return Ok(await mediator.Send(new GetInstitutionStaffCategoriesQuery(activeOnly, dto), cancellationToken));
+    }
 
     /// <summary>Used-In-Angular: creates an institution-owned Staff Category.</summary>
     [HttpPost("categories")]
@@ -50,13 +52,16 @@ public sealed class StaffProfessionalStructureController(IMediator mediator) : C
         CancellationToken cancellationToken) =>
         Ok(await mediator.Send(new SetInstitutionStaffCategoryActiveCommand(id, isActive, dto), cancellationToken));
 
+    /// <summary>Returns a tenant-scoped page, default PageNumber=1 and PageSize=10.</summary>
     [HttpGet("masters/{masterType}")]
     public async Task<IActionResult> GetMasters(
         StaffProfessionalMasterType masterType,
         [FromQuery] bool activeOnly,
-        [FromQuery] StaffProfessionalPermissionRequestDTO dto,
-        CancellationToken cancellationToken) =>
-        Ok(await mediator.Send(new GetStaffProfessionalMastersQuery(masterType, activeOnly, dto), cancellationToken));
+        [FromQuery] StaffProfessionalPagedRequestDTO dto,
+        CancellationToken cancellationToken)
+    {
+        return Ok(await mediator.Send(new GetStaffProfessionalMastersQuery(masterType, activeOnly, dto), cancellationToken));
+    }
 
     [HttpPost("masters/{masterType}")]
     public async Task<IActionResult> CreateMaster(
@@ -88,13 +93,16 @@ public sealed class StaffProfessionalStructureController(IMediator mediator) : C
         return Ok(await mediator.Send(new DeleteStaffProfessionalMasterCommand(masterType, dto), cancellationToken));
     }
 
+    /// <summary>Returns a tenant-scoped page, default PageNumber=1 and PageSize=10.</summary>
     [HttpGet("positions")]
     public async Task<IActionResult> GetPositions(
         [FromQuery] bool activeOnly,
         [FromQuery] int? institutionStaffCategoryMasterId,
-        [FromQuery] StaffProfessionalPermissionRequestDTO dto,
-        CancellationToken cancellationToken) =>
-        Ok(await mediator.Send(new GetStaffPositionsQuery(activeOnly, institutionStaffCategoryMasterId, dto), cancellationToken));
+        [FromQuery] StaffProfessionalPagedRequestDTO dto,
+        CancellationToken cancellationToken)
+    {
+        return Ok(await mediator.Send(new GetStaffPositionsQuery(activeOnly, institutionStaffCategoryMasterId, dto), cancellationToken));
+    }
 
     [HttpPost("positions")]
     public async Task<IActionResult> CreatePosition([FromBody] StaffPositionMasterRequestDTO dto, CancellationToken cancellationToken) =>

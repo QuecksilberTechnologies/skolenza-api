@@ -1,0 +1,127 @@
+[
+  {
+    "size": 10,
+    "case": "masters/JobFamily",
+    "pages": 2,
+    "activeCustomPageCount": 3,
+    "total": 14,
+    "page": 1,
+    "counts": [
+      10,
+      4
+    ],
+    "http": 200,
+    "profileMetadataPresent": false,
+    "overlap": 0
+  },
+  {
+    "size": 10,
+    "case": "categories",
+    "pages": 1,
+    "activeCustomPageCount": 3,
+    "total": 8,
+    "page": 1,
+    "counts": [
+      8,
+      0
+    ],
+    "http": 200,
+    "profileMetadataPresent": false,
+    "overlap": 0
+  },
+  {
+    "size": 10,
+    "case": "masters/Capability",
+    "pages": 2,
+    "activeCustomPageCount": 3,
+    "total": 11,
+    "page": 1,
+    "counts": [
+      10,
+      1
+    ],
+    "http": 200,
+    "profileMetadataPresent": false,
+    "overlap": 0
+  },
+  {
+    "size": 10,
+    "case": "masters/DutyDefinition",
+    "pages": 2,
+    "activeCustomPageCount": 3,
+    "total": 12,
+    "page": 1,
+    "counts": [
+      10,
+      2
+    ],
+    "http": 200,
+    "profileMetadataPresent": false,
+    "overlap": 0
+  },
+  {
+    "size": 10,
+    "case": "positions",
+    "pages": 1,
+    "activeCustomPageCount": 3,
+    "total": 8,
+    "page": 1,
+    "counts": [
+      8,
+      0
+    ],
+    "http": 200,
+    "profileMetadataPresent": false,
+    "overlap": 0
+  },
+  {
+    "count": 1,
+    "total": 1,
+    "allMatch": true,
+    "case": "positions-category-filter",
+    "http": 200
+  },
+  {
+    "size": 10,
+    "page": 1,
+    "case": "nonpositive-defaults",
+    "http": 200
+  },
+  {
+    "http": 401,
+    "case": "anonymous"
+  },
+  {
+    "http": 403,
+    "case": "missing-permission"
+  },
+  {
+    "http": 400,
+    "case": "malformed-page"
+  },
+  {
+    "http": 400,
+    "case": "invalid-master-type"
+  },
+  {
+    "case": "swagger",
+    "http": 200,
+    "pagingParameters": [
+      {
+        "pageSizePresent": true,
+        "route": "/api/Staff/professional-structure/categories",
+        "pageNumberPresent": true
+      },
+      {
+        "pageSizePresent": true,
+        "route": "/api/Staff/professional-structure/masters/{masterType}",
+        "pageNumberPresent": true
+      },
+      {
+        "pageSizePresent": true,
+        "route": "/api/Staff/professional-structure/positions",
+        "pageNumberPresent": true
+      }
+    ]
+  }
+]

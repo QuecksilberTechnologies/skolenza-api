@@ -11,7 +11,7 @@ namespace skolenza.application.Features.StaffMemberCmd.ProfessionalStructure.Aca
 
 #region Requests
 
-public sealed record GetAcademicMastersQuery(AcademicMasterType MasterType, bool ActiveOnly, AcademicStructurePermissionRequestDTO DTO)
+public sealed record GetAcademicMastersQuery(AcademicMasterType MasterType, bool ActiveOnly, AcademicStructurePagedRequestDTO DTO)
     : IRequest<ApiResponse<List<AcademicMasterResponseDTO>>>;
 
 public sealed record GetTeachingAssignmentTypesQuery(AcademicStructurePermissionRequestDTO DTO)
@@ -59,12 +59,20 @@ public sealed class GetAcademicMastersQueryHandler(IUnitOfWork unitOfWork, IComm
     public async Task<ApiResponse<List<AcademicMasterResponseDTO>>> Handle(GetAcademicMastersQuery request, CancellationToken cancellationToken)
     {
         var actor = await ProfessionalStructureRequestContext.ResolveAsync(commonRequestService);
-        var data = await unitOfWork.StaffAcademicStructureRepository.GetMastersAsync(
+        var page = await unitOfWork.StaffAcademicStructureRepository.GetMastersAsync(
             request.MasterType,
             actor.InstitutionId,
             request.ActiveOnly,
+            request.DTO.PageNumber,
+            request.DTO.PageSize,
             cancellationToken);
-        return ApiResponse<List<AcademicMasterResponseDTO>>.Success(data, "Academic records retrieved successfully.");
+        return ApiResponse<List<AcademicMasterResponseDTO>>.SuccessPaginated(
+            page.Data,
+            page.PageNumber,
+            page.PageSize,
+            page.TotalCount,
+            page.TotalPages,
+            "Academic records retrieved successfully.");
     }
 }
 

@@ -36,6 +36,7 @@ public interface IStaffAcademicStructureRepository
     Task<StaffConversationDetailResponseDTO> CloseConversationAsync(long conversationId, long institutionId, long actorId, CancellationToken token);
     Task<List<TeachingAssignmentTypeOptionDTO>> GetTeachingAssignmentTypesAsync(CancellationToken cancellationToken = default);
     Task<List<AcademicMasterResponseDTO>> GetMastersAsync(AcademicMasterType type, long institutionId, bool activeOnly, CancellationToken cancellationToken = default);
+    Task<PagedResponseDTO<AcademicMasterResponseDTO>> GetMastersAsync(AcademicMasterType type, long institutionId, bool activeOnly, int pageNumber, int pageSize, CancellationToken cancellationToken = default);
     Task<AcademicMasterResponseDTO> SaveMasterAsync(AcademicMasterType type, AcademicMasterRequestDTO request, long institutionId, long actorStaffMemberId, CancellationToken cancellationToken = default);
     Task DeleteMasterAsync(AcademicMasterType type, long id, long institutionId, long actorStaffMemberId, CancellationToken cancellationToken = default);
     Task<StaffAcademicProfileResponseDTO> GetStaffProfileAsync(long institutionId, long staffMemberId, CancellationToken cancellationToken = default);

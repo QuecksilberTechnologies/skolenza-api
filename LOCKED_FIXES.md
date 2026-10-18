@@ -122,6 +122,8 @@ Every entry must include:
 | `LOCK-STAFF-ACADEMIC-018` | Tenant-owned academic hierarchy and effective staff teaching responsibility | LOCKED | Staff combined 12/12; tenant rollback 2/2; Release API and Angular production builds; authenticated local CRUD/conflict/isolation | DB/API LIVE; AUTHENTICATED UI PENDING | [2026-10-13](docs/testing/staff/academic-structure/2026-10-13.md) |
 | `LOCK-HOST-STAFF-CATEGORY-CATALOGUE-021` | Host-owned Staff Category catalogue and permission-scoped institution setup | LOCKED | Staff gates 14/14; Angular catalogue/interceptor 67/67; backend Release and Angular production builds | Render DB seed PASS; API/UI deployment and authenticated browser acceptance PENDING | [2026-10-14](docs/testing/staff/host-staff-category-catalogue/2026-10-14.md) |
 | `LOCK-CURRICULUM-API-PAGINATION-022` | Permission-scoped curriculum pagination and independent Topics | LOCKED | New paging 9/9; affected Staff and tenant rollback combined 33/33; Release build and local HTTP probes | API deployment and UI integration PENDING | [2026-10-17](docs/testing/staff/curriculum-pagination/2026-10-17.md) |
+| `LOCK-PROFESSIONAL-API-PAGINATION-023` | All five institution Professional Structure tab lists use central paging | LOCKED | Combined Staff/Curriculum/rollback 38/38; Debug and Release builds; local HTTP paging/filter/error probes | API deployment and UI integration PENDING | [2026-10-18](docs/testing/staff/professional-pagination/2026-10-18.md) |
+| `LOCK-ACADEMIC-API-PAGINATION-024` | All six Academic master tab lists reuse central paging | LOCKED | Combined suite 41/41; Debug/Release builds; all 17 structure/curriculum list variants verified over local HTTP | API deployment and UI integration PENDING | [2026-10-18](docs/testing/staff/academic-pagination/2026-10-18.md) |
 
 ## LOCK-TENANT-REG-001: Tenant registration transaction and actionable errors
 
@@ -988,3 +990,69 @@ Verify authenticated local page slices, root totals, independent Topics, 401/403
 responses and Swagger. [Scenario evidence](docs/testing/staff/curriculum-pagination/2026-10-17.md).
 No Angular changes/build were authorized or performed. UI integration and Render
 deployment are pending acceptance, not implied by this local API lock.
+
+## LOCK-PROFESSIONAL-API-PAGINATION-023: Five professional catalogue lists
+
+### Locked behavior
+
+- Institution Job Families, Staff Categories, Capabilities, Duties and Positions
+  reuse `QueryPagination.ToPageAsync` and `PaginationDefaults`; omitted or
+  nonpositive values resolve to page 1 / 10 records. No duplicate paging helper
+  or profile-completion metadata is introduced.
+- Tenant, soft-delete, active-only and optional Position category filters apply
+  before count/paging. DisplayOrder, Name and Id give a deterministic order.
+- Root `data` remains an array with pageNumber, pageSize, totalRecords and
+  totalPages metadata. Categories retain complete family mappings/dependency
+  counts; Positions retain complete capability/duty requirements and flags.
+- Existing save/profile/seed reads and write responses are not limited to page 1.
+  The established StaffMember institution permission pipeline remains unchanged.
+
+### Regression gate and evidence
+
+```powershell
+$env:SKOLENZA_HOST_DB_SETTINGS=(Resolve-Path '.\Skolenza.api\appsettings.Development.json').Path
+dotnet test .\Skolenza.automationtests\Skolenza.automationtests.csproj -c Release --no-restore --filter 'TestCategory=StaffAcademicStructure|TestCategory=StaffProfessionalStructure|TestCategory=StaffCategoryCatalogue|TestCategory=StaffCurriculumDelivery|FullyQualifiedName~HostApiRegressionTests.Institution_creation_real_database_rollback_probe' --logger 'console;verbosity=minimal'
+dotnet build .\Skolenza.sln -c Release --no-restore --nologo
+dotnet build .\Skolenza.sln -c Debug --no-restore --nologo
+```
+
+Expected local baseline: 38/38 tests, zero failures/skips; both builds zero errors.
+Authenticated HTTP pages, active/category filters, 401/403/400 errors and OpenAPI
+paging parameters are recorded in the [2026-10-18 scenario](docs/testing/staff/professional-pagination/2026-10-18.md).
+No Angular work or schema migration was authorized/performed for this API-only
+change. UI integration and Render deployment remain unaccepted.
+
+
+## LOCK-ACADEMIC-API-PAGINATION-024: Academic catalogue paging
+
+### Locked behavior
+
+- Session, Programme, Group, Section, Subject and CourseOffering GET lists use
+  the existing central QueryPagination helper and PaginationDefaults. Default
+  page/size is 1/10; nonpositive values normalize through that same helper.
+- Existing tenant, soft-delete and activeOnly predicates apply before SQL count
+  and page retrieval. Name plus unique Id provides stable ordering.
+- The existing root data array gains standard pageNumber, pageSize,
+  totalRecords and totalPages metadata; no profile-completion flags are added.
+- Date/type/reference IDs and names, capacity, level, curriculum version and
+  required periods remain complete. Parent name resolution and single-record
+  save/profile/seed flows must not be truncated to page 1.
+- The existing StaffMember institution permission pipeline, entity mapping,
+  teaching allocation and lookup contracts remain unchanged.
+
+### Regression gate and evidence
+
+```powershell
+$env:SKOLENZA_HOST_DB_SETTINGS=(Resolve-Path '.\Skolenza.api\appsettings.Development.json').Path
+dotnet test .\Skolenza.automationtests\Skolenza.automationtests.csproj -c Release --no-restore --filter 'TestCategory=StaffAcademicStructure|TestCategory=StaffProfessionalStructure|TestCategory=StaffCategoryCatalogue|TestCategory=StaffCurriculumDelivery|FullyQualifiedName~HostApiRegressionTests.Institution_creation_real_database_rollback_probe' --logger 'console;verbosity=minimal'
+dotnet build .\Skolenza.sln -c Release --no-restore --nologo
+dotnet build .\Skolenza.sln -c Debug --no-restore --nologo
+```
+
+Expected local baseline: 41/41, zero failures/skips; Debug/Release zero errors.
+All 17 structure/curriculum list URL variants were verified over local HTTP,
+including Academic active/custom-size/invalid-input/authentication cases.
+[Scenario evidence](docs/testing/staff/academic-pagination/2026-10-18.md) and
+[consolidated endpoint index](docs/UIdeveloperDoc/STAFF_PAGINATION_API_INDEX.md).
+No Angular work or database migration was authorized/performed. UI integration
+and Render deployment remain pending acceptance.

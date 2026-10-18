@@ -17,9 +17,16 @@ public sealed class StaffAcademicStructureController(IMediator mediator) : Contr
     public async Task<IActionResult> GetTeachingAssignmentTypes([FromQuery] AcademicStructurePermissionRequestDTO dto, CancellationToken cancellationToken) =>
         Ok(await mediator.Send(new GetTeachingAssignmentTypesQuery(dto), cancellationToken));
 
+    /// <summary>Returns one institution-owned academic catalogue page; defaults to page 1 / 10 records.</summary>
     [HttpGet("masters/{masterType}")]
-    public async Task<IActionResult> GetMasters(AcademicMasterType masterType, [FromQuery] bool activeOnly, [FromQuery] AcademicStructurePermissionRequestDTO dto, CancellationToken cancellationToken) =>
-        Ok(await mediator.Send(new GetAcademicMastersQuery(masterType, activeOnly, dto), cancellationToken));
+    public async Task<IActionResult> GetMasters(
+        AcademicMasterType masterType,
+        [FromQuery] bool activeOnly,
+        [FromQuery] AcademicStructurePagedRequestDTO dto,
+        CancellationToken cancellationToken)
+    {
+        return Ok(await mediator.Send(new GetAcademicMastersQuery(masterType, activeOnly, dto), cancellationToken));
+    }
 
     [HttpPost("masters/{masterType}")]
     public async Task<IActionResult> CreateMaster(AcademicMasterType masterType, [FromBody] AcademicMasterRequestDTO dto, CancellationToken cancellationToken) =>
