@@ -169,6 +169,7 @@ try
             policy.WithOrigins(
                 "http://localhost:4200",
                 "http://localhost:4201",               
+                "https://skolenza.vercel.app",
                 "https://skolenza-app..app"
             )
             .AllowAnyHeader()
