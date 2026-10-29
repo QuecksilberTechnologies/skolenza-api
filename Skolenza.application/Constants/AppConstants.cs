@@ -842,7 +842,9 @@ namespace skolenza.application.Constants
             ForgotPasswordEmail,
             BirthdayWishEmail,
             LeaveApprovalEmail,
-            AccountVerificationEmail
+            AccountVerificationEmail,
+            StudentConstants.PortalInvitationTemplateCode,
+            StudentConstants.PortalPasswordResetTemplateCode
         };
 
         public static bool IsSupportedEmailTemplateCode(string? templateCode) =>

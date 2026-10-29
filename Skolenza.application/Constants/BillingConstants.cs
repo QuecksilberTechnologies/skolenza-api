@@ -12,6 +12,7 @@ public static class BillingConstants
     public const string HostBillingRefundsModuleCode = "HOST_BILLING_REFUNDS";
     public const string HostBillingReconciliationModuleCode = "HOST_BILLING_RECONCILIATION";
     public const string HostBillingAuditModuleCode = "HOST_BILLING_AUDIT";
+    public const string HostCountryCurrencyMasterModuleCode = "HOST_COUNTRY_CURRENCY_MASTER";
     public const string DefaultGatewayCode = "CASHFREE";
     public const string IndiaCountryCode = "IN";
     public const string IndiaCurrencyCode = "INR";

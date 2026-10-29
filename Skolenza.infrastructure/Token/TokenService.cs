@@ -111,6 +111,35 @@ namespace skolenza.infrastructure.Token
 
         #endregion
 
+        #region Student Portal Access Token Generation
+
+        /// <summary>
+        /// Generates a Student portal token using the shared signer and a distinct principal type.
+        /// </summary>
+        public Task<string> GenerateStudentPortalToken(StudentPortalTokenInfoDTO portalUser)
+        {
+            ArgumentNullException.ThrowIfNull(portalUser);
+            if (portalUser.AccountId <= 0 || portalUser.InstitutionId <= 0 ||
+                string.IsNullOrWhiteSpace(portalUser.NormalizedEmail))
+            {
+                throw new ArgumentException("A valid Student portal identity is required.", nameof(portalUser));
+            }
+
+            var claims = new List<Claim>
+            {
+                new(AppConstants.UserTypeClaim, StudentConstants.PortalUserType),
+                new(StudentConstants.PortalAccountIdClaim, portalUser.AccountId.ToString()),
+                new("InstitutionId", portalUser.InstitutionId.ToString()),
+                new(ClaimTypes.Email, portalUser.NormalizedEmail),
+                new("TokenPurpose", AppConstants.AccessTokenPurpose),
+                new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
+            };
+
+            return GenerateSignedAccessTokenAsync(claims, includeNotBefore: true);
+        }
+
+        #endregion
+
         #region Host Access Token Generation
 
         /// <summary>

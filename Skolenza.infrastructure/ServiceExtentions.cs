@@ -14,9 +14,11 @@ using skolenza.application.Interfaces.ITokenService;
 using skolenza.application.Common.Models;
 
 using skolenza.infrastructure.BackgroundJob;
+using skolenza.infrastructure.Billing;
 using skolenza.infrastructure.CacheMemory;
 using skolenza.infrastructure.CommonRequest;
 using skolenza.infrastructure.DeviceCommunication.Mqtt;
+using skolenza.infrastructure.Dns;
 using skolenza.infrastructure.EncryptionService;
 using skolenza.infrastructure.FileStoringService;
 using skolenza.infrastructure.Logging;
@@ -36,6 +38,12 @@ namespace skolenza.infrastructure
     {
         public static void AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
         {
+            services.AddOptions<PortalDomainVerificationOptions>()
+                .Bind(configuration.GetSection(PortalDomainVerificationOptions.SectionName))
+                .Validate(options => Uri.TryCreate(options.DnsOverHttpsEndpoint, UriKind.Absolute, out var endpoint) &&
+                    endpoint.Scheme == Uri.UriSchemeHttps,
+                    "PortalDomainVerification:DnsOverHttpsEndpoint must be an HTTPS URL.")
+                .ValidateOnStart();
             services.AddOptions<StaffMemberMonitoringStorageOptions>()
                 .Bind(configuration.GetSection(StaffMemberMonitoringStorageOptions.SectionName))
                 .Validate(value => string.Equals(value.Provider, "FileSystem", StringComparison.OrdinalIgnoreCase),
@@ -109,6 +117,13 @@ namespace skolenza.infrastructure
             services.AddScoped<IPermissionRepository, PermissionRepository>();
 
             services.AddScoped<IEncryptionService, AesEncryptionService>();
+            services.AddScoped<IStudentGatewaySecretProtector, StudentGatewaySecretProtector>();
+            services.AddHttpClient<IStudentCashfreeClient, StudentCashfreeClient>();
+            services.AddHttpClient<IDnsTxtResolver, DnsOverHttpsTxtResolver>(client =>
+            {
+                client.Timeout = TimeSpan.FromSeconds(8);
+                client.DefaultRequestHeaders.Accept.ParseAdd("application/dns-json");
+            });
             services.AddScoped<IIdEncoderService, IdEncoderService>();
             services.AddScoped<ICacheService, CacheService>();
             services.AddScoped<IInstitutionKeyCache, InstitutionKeyMemoryCache>();

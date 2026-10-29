@@ -121,6 +121,16 @@ try
         };
     });
 
+    builder.Services.AddAuthorization(options =>
+    {
+        options.AddPolicy(StudentConstants.PortalAuthenticationPolicy, policy => policy
+            .RequireAuthenticatedUser()
+            .RequireClaim(AppConstants.UserTypeClaim, StudentConstants.PortalUserType)
+            .RequireClaim(StudentConstants.PortalAccountIdClaim)
+            .RequireClaim("InstitutionId")
+            .RequireClaim("TokenPurpose", AppConstants.AccessTokenPurpose));
+    });
+
     // ============================
     // Service registration
     // ============================

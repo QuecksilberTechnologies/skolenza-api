@@ -25,6 +25,7 @@ namespace skolenza.application.Interfaces.ITokenService
     {
            public Task <string> GenerateInstitutionToken(GetTokenInfoDTO dto);
            public Task<string> GenerateHostToken(HostTokenInfoDTO dto);
+           public Task<string> GenerateStudentPortalToken(StudentPortalTokenInfoDTO dto);
        
            bool ValidateToken(string token);
         public Task<string>  GenerateRefreshToken();

@@ -206,6 +206,44 @@ namespace skolenza.persistance.Data.Context
         public virtual DbSet<StaffTeachingAssignment> StaffTeachingAssignments { get; set; }
         public virtual DbSet<ClassTeacherAssignment> ClassTeacherAssignments { get; set; }
         public virtual DbSet<AcademicWorkflowStatusMaster> AcademicWorkflowStatuses { get; set; }
+        public virtual DbSet<StudentDocumentRequirementMaster> StudentDocumentRequirementMasters { get; set; }
+        public virtual DbSet<StudentFeeFrequencyMaster> StudentFeeFrequencyMasters { get; set; }
+        public virtual DbSet<StudentFeeComponentMaster> StudentFeeComponentMasters { get; set; }
+        public virtual DbSet<StudentBenefitSchemeMaster> StudentBenefitSchemeMasters { get; set; }
+        public virtual DbSet<Student> Students { get; set; }
+        public virtual DbSet<StudentAdmission> StudentAdmissions { get; set; }
+        public virtual DbSet<StudentAdmissionStatusHistory> StudentAdmissionStatusHistories { get; set; }
+        public virtual DbSet<StudentAdmissionGuardian> StudentAdmissionGuardians { get; set; }
+        public virtual DbSet<StudentEnrollment> StudentEnrollments { get; set; }
+        public virtual DbSet<Guardian> Guardians { get; set; }
+        public virtual DbSet<StudentGuardian> StudentGuardians { get; set; }
+        public virtual DbSet<StudentExitHistory> StudentExitHistories { get; set; }
+        public virtual DbSet<StudentEducationIdentifierMaster> StudentEducationIdentifierMasters { get; set; }
+        public virtual DbSet<InstitutionPortalDomainMaster> InstitutionPortalDomainMasters { get; set; }
+        public virtual DbSet<StudentPortalAccount> StudentPortalAccounts { get; set; }
+        public virtual DbSet<StudentPortalAccountGuardian> StudentPortalAccountGuardians { get; set; }
+        public virtual DbSet<StudentPortalAccountStudent> StudentPortalAccountStudents { get; set; }
+        public virtual DbSet<StudentPortalRefreshToken> StudentPortalRefreshTokens { get; set; }
+        public virtual DbSet<StudentPortalOneTimeToken> StudentPortalOneTimeTokens { get; set; }
+        public virtual DbSet<StudentEducationIdentifier> StudentEducationIdentifiers { get; set; }
+        public virtual DbSet<StudentEducationIdentifierVerificationHistory> StudentEducationIdentifierVerificationHistories { get; set; }
+        public virtual DbSet<StudentAdmissionDocument> StudentAdmissionDocuments { get; set; }
+        public virtual DbSet<StudentAdmissionDocumentReviewHistory> StudentAdmissionDocumentReviewHistories { get; set; }
+        public virtual DbSet<StudentRecordDocument> StudentRecordDocuments { get; set; }
+        public virtual DbSet<StudentRecordDocumentReviewHistory> StudentRecordDocumentReviewHistories { get; set; }
+        public virtual DbSet<CountryCurrencyMaster> CountryCurrencyMasters { get; set; }
+        public virtual DbSet<StudentFeeStructure> StudentFeeStructures { get; set; }
+        public virtual DbSet<StudentFeeStructureItem> StudentFeeStructureItems { get; set; }
+        public virtual DbSet<StudentFeeStructureFrequency> StudentFeeStructureFrequencies { get; set; }
+        public virtual DbSet<StudentFeeStructureInstallmentDueDate> StudentFeeStructureInstallmentDueDates { get; set; }
+        public virtual DbSet<StudentAdmissionFeeQuote> StudentAdmissionFeeQuotes { get; set; }
+        public virtual DbSet<StudentAdmissionFeeQuoteLine> StudentAdmissionFeeQuoteLines { get; set; }
+        public virtual DbSet<StudentFeeInstallment> StudentFeeInstallments { get; set; }
+        public virtual DbSet<StudentFeePaymentAttempt> StudentFeePaymentAttempts { get; set; }
+        public virtual DbSet<StudentPaymentGatewayConfiguration> StudentPaymentGatewayConfigurations { get; set; }
+        public virtual DbSet<StudentFeePaymentTransaction> StudentFeePaymentTransactions { get; set; }
+        public virtual DbSet<StudentFeePaymentWebhookEvent> StudentFeePaymentWebhookEvents { get; set; }
+        public virtual DbSet<StudentFeeReceipt> StudentFeeReceipts { get; set; }
         public virtual DbSet<CurriculumFrameworkMaster> CurriculumFrameworks { get; set; }
         public virtual DbSet<CurriculumUnit> CurriculumUnits { get; set; }
         public virtual DbSet<CurriculumTopic> CurriculumTopics { get; set; }
@@ -2980,6 +3018,674 @@ namespace skolenza.persistance.Data.Context
             ConfigureInstitutionMaster<StaffCapabilityMaster>(modelBuilder, "StaffCapabilityMaster");
             ConfigureInstitutionMaster<StaffDutyDefinitionMaster>(modelBuilder, "StaffDutyDefinitionMaster");
             ConfigureInstitutionMaster<StaffPositionMaster>(modelBuilder, "StaffPositionMaster");
+            modelBuilder.Entity<StudentInstitutionMasterEntity>(entity =>
+            {
+                entity.UseTpcMappingStrategy();
+                entity.HasKey(item => item.Id);
+                entity.Property(item => item.Code).HasMaxLength(60);
+                entity.Property(item => item.Name).HasMaxLength(150);
+                entity.Property(item => item.Description).HasMaxLength(500);
+                entity.Property(item => item.IsActive).HasDefaultValue(true);
+                entity.Property(item => item.IsSystemDefined).HasDefaultValue(false);
+                entity.Property(item => item.AddedDateTime).HasDefaultValueSql("CURRENT_TIMESTAMP");
+            });
+            ConfigureStudentInstitutionMaster<StudentDocumentRequirementMaster>(modelBuilder, "StudentDocumentRequirementMaster");
+            ConfigureStudentInstitutionMaster<StudentFeeFrequencyMaster>(modelBuilder, "StudentFeeFrequencyMaster");
+            ConfigureStudentInstitutionMaster<StudentFeeComponentMaster>(modelBuilder, "StudentFeeComponentMaster");
+            ConfigureStudentInstitutionMaster<StudentBenefitSchemeMaster>(modelBuilder, "StudentBenefitSchemeMaster");
+            ConfigureStudentInstitutionMaster<StudentEducationIdentifierMaster>(modelBuilder, "StudentEducationIdentifierMaster");
+
+            modelBuilder.Entity<StudentEducationIdentifierMaster>(entity =>
+            {
+                entity.Property(item => item.IssuingAuthority).HasMaxLength(150).IsRequired();
+                entity.HasIndex(item => new { item.InstitutionId, item.CountryId, item.Code })
+                    .IsUnique().HasFilter("\"IsSoftDeleted\" = false")
+                    .HasDatabaseName("UX_StudentEducationIdentifierMaster_Institution_Country_Code");
+                entity.HasOne<Country>().WithMany().HasForeignKey(item => item.CountryId)
+                    .OnDelete(DeleteBehavior.Restrict).HasConstraintName("FK_StudentEducationIdentifierMaster_Country");
+            });
+
+            modelBuilder.Entity<InstitutionPortalDomainMaster>(entity =>
+            {
+                entity.ToTable("InstitutionPortalDomainMaster", "skolenza", table =>
+                    table.HasCheckConstraint("CK_InstitutionPortalDomainMaster_VerificationStatus", "\"VerificationStatus\" IN (1, 2)"));
+                entity.HasKey(item => item.Id);
+                entity.Property(item => item.DomainName).HasMaxLength(253).IsRequired();
+                entity.Property(item => item.ChallengeValueHash).HasMaxLength(64).IsRequired();
+                entity.HasIndex(item => item.InstitutionId).IsUnique()
+                    .HasFilter("\"IsSoftDeleted\" = false")
+                    .HasDatabaseName("UX_InstitutionPortalDomainMaster_Institution");
+                entity.HasIndex(item => item.DomainName).IsUnique()
+                    .HasFilter("\"IsSoftDeleted\" = false")
+                    .HasDatabaseName("UX_InstitutionPortalDomainMaster_Domain");
+                entity.HasOne<Institution>().WithMany().HasForeignKey(item => item.InstitutionId)
+                    .OnDelete(DeleteBehavior.Restrict)
+                    .HasConstraintName("FK_InstitutionPortalDomainMaster_Institution");
+            });
+
+            modelBuilder.Entity<StudentPortalAccount>(entity =>
+            {
+                entity.ToTable("StudentPortalAccount", "skolenza", table =>
+                {
+                    table.HasCheckConstraint("CK_StudentPortalAccount_FailedLoginCount", "\"FailedLoginCount\" >= 0");
+                });
+                entity.HasKey(item => item.Id);
+                entity.Property(item => item.NormalizedEmail).HasMaxLength(254).IsRequired();
+                entity.Property(item => item.PasswordHash).HasMaxLength(500).IsRequired();
+                entity.Property(item => item.SecurityStamp).HasMaxLength(64).IsRequired();
+                entity.HasIndex(item => new { item.InstitutionId, item.NormalizedEmail }).IsUnique()
+                    .HasDatabaseName("UX_StudentPortalAccount_Institution_Email");
+                entity.HasOne<Institution>().WithMany().HasForeignKey(item => item.InstitutionId)
+                    .OnDelete(DeleteBehavior.Restrict).HasConstraintName("FK_StudentPortalAccount_Institution");
+            });
+
+            modelBuilder.Entity<StudentPortalAccountGuardian>(entity =>
+            {
+                entity.ToTable("StudentPortalAccountGuardian", "skolenza");
+                entity.HasKey(item => item.Id);
+                entity.HasIndex(item => new { item.InstitutionId, item.StudentPortalAccountId, item.GuardianId }).IsUnique()
+                    .HasDatabaseName("UX_StudentPortalAccountGuardian_Link");
+                entity.HasIndex(item => new { item.InstitutionId, item.GuardianId }).IsUnique()
+                    .HasFilter("\"IsActive\" = true")
+                    .HasDatabaseName("UX_StudentPortalAccountGuardian_Guardian");
+                entity.HasOne<StudentPortalAccount>().WithMany().HasForeignKey(item => item.StudentPortalAccountId)
+                    .OnDelete(DeleteBehavior.Restrict).HasConstraintName("FK_StudentPortalAccountGuardian_Account");
+                entity.HasOne<Guardian>().WithMany().HasForeignKey(item => item.GuardianId)
+                    .OnDelete(DeleteBehavior.Restrict).HasConstraintName("FK_StudentPortalAccountGuardian_Guardian");
+            });
+
+            modelBuilder.Entity<StudentPortalAccountStudent>(entity =>
+            {
+                entity.ToTable("StudentPortalAccountStudent", "skolenza");
+                entity.HasKey(item => item.Id);
+                entity.HasIndex(item => new { item.InstitutionId, item.StudentPortalAccountId, item.StudentId }).IsUnique()
+                    .HasDatabaseName("UX_StudentPortalAccountStudent_Link");
+                entity.HasIndex(item => new { item.InstitutionId, item.StudentId }).IsUnique()
+                    .HasFilter("\"IsActive\" = true")
+                    .HasDatabaseName("UX_StudentPortalAccountStudent_Student");
+                entity.HasOne<StudentPortalAccount>().WithMany().HasForeignKey(item => item.StudentPortalAccountId)
+                    .OnDelete(DeleteBehavior.Restrict).HasConstraintName("FK_StudentPortalAccountStudent_Account");
+                entity.HasOne<Student>().WithMany().HasForeignKey(item => item.StudentId)
+                    .OnDelete(DeleteBehavior.Restrict).HasConstraintName("FK_StudentPortalAccountStudent_Student");
+            });
+
+            modelBuilder.Entity<StudentPortalRefreshToken>(entity =>
+            {
+                entity.ToTable("StudentPortalRefreshToken", "skolenza");
+                entity.HasKey(item => item.Id);
+                entity.Property(item => item.TokenHash).HasMaxLength(64).IsRequired();
+                entity.Property(item => item.ReplacedByTokenHash).HasMaxLength(64);
+                entity.HasIndex(item => item.TokenHash).IsUnique()
+                    .HasDatabaseName("UX_StudentPortalRefreshToken_Hash");
+                entity.HasOne<StudentPortalAccount>().WithMany().HasForeignKey(item => item.StudentPortalAccountId)
+                    .OnDelete(DeleteBehavior.Restrict).HasConstraintName("FK_StudentPortalRefreshToken_Account");
+            });
+
+            modelBuilder.Entity<StudentPortalOneTimeToken>(entity =>
+            {
+                entity.ToTable("StudentPortalOneTimeToken", "skolenza", table =>
+                {
+                    table.HasCheckConstraint("CK_StudentPortalOneTimeToken_Purpose", "\"Purpose\" IN (1, 2)");
+                    table.HasCheckConstraint("CK_StudentPortalOneTimeToken_Target", "(CASE WHEN \"StudentPortalAccountId\" IS NULL THEN 0 ELSE 1 END) + (CASE WHEN \"GuardianId\" IS NULL THEN 0 ELSE 1 END) + (CASE WHEN \"StudentId\" IS NULL THEN 0 ELSE 1 END) = 1");
+                });
+                entity.HasKey(item => item.Id);
+                entity.Property(item => item.TokenHash).HasMaxLength(64).IsRequired();
+                entity.HasIndex(item => item.TokenHash).IsUnique()
+                    .HasDatabaseName("UX_StudentPortalOneTimeToken_Hash");
+                entity.HasOne<StudentPortalAccount>().WithMany().HasForeignKey(item => item.StudentPortalAccountId)
+                    .OnDelete(DeleteBehavior.Restrict).HasConstraintName("FK_StudentPortalOneTimeToken_Account");
+                entity.HasOne<Guardian>().WithMany().HasForeignKey(item => item.GuardianId)
+                    .OnDelete(DeleteBehavior.Restrict).HasConstraintName("FK_StudentPortalOneTimeToken_Guardian");
+                entity.HasOne<Student>().WithMany().HasForeignKey(item => item.StudentId)
+                    .OnDelete(DeleteBehavior.Restrict).HasConstraintName("FK_StudentPortalOneTimeToken_Student");
+            });
+
+            modelBuilder.Entity<Student>(entity =>
+            {
+                entity.ToTable("Student", "skolenza");
+                entity.HasKey(item => item.Id);
+                entity.Property(item => item.StudentCode).HasMaxLength(80).IsRequired();
+                entity.Property(item => item.AdmissionNumber).HasMaxLength(80);
+                entity.Property(item => item.FirstName).HasMaxLength(100).IsRequired();
+                entity.Property(item => item.MiddleName).HasMaxLength(100);
+                entity.Property(item => item.LastName).HasMaxLength(100).IsRequired();
+                entity.HasIndex(item => new { item.InstitutionId, item.StudentCode }).IsUnique()
+                    .HasDatabaseName("UX_Student_Institution_StudentCode");
+                entity.HasIndex(item => new { item.InstitutionId, item.AdmissionNumber }).IsUnique()
+                    .HasFilter("\"AdmissionNumber\" IS NOT NULL AND \"IsSoftDeleted\" = false")
+                    .HasDatabaseName("UX_Student_Institution_AdmissionNumber");
+                entity.HasOne<Institution>().WithMany().HasForeignKey(item => item.InstitutionId)
+                    .OnDelete(DeleteBehavior.Restrict).HasConstraintName("FK_Student_Institution");
+                entity.HasOne<Country>().WithMany().HasForeignKey(item => item.CountryId)
+                    .OnDelete(DeleteBehavior.Restrict).HasConstraintName("FK_Student_Country");
+                entity.HasOne<Gender>().WithMany().HasForeignKey(item => item.GenderId)
+                    .OnDelete(DeleteBehavior.Restrict).HasConstraintName("FK_Student_Gender");
+            });
+
+            modelBuilder.Entity<StudentAdmission>(entity =>
+            {
+                entity.ToTable("StudentAdmission", "skolenza");
+                entity.HasKey(item => item.Id);
+                entity.Property(item => item.ApplicationNumber).HasMaxLength(80).IsRequired();
+                entity.Property(item => item.FirstName).HasMaxLength(100).IsRequired();
+                entity.Property(item => item.MiddleName).HasMaxLength(100);
+                entity.Property(item => item.LastName).HasMaxLength(100).IsRequired();
+                entity.Property(item => item.ReviewReason).HasMaxLength(1000);
+                entity.HasIndex(item => new { item.InstitutionId, item.ApplicationNumber }).IsUnique();
+                entity.HasOne<Institution>().WithMany().HasForeignKey(item => item.InstitutionId)
+                    .OnDelete(DeleteBehavior.Restrict).HasConstraintName("FK_StudentAdmission_Institution");
+                entity.HasOne<AcademicSession>().WithMany().HasForeignKey(item => item.AcademicSessionId)
+                    .OnDelete(DeleteBehavior.Restrict).HasConstraintName("FK_StudentAdmission_AcademicSession");
+                entity.HasOne<Campus>().WithMany().HasForeignKey(item => item.CampusId)
+                    .OnDelete(DeleteBehavior.Restrict).HasConstraintName("FK_StudentAdmission_Campus");
+                entity.HasOne<AcademicGroup>().WithMany().HasForeignKey(item => item.AcademicGroupId)
+                    .OnDelete(DeleteBehavior.Restrict).HasConstraintName("FK_StudentAdmission_AcademicGroup");
+                entity.HasOne<Country>().WithMany().HasForeignKey(item => item.CountryId)
+                    .OnDelete(DeleteBehavior.Restrict).HasConstraintName("FK_StudentAdmission_Country");
+                entity.HasOne<Gender>().WithMany().HasForeignKey(item => item.GenderId)
+                    .OnDelete(DeleteBehavior.Restrict).HasConstraintName("FK_StudentAdmission_Gender");
+                entity.HasOne<Student>().WithMany().HasForeignKey(item => item.StudentId)
+                    .OnDelete(DeleteBehavior.Restrict).HasConstraintName("FK_StudentAdmission_Student");
+            });
+
+            modelBuilder.Entity<StudentEnrollment>(entity =>
+            {
+                entity.ToTable("StudentEnrollment", "skolenza");
+                entity.HasKey(item => item.Id);
+                entity.Property(item => item.RollNumber).HasMaxLength(80);
+                entity.HasIndex(item => new { item.InstitutionId, item.StudentId, item.AcademicSessionId }).IsUnique();
+                entity.HasOne<Student>().WithMany().HasForeignKey(item => item.StudentId)
+                    .OnDelete(DeleteBehavior.Restrict).HasConstraintName("FK_StudentEnrollment_Student");
+                entity.HasOne<AcademicSession>().WithMany().HasForeignKey(item => item.AcademicSessionId)
+                    .OnDelete(DeleteBehavior.Restrict).HasConstraintName("FK_StudentEnrollment_AcademicSession");
+                entity.HasOne<Campus>().WithMany().HasForeignKey(item => item.CampusId)
+                    .OnDelete(DeleteBehavior.Restrict).HasConstraintName("FK_StudentEnrollment_Campus");
+                entity.HasOne<AcademicGroup>().WithMany().HasForeignKey(item => item.AcademicGroupId)
+                    .OnDelete(DeleteBehavior.Restrict).HasConstraintName("FK_StudentEnrollment_AcademicGroup");
+                entity.HasOne<AcademicProgramme>().WithMany().HasForeignKey(item => item.AcademicProgrammeId)
+                    .OnDelete(DeleteBehavior.Restrict).HasConstraintName("FK_StudentEnrollment_AcademicProgramme");
+            });
+
+            modelBuilder.Entity<StudentAdmissionStatusHistory>(entity =>
+            {
+                entity.ToTable("StudentAdmissionStatusHistory", "skolenza");
+                entity.HasKey(item => item.Id);
+                entity.Property(item => item.Reason).HasMaxLength(1000);
+                entity.HasIndex(item => new { item.InstitutionId, item.StudentAdmissionId, item.ChangedDateTime });
+                entity.HasOne<StudentAdmission>().WithMany().HasForeignKey(item => item.StudentAdmissionId)
+                    .OnDelete(DeleteBehavior.Restrict).HasConstraintName("FK_StudentAdmissionStatusHistory_Admission");
+            });
+
+            modelBuilder.Entity<StudentAdmissionGuardian>(entity =>
+            {
+                entity.ToTable("StudentAdmissionGuardian", "skolenza", table =>
+                {
+                    table.HasCheckConstraint("CK_StudentAdmissionGuardian_RelationshipType", "\"RelationshipType\" BETWEEN 1 AND 5");
+                    table.HasCheckConstraint("CK_StudentAdmissionGuardian_EffectiveDates", "\"EffectiveTo\" IS NULL OR \"EffectiveTo\" >= \"EffectiveFrom\"");
+                });
+                entity.HasKey(item => item.Id);
+                entity.HasIndex(item => new { item.InstitutionId, item.StudentAdmissionId, item.GuardianId })
+                    .IsUnique().HasFilter("\"IsActive\" = true")
+                    .HasDatabaseName("UX_StudentAdmissionGuardian_ActiveLink");
+                entity.HasIndex(item => new { item.InstitutionId, item.StudentAdmissionId })
+                    .IsUnique().HasFilter("\"IsActive\" = true AND \"IsPrimary\" = true")
+                    .HasDatabaseName("UX_StudentAdmissionGuardian_OnePrimary");
+                entity.HasOne<StudentAdmission>().WithMany().HasForeignKey(item => item.StudentAdmissionId)
+                    .OnDelete(DeleteBehavior.Restrict).HasConstraintName("FK_StudentAdmissionGuardian_Admission");
+                entity.HasOne<Guardian>().WithMany().HasForeignKey(item => item.GuardianId)
+                    .OnDelete(DeleteBehavior.Restrict).HasConstraintName("FK_StudentAdmissionGuardian_Guardian");
+            });
+
+            modelBuilder.Entity<StudentAdmissionDocument>(entity =>
+            {
+                entity.ToTable("StudentAdmissionDocument", "skolenza", table =>
+                {
+                    table.HasCheckConstraint("CK_StudentAdmissionDocument_PersonScope", "\"PersonScope\" BETWEEN 1 AND 3");
+                    table.HasCheckConstraint("CK_StudentAdmissionDocument_GuardianScope", "(\"PersonScope\" = 1 AND \"GuardianId\" IS NULL) OR (\"PersonScope\" IN (2, 3) AND \"GuardianId\" IS NOT NULL)");
+                    table.HasCheckConstraint("CK_StudentAdmissionDocument_Version", "\"VersionNumber\" > 0");
+                    table.HasCheckConstraint("CK_StudentAdmissionDocument_Size", "\"FileSizeBytes\" > 0");
+                    table.HasCheckConstraint("CK_StudentAdmissionDocument_Status", "\"Status\" BETWEEN 1 AND 4");
+                });
+                entity.HasKey(item => item.Id);
+                entity.Property(item => item.OriginalFileName).HasMaxLength(255).IsRequired();
+                entity.Property(item => item.StorageProvider).HasMaxLength(30).IsRequired();
+                entity.Property(item => item.ObjectKey).HasMaxLength(1000).IsRequired();
+                entity.Property(item => item.ContentType).HasMaxLength(150).IsRequired();
+                entity.Property(item => item.ChecksumSha256).HasMaxLength(64).IsRequired();
+                entity.Property(item => item.ReviewReason).HasMaxLength(1000);
+                entity.HasIndex(item => new { item.InstitutionId, item.StudentAdmissionId, item.RequirementId, item.PersonScope, item.GuardianId, item.VersionNumber })
+                    .IsUnique().HasDatabaseName("UX_StudentAdmissionDocument_Version");
+                entity.HasIndex(item => new { item.InstitutionId, item.StudentAdmissionId, item.Status, item.Id })
+                    .HasDatabaseName("IX_StudentAdmissionDocument_Admission_Status");
+                entity.HasOne<StudentAdmission>().WithMany().HasForeignKey(item => item.StudentAdmissionId)
+                    .OnDelete(DeleteBehavior.Restrict).HasConstraintName("FK_StudentAdmissionDocument_Admission");
+                entity.HasOne<StudentDocumentRequirementMaster>().WithMany().HasForeignKey(item => item.RequirementId)
+                    .OnDelete(DeleteBehavior.Restrict).HasConstraintName("FK_StudentAdmissionDocument_Requirement");
+                entity.HasOne<Guardian>().WithMany().HasForeignKey(item => item.GuardianId)
+                    .OnDelete(DeleteBehavior.Restrict).HasConstraintName("FK_StudentAdmissionDocument_Guardian");
+                entity.HasOne<StudentAdmissionDocument>().WithMany().HasForeignKey(item => item.SupersedesDocumentId)
+                    .OnDelete(DeleteBehavior.Restrict).HasConstraintName("FK_StudentAdmissionDocument_Supersedes");
+            });
+
+            modelBuilder.Entity<StudentAdmissionDocumentReviewHistory>(entity =>
+            {
+                entity.ToTable("StudentAdmissionDocumentReviewHistory", "skolenza");
+                entity.HasKey(item => item.Id);
+                entity.Property(item => item.Reason).HasMaxLength(1000);
+                entity.HasIndex(item => new { item.InstitutionId, item.StudentAdmissionDocumentId, item.ChangedDateTime })
+                    .HasDatabaseName("IX_StudentAdmissionDocumentReviewHistory_Document");
+                entity.HasOne<StudentAdmissionDocument>().WithMany().HasForeignKey(item => item.StudentAdmissionDocumentId)
+                    .OnDelete(DeleteBehavior.Restrict).HasConstraintName("FK_StudentAdmissionDocumentReviewHistory_Document");
+            });
+
+            modelBuilder.Entity<StudentRecordDocument>(entity =>
+            {
+                entity.ToTable("StudentRecordDocument", "skolenza", table =>
+                {
+                    table.HasCheckConstraint("CK_StudentRecordDocument_PersonScope", "\"PersonScope\" IN (1, 2)");
+                    table.HasCheckConstraint("CK_StudentRecordDocument_GuardianScope", "(\"PersonScope\" = 1 AND \"GuardianId\" IS NULL) OR (\"PersonScope\" = 2 AND \"GuardianId\" IS NOT NULL)");
+                    table.HasCheckConstraint("CK_StudentRecordDocument_Version", "\"VersionNumber\" > 0");
+                    table.HasCheckConstraint("CK_StudentRecordDocument_Size", "\"FileSizeBytes\" > 0");
+                    table.HasCheckConstraint("CK_StudentRecordDocument_Status", "\"Status\" BETWEEN 1 AND 4");
+                });
+                entity.HasKey(item => item.Id);
+                entity.Property(item => item.OriginalFileName).HasMaxLength(255).IsRequired();
+                entity.Property(item => item.StorageProvider).HasMaxLength(30).IsRequired();
+                entity.Property(item => item.ObjectKey).HasMaxLength(1000).IsRequired();
+                entity.Property(item => item.ContentType).HasMaxLength(150).IsRequired();
+                entity.Property(item => item.ChecksumSha256).HasMaxLength(64).IsRequired();
+                entity.Property(item => item.ReviewReason).HasMaxLength(1000);
+                entity.HasIndex(item => new { item.InstitutionId, item.StudentId, item.RequirementId, item.PersonScope, item.VersionNumber })
+                    .IsUnique().HasFilter("\"GuardianId\" IS NULL")
+                    .HasDatabaseName("UX_StudentRecordDocument_Student_Version");
+                entity.HasIndex(item => new { item.InstitutionId, item.StudentId, item.RequirementId, item.PersonScope, item.GuardianId, item.VersionNumber })
+                    .IsUnique().HasFilter("\"GuardianId\" IS NOT NULL")
+                    .HasDatabaseName("UX_StudentRecordDocument_Guardian_Version");
+                entity.HasIndex(item => new { item.InstitutionId, item.StudentId, item.Status, item.Id })
+                    .HasDatabaseName("IX_StudentRecordDocument_Student_Status");
+                entity.HasOne<Student>().WithMany().HasForeignKey(item => item.StudentId)
+                    .OnDelete(DeleteBehavior.Restrict).HasConstraintName("FK_StudentRecordDocument_Student");
+                entity.HasOne<StudentDocumentRequirementMaster>().WithMany().HasForeignKey(item => item.RequirementId)
+                    .OnDelete(DeleteBehavior.Restrict).HasConstraintName("FK_StudentRecordDocument_Requirement");
+                entity.HasOne<Guardian>().WithMany().HasForeignKey(item => item.GuardianId)
+                    .OnDelete(DeleteBehavior.Restrict).HasConstraintName("FK_StudentRecordDocument_Guardian");
+                entity.HasOne<StudentPortalAccount>().WithMany().HasForeignKey(item => item.SubmittedByPortalAccountId)
+                    .OnDelete(DeleteBehavior.Restrict).HasConstraintName("FK_StudentRecordDocument_PortalAccount");
+                entity.HasOne<StudentRecordDocument>().WithMany().HasForeignKey(item => item.SupersedesDocumentId)
+                    .OnDelete(DeleteBehavior.Restrict).HasConstraintName("FK_StudentRecordDocument_Supersedes");
+            });
+
+            modelBuilder.Entity<StudentRecordDocumentReviewHistory>(entity =>
+            {
+                entity.ToTable("StudentRecordDocumentReviewHistory", "skolenza", table =>
+                    table.HasCheckConstraint(
+                        "CK_StudentRecordDocumentReviewHistory_Actor",
+                        "(CASE WHEN \"ChangedByStaffMemberId\" IS NULL THEN 0 ELSE 1 END) + " +
+                        "(CASE WHEN \"ChangedByPortalAccountId\" IS NULL THEN 0 ELSE 1 END) = 1"));
+                entity.HasKey(item => item.Id);
+                entity.Property(item => item.Reason).HasMaxLength(1000);
+                entity.HasIndex(item => new { item.InstitutionId, item.StudentRecordDocumentId, item.ChangedDateTime })
+                    .HasDatabaseName("IX_StudentRecordDocumentReviewHistory_Document");
+                entity.HasOne<StudentRecordDocument>().WithMany().HasForeignKey(item => item.StudentRecordDocumentId)
+                    .OnDelete(DeleteBehavior.Restrict).HasConstraintName("FK_StudentRecordDocumentReviewHistory_Document");
+                entity.HasOne<StaffMember>().WithMany().HasForeignKey(item => item.ChangedByStaffMemberId)
+                    .OnDelete(DeleteBehavior.Restrict).HasConstraintName("FK_StudentRecordDocumentReviewHistory_Staff");
+                entity.HasOne<StudentPortalAccount>().WithMany().HasForeignKey(item => item.ChangedByPortalAccountId)
+                    .OnDelete(DeleteBehavior.Restrict).HasConstraintName("FK_StudentRecordDocumentReviewHistory_PortalAccount");
+            });
+
+            modelBuilder.Entity<CountryCurrencyMaster>(entity =>
+            {
+                entity.ToTable("CountryCurrencyMaster", "skolenza", table =>
+                {
+                    table.HasCheckConstraint("CK_CountryCurrencyMaster_CurrencyCode", "length(\"CurrencyCode\") = 3");
+                    table.HasCheckConstraint("CK_CountryCurrencyMaster_DecimalPlaces", "\"DecimalPlaces\" IN (0, 2, 3)");
+                    table.HasCheckConstraint("CK_CountryCurrencyMaster_EffectiveDates", "\"EffectiveTo\" IS NULL OR \"EffectiveTo\" >= \"EffectiveFrom\"");
+                });
+                entity.HasKey(item => item.Id);
+                entity.Property(item => item.CurrencyCode).HasMaxLength(3).IsRequired();
+                entity.Property(item => item.CurrencyName).HasMaxLength(100).IsRequired();
+                entity.Property(item => item.CurrencySymbol).HasMaxLength(12).IsRequired();
+                entity.HasIndex(item => new { item.CountryId, item.CurrencyCode, item.EffectiveFrom }).IsUnique()
+                    .HasDatabaseName("UX_CountryCurrencyMaster_Country_Code_EffectiveFrom");
+                entity.HasIndex(item => item.CountryId).IsUnique()
+                    .HasFilter("\"IsPrimary\" = true AND \"IsActive\" = true AND \"EffectiveTo\" IS NULL")
+                    .HasDatabaseName("UX_CountryCurrencyMaster_ActivePrimaryCountry");
+                entity.HasOne<Country>().WithMany().HasForeignKey(item => item.CountryId)
+                    .OnDelete(DeleteBehavior.Restrict).HasConstraintName("FK_CountryCurrencyMaster_Country");
+            });
+
+            modelBuilder.Entity<StudentFeeStructure>(entity =>
+            {
+                entity.ToTable("StudentFeeStructure", "skolenza", table =>
+                {
+                    table.HasCheckConstraint("CK_StudentFeeStructure_LateFee", "\"LateFeePerInstallment\" >= 0 AND \"GracePeriodDays\" >= 0 AND (\"LateFeeCap\" IS NULL OR \"LateFeeCap\" >= 0)");
+                    table.HasCheckConstraint("CK_StudentFeeStructure_CurrencyDecimalPlaces", "\"CurrencyDecimalPlaces\" IN (0, 2, 3)");
+                });
+                entity.HasKey(item => item.Id);
+                entity.Property(item => item.CurrencyCode).HasMaxLength(3).IsRequired();
+                entity.Property(item => item.LateFeePerInstallment).HasPrecision(18, 3);
+                entity.Property(item => item.LateFeeCap).HasPrecision(18, 3);
+                entity.HasIndex(item => new { item.InstitutionId, item.CampusId, item.AcademicSessionId, item.AcademicGroupId })
+                    .IsUnique().HasFilter("\"IsSoftDeleted\" = false")
+                    .HasDatabaseName("UX_StudentFeeStructure_Campus_Session_Group");
+                entity.HasOne<Institution>().WithMany().HasForeignKey(item => item.InstitutionId)
+                    .OnDelete(DeleteBehavior.Restrict).HasConstraintName("FK_StudentFeeStructure_Institution");
+                entity.HasOne<Campus>().WithMany().HasForeignKey(item => item.CampusId)
+                    .OnDelete(DeleteBehavior.Restrict).HasConstraintName("FK_StudentFeeStructure_Campus");
+                entity.HasOne<AcademicSession>().WithMany().HasForeignKey(item => item.AcademicSessionId)
+                    .OnDelete(DeleteBehavior.Restrict).HasConstraintName("FK_StudentFeeStructure_Session");
+                entity.HasOne<AcademicGroup>().WithMany().HasForeignKey(item => item.AcademicGroupId)
+                    .OnDelete(DeleteBehavior.Restrict).HasConstraintName("FK_StudentFeeStructure_Group");
+                entity.HasOne<CountryCurrencyMaster>().WithMany().HasForeignKey(item => item.CountryCurrencyMasterId)
+                    .OnDelete(DeleteBehavior.Restrict).HasConstraintName("FK_StudentFeeStructure_Currency");
+            });
+
+            modelBuilder.Entity<StudentFeeStructureItem>(entity =>
+            {
+                entity.ToTable("StudentFeeStructureItem", "skolenza", table =>
+                    table.HasCheckConstraint("CK_StudentFeeStructureItem_Amount", "\"Amount\" >= 0"));
+                entity.HasKey(item => item.Id);
+                entity.Property(item => item.ComponentCode).HasMaxLength(60).IsRequired();
+                entity.Property(item => item.ComponentName).HasMaxLength(150).IsRequired();
+                entity.Property(item => item.Amount).HasPrecision(18, 3);
+                entity.HasIndex(item => new { item.InstitutionId, item.StudentFeeStructureId, item.FeeComponentMasterId })
+                    .IsUnique().HasDatabaseName("UX_StudentFeeStructureItem_Component");
+                entity.HasOne<StudentFeeStructure>().WithMany().HasForeignKey(item => item.StudentFeeStructureId)
+                    .OnDelete(DeleteBehavior.Restrict).HasConstraintName("FK_StudentFeeStructureItem_Structure");
+                entity.HasOne<StudentFeeComponentMaster>().WithMany().HasForeignKey(item => item.FeeComponentMasterId)
+                    .OnDelete(DeleteBehavior.Restrict).HasConstraintName("FK_StudentFeeStructureItem_ComponentMaster");
+            });
+
+            modelBuilder.Entity<StudentFeeStructureFrequency>(entity =>
+            {
+                entity.ToTable("StudentFeeStructureFrequency", "skolenza");
+                entity.HasKey(item => item.Id);
+                entity.HasIndex(item => new { item.InstitutionId, item.StudentFeeStructureId, item.FeeFrequencyMasterId })
+                    .IsUnique().HasDatabaseName("UX_StudentFeeStructureFrequency_Frequency");
+                entity.HasOne<StudentFeeStructure>().WithMany().HasForeignKey(item => item.StudentFeeStructureId)
+                    .OnDelete(DeleteBehavior.Restrict).HasConstraintName("FK_StudentFeeStructureFrequency_Structure");
+                entity.HasOne<StudentFeeFrequencyMaster>().WithMany().HasForeignKey(item => item.FeeFrequencyMasterId)
+                    .OnDelete(DeleteBehavior.Restrict).HasConstraintName("FK_StudentFeeStructureFrequency_FrequencyMaster");
+            });
+
+            modelBuilder.Entity<StudentFeeStructureInstallmentDueDate>(entity =>
+            {
+                entity.ToTable("StudentFeeStructureInstallmentDueDate", "skolenza", table =>
+                    table.HasCheckConstraint("CK_StudentFeeStructureInstallmentDueDate_Number", "\"InstallmentNumber\" > 0"));
+                entity.HasKey(item => item.Id);
+                entity.HasIndex(item => new { item.InstitutionId, item.StudentFeeStructureFrequencyId, item.InstallmentNumber })
+                    .IsUnique().HasDatabaseName("UX_StudentFeeStructureInstallmentDueDate_Number");
+                entity.HasOne<StudentFeeStructureFrequency>().WithMany().HasForeignKey(item => item.StudentFeeStructureFrequencyId)
+                    .OnDelete(DeleteBehavior.Restrict).HasConstraintName("FK_StudentFeeStructureInstallmentDueDate_Frequency");
+            });
+
+            modelBuilder.Entity<StudentAdmissionFeeQuote>(entity =>
+            {
+                entity.ToTable("StudentAdmissionFeeQuote", "skolenza", table =>
+                {
+                    table.HasCheckConstraint("CK_StudentAdmissionFeeQuote_Amounts", "\"DiscountPercent\" BETWEEN 0 AND 100 AND \"GrossRecurringAmount\" >= 0 AND \"DiscountAmount\" >= 0 AND \"OneTimeAmount\" >= 0 AND \"NetAnnualAmount\" >= 0");
+                    table.HasCheckConstraint("CK_StudentAdmissionFeeQuote_CurrencyDecimalPlaces", "\"CurrencyDecimalPlaces\" IN (0, 2, 3)");
+                });
+                entity.HasKey(item => item.Id);
+                entity.Property(item => item.CurrencyCode).HasMaxLength(3).IsRequired();
+                entity.Property(item => item.DiscountPercent).HasPrecision(5, 2);
+                entity.Property(item => item.GrossRecurringAmount).HasPrecision(18, 3);
+                entity.Property(item => item.DiscountAmount).HasPrecision(18, 3);
+                entity.Property(item => item.OneTimeAmount).HasPrecision(18, 3);
+                entity.Property(item => item.NetAnnualAmount).HasPrecision(18, 3);
+                entity.HasIndex(item => new { item.InstitutionId, item.StudentAdmissionId }).IsUnique()
+                    .HasDatabaseName("UX_StudentAdmissionFeeQuote_Admission");
+                entity.HasOne<StudentAdmission>().WithMany().HasForeignKey(item => item.StudentAdmissionId)
+                    .OnDelete(DeleteBehavior.Restrict).HasConstraintName("FK_StudentAdmissionFeeQuote_Admission");
+                entity.HasOne<StudentFeeStructure>().WithMany().HasForeignKey(item => item.StudentFeeStructureId)
+                    .OnDelete(DeleteBehavior.Restrict).HasConstraintName("FK_StudentAdmissionFeeQuote_Structure");
+                entity.HasOne<StudentFeeStructureFrequency>().WithMany().HasForeignKey(item => item.StudentFeeStructureFrequencyId)
+                    .OnDelete(DeleteBehavior.Restrict).HasConstraintName("FK_StudentAdmissionFeeQuote_Frequency");
+                entity.HasOne<StudentBenefitSchemeMaster>().WithMany().HasForeignKey(item => item.StudentBenefitSchemeMasterId)
+                    .OnDelete(DeleteBehavior.Restrict).HasConstraintName("FK_StudentAdmissionFeeQuote_BenefitScheme");
+            });
+
+            modelBuilder.Entity<StudentAdmissionFeeQuoteLine>(entity =>
+            {
+                entity.ToTable("StudentAdmissionFeeQuoteLine", "skolenza");
+                entity.HasKey(item => item.Id);
+                entity.Property(item => item.ComponentCode).HasMaxLength(60).IsRequired();
+                entity.Property(item => item.ComponentName).HasMaxLength(150).IsRequired();
+                entity.Property(item => item.AnnualAmount).HasPrecision(18, 3);
+                entity.Property(item => item.DiscountAmount).HasPrecision(18, 3);
+                entity.Property(item => item.NetAmount).HasPrecision(18, 3);
+                entity.HasOne<StudentAdmissionFeeQuote>().WithMany().HasForeignKey(item => item.StudentAdmissionFeeQuoteId)
+                    .OnDelete(DeleteBehavior.Restrict).HasConstraintName("FK_StudentAdmissionFeeQuoteLine_Quote");
+            });
+
+            modelBuilder.Entity<StudentFeeInstallment>(entity =>
+            {
+                entity.ToTable("StudentFeeInstallment", "skolenza", table =>
+                    table.HasCheckConstraint("CK_StudentFeeInstallment_Amounts", "\"RecurringAmount\" >= 0 AND \"OneTimeAmount\" >= 0 AND \"LateFeeAmount\" >= 0 AND \"PaidAmount\" >= 0"));
+                entity.HasKey(item => item.Id);
+                entity.Property(item => item.RecurringAmount).HasPrecision(18, 3);
+                entity.Property(item => item.OneTimeAmount).HasPrecision(18, 3);
+                entity.Property(item => item.LateFeeAmount).HasPrecision(18, 3);
+                entity.Property(item => item.PaidAmount).HasPrecision(18, 3);
+                entity.HasIndex(item => new { item.InstitutionId, item.StudentAdmissionFeeQuoteId, item.InstallmentNumber })
+                    .IsUnique().HasDatabaseName("UX_StudentFeeInstallment_Quote_Number");
+                entity.HasOne<StudentAdmissionFeeQuote>().WithMany().HasForeignKey(item => item.StudentAdmissionFeeQuoteId)
+                    .OnDelete(DeleteBehavior.Restrict).HasConstraintName("FK_StudentFeeInstallment_Quote");
+            });
+
+            modelBuilder.Entity<StudentFeePaymentAttempt>(entity =>
+            {
+                entity.ToTable("StudentFeePaymentAttempt", "skolenza");
+                entity.HasKey(item => item.Id);
+                entity.Property(item => item.IdempotencyKey).HasMaxLength(100).IsRequired();
+                entity.Property(item => item.GatewayCode).HasMaxLength(40).IsRequired();
+                entity.Property(item => item.GatewayOrderId).HasMaxLength(100).IsRequired();
+                entity.Property(item => item.GatewayPaymentSessionId).HasMaxLength(2000);
+                entity.Property(item => item.Amount).HasPrecision(18, 3);
+                entity.Property(item => item.CurrencyCode).HasMaxLength(3).IsRequired();
+                entity.HasIndex(item => new { item.InstitutionId, item.IdempotencyKey }).IsUnique()
+                    .HasDatabaseName("UX_StudentFeePaymentAttempt_Idempotency");
+                entity.HasIndex(item => item.GatewayOrderId).IsUnique()
+                    .HasDatabaseName("UX_StudentFeePaymentAttempt_GatewayOrder");
+                entity.HasOne<StudentFeeInstallment>().WithMany().HasForeignKey(item => item.StudentFeeInstallmentId)
+                    .OnDelete(DeleteBehavior.Restrict).HasConstraintName("FK_StudentFeePaymentAttempt_Installment");
+            });
+
+            modelBuilder.Entity<StudentPaymentGatewayConfiguration>(entity =>
+            {
+                entity.ToTable("StudentPaymentGatewayConfiguration", "skolenza", table =>
+                {
+                    table.HasCheckConstraint("CK_StudentPaymentGatewayConfiguration_Environment", "\"Environment\" IN (1, 2)");
+                    table.HasCheckConstraint("CK_StudentPaymentGatewayConfiguration_Version", "\"Version\" > 0");
+                });
+                entity.HasKey(item => item.Id);
+                entity.Property(item => item.GatewayCode).HasMaxLength(40).IsRequired();
+                entity.Property(item => item.ClientId).HasMaxLength(250).IsRequired();
+                entity.Property(item => item.ProtectedClientSecret).HasMaxLength(4096).IsRequired();
+                entity.Property(item => item.ProtectedWebhookSecret).HasMaxLength(4096).IsRequired();
+                entity.HasIndex(item => new { item.InstitutionId, item.GatewayCode }).IsUnique()
+                    .HasDatabaseName("UX_StudentPaymentGatewayConfiguration_Institution_Gateway");
+                entity.HasOne<Institution>().WithMany().HasForeignKey(item => item.InstitutionId)
+                    .OnDelete(DeleteBehavior.Restrict).HasConstraintName("FK_StudentPaymentGatewayConfiguration_Institution");
+            });
+
+            modelBuilder.Entity<StudentFeePaymentTransaction>(entity =>
+            {
+                entity.ToTable("StudentFeePaymentTransaction", "skolenza", table =>
+                    table.HasCheckConstraint("CK_StudentFeePaymentTransaction_Amount", "\"Amount\" > 0"));
+                entity.HasKey(item => item.Id);
+                entity.Property(item => item.GatewayPaymentId).HasMaxLength(100);
+                entity.Property(item => item.IdempotencyKey).HasMaxLength(100);
+                entity.Property(item => item.Amount).HasPrecision(18, 3);
+                entity.Property(item => item.CurrencyCode).HasMaxLength(3).IsRequired();
+                entity.Property(item => item.BankReference).HasMaxLength(150);
+                entity.Property(item => item.RecordedReference).HasMaxLength(150);
+                entity.HasIndex(item => new { item.InstitutionId, item.IdempotencyKey }).IsUnique()
+                    .HasFilter("\"IdempotencyKey\" IS NOT NULL")
+                    .HasDatabaseName("UX_StudentFeePaymentTransaction_Idempotency");
+                entity.HasIndex(item => item.GatewayPaymentId).IsUnique()
+                    .HasFilter("\"GatewayPaymentId\" IS NOT NULL")
+                    .HasDatabaseName("UX_StudentFeePaymentTransaction_GatewayPayment");
+                entity.HasOne<StudentFeeInstallment>().WithMany().HasForeignKey(item => item.StudentFeeInstallmentId)
+                    .OnDelete(DeleteBehavior.Restrict).HasConstraintName("FK_StudentFeePaymentTransaction_Installment");
+                entity.HasOne<StudentFeePaymentAttempt>().WithMany().HasForeignKey(item => item.StudentFeePaymentAttemptId)
+                    .OnDelete(DeleteBehavior.Restrict).HasConstraintName("FK_StudentFeePaymentTransaction_Attempt");
+            });
+
+            modelBuilder.Entity<StudentFeePaymentWebhookEvent>(entity =>
+            {
+                entity.ToTable("StudentFeePaymentWebhookEvent", "skolenza");
+                entity.HasKey(item => item.Id);
+                entity.Property(item => item.EventId).HasMaxLength(150).IsRequired();
+                entity.Property(item => item.EventType).HasMaxLength(100).IsRequired();
+                entity.Property(item => item.PayloadSha256).HasMaxLength(64).IsRequired();
+                entity.HasIndex(item => item.EventId).IsUnique()
+                    .HasDatabaseName("UX_StudentFeePaymentWebhookEvent_EventId");
+                entity.HasOne<StudentFeePaymentAttempt>().WithMany().HasForeignKey(item => item.StudentFeePaymentAttemptId)
+                    .OnDelete(DeleteBehavior.Restrict).HasConstraintName("FK_StudentFeePaymentWebhookEvent_Attempt");
+            });
+
+            modelBuilder.Entity<StudentFeeReceipt>(entity =>
+            {
+                entity.ToTable("StudentFeeReceipt", "skolenza");
+                entity.HasKey(item => item.Id);
+                entity.Property(item => item.ReceiptNumber).HasMaxLength(100).IsRequired();
+                entity.Property(item => item.Amount).HasPrecision(18, 3);
+                entity.Property(item => item.CurrencyCode).HasMaxLength(3).IsRequired();
+                entity.HasIndex(item => new { item.InstitutionId, item.ReceiptNumber }).IsUnique()
+                    .HasDatabaseName("UX_StudentFeeReceipt_Institution_Number");
+                entity.HasIndex(item => item.StudentFeePaymentTransactionId).IsUnique();
+                entity.HasOne<StudentFeePaymentTransaction>().WithMany().HasForeignKey(item => item.StudentFeePaymentTransactionId)
+                    .OnDelete(DeleteBehavior.Restrict).HasConstraintName("FK_StudentFeeReceipt_Transaction");
+                entity.HasOne<StudentAdmissionFeeQuote>().WithMany().HasForeignKey(item => item.StudentAdmissionFeeQuoteId)
+                    .OnDelete(DeleteBehavior.Restrict).HasConstraintName("FK_StudentFeeReceipt_Quote");
+                entity.HasOne<StudentFeeInstallment>().WithMany().HasForeignKey(item => item.StudentFeeInstallmentId)
+                    .OnDelete(DeleteBehavior.Restrict).HasConstraintName("FK_StudentFeeReceipt_Installment");
+            });
+
+            modelBuilder.Entity<Guardian>(entity =>
+            {
+                entity.ToTable("Guardian", "skolenza");
+                entity.HasKey(item => item.Id);
+                entity.Property(item => item.FirstName).HasMaxLength(100).IsRequired();
+                entity.Property(item => item.MiddleName).HasMaxLength(100);
+                entity.Property(item => item.LastName).HasMaxLength(100).IsRequired();
+                entity.Property(item => item.Email).HasMaxLength(254);
+                entity.Property(item => item.PhoneNumber).HasMaxLength(30);
+                entity.HasIndex(item => new { item.InstitutionId, item.Email })
+                    .IsUnique().HasFilter("\"Email\" IS NOT NULL AND \"IsSoftDeleted\" = false")
+                    .HasDatabaseName("UX_Guardian_Institution_Email");
+                entity.HasOne<Institution>().WithMany().HasForeignKey(item => item.InstitutionId)
+                    .OnDelete(DeleteBehavior.Restrict).HasConstraintName("FK_Guardian_Institution");
+            });
+
+            modelBuilder.Entity<StudentGuardian>(entity =>
+            {
+                entity.ToTable("StudentGuardian", "skolenza", table =>
+                {
+                    table.HasCheckConstraint("CK_StudentGuardian_RelationshipType", "\"RelationshipType\" BETWEEN 1 AND 5");
+                    table.HasCheckConstraint("CK_StudentGuardian_EffectiveDates", "\"EffectiveTo\" IS NULL OR \"EffectiveTo\" >= \"EffectiveFrom\"");
+                });
+                entity.HasKey(item => item.Id);
+                entity.HasIndex(item => new { item.InstitutionId, item.StudentId, item.GuardianId })
+                    .IsUnique().HasFilter("\"IsActive\" = true")
+                    .HasDatabaseName("UX_StudentGuardian_ActiveLink");
+                entity.HasIndex(item => new { item.InstitutionId, item.StudentId })
+                    .IsUnique().HasFilter("\"IsActive\" = true AND \"IsPrimary\" = true")
+                    .HasDatabaseName("UX_StudentGuardian_OnePrimary");
+                entity.HasOne<Student>().WithMany().HasForeignKey(item => item.StudentId)
+                    .OnDelete(DeleteBehavior.Restrict).HasConstraintName("FK_StudentGuardian_Student");
+                entity.HasOne<Guardian>().WithMany().HasForeignKey(item => item.GuardianId)
+                    .OnDelete(DeleteBehavior.Restrict).HasConstraintName("FK_StudentGuardian_Guardian");
+            });
+
+            modelBuilder.Entity<StudentExitHistory>(entity =>
+            {
+                entity.ToTable("StudentExitHistory", "skolenza");
+                entity.HasKey(item => item.Id);
+                entity.Property(item => item.PreviousSchoolName).HasMaxLength(250);
+                entity.Property(item => item.DestinationSchoolName).HasMaxLength(250);
+                entity.Property(item => item.Notes).HasMaxLength(2000);
+                entity.HasOne<Student>().WithMany().HasForeignKey(item => item.StudentId)
+                    .OnDelete(DeleteBehavior.Restrict).HasConstraintName("FK_StudentExitHistory_Student");
+                entity.HasOne<StudentEnrollment>().WithMany().HasForeignKey(item => item.StudentEnrollmentId)
+                    .OnDelete(DeleteBehavior.Restrict).HasConstraintName("FK_StudentExitHistory_StudentEnrollment");
+                entity.HasOne<Country>().WithMany().HasForeignKey(item => item.PreviousSchoolCountryId)
+                    .OnDelete(DeleteBehavior.Restrict).HasConstraintName("FK_StudentExitHistory_PreviousCountry");
+                entity.HasOne<Country>().WithMany().HasForeignKey(item => item.DestinationSchoolCountryId)
+                    .OnDelete(DeleteBehavior.Restrict).HasConstraintName("FK_StudentExitHistory_DestinationCountry");
+            });
+
+            modelBuilder.Entity<StudentEducationIdentifier>(entity =>
+            {
+                entity.ToTable("StudentEducationIdentifier", "skolenza");
+                entity.HasKey(item => item.Id);
+                entity.Property(item => item.EncryptedValue).HasMaxLength(2000).IsRequired();
+                entity.Property(item => item.MaskedValue).HasMaxLength(80).IsRequired();
+                entity.Property(item => item.IssuerReference).HasMaxLength(150);
+                entity.Property(item => item.UpdatedDateTime).HasColumnType("timestamp without time zone");
+                entity.HasIndex(item => new { item.InstitutionId, item.StudentId, item.IdentifierMasterId }).IsUnique();
+                entity.HasOne<Student>().WithMany().HasForeignKey(item => item.StudentId)
+                    .OnDelete(DeleteBehavior.Restrict).HasConstraintName("FK_StudentEducationIdentifier_Student");
+                entity.HasOne<StudentEducationIdentifierMaster>().WithMany().HasForeignKey(item => item.IdentifierMasterId)
+                    .OnDelete(DeleteBehavior.Restrict).HasConstraintName("FK_StudentEducationIdentifier_Master");
+                entity.HasOne<Country>().WithMany().HasForeignKey(item => item.CountryId)
+                    .OnDelete(DeleteBehavior.Restrict).HasConstraintName("FK_StudentEducationIdentifier_Country");
+            });
+
+            modelBuilder.Entity<StudentEducationIdentifierVerificationHistory>(entity =>
+            {
+                entity.ToTable("StudentEducationIdentifierVerificationHistory", "skolenza");
+                entity.HasKey(item => item.Id);
+                entity.Property(item => item.Reason).HasMaxLength(500);
+                entity.Property(item => item.ChangedDateTime).HasColumnType("timestamp without time zone");
+                entity.HasIndex(item => new { item.InstitutionId, item.StudentEducationIdentifierId, item.ChangedDateTime });
+                entity.HasOne<StudentEducationIdentifier>().WithMany()
+                    .HasForeignKey(item => item.StudentEducationIdentifierId)
+                    .OnDelete(DeleteBehavior.Restrict)
+                    .HasConstraintName("FK_StudentEducationIdentifierVerificationHistory_Identifier");
+            });
+
+            modelBuilder.Entity<StudentDocumentRequirementMaster>(entity =>
+            {
+                entity.Property(item => item.AllowedMimeTypesJson).HasColumnType("jsonb").HasDefaultValueSql("'[]'::jsonb");
+                entity.Property(item => item.IsRequired).HasDefaultValue(true);
+                entity.Property(item => item.MaxFileSizeBytes).HasDefaultValue(10485760L);
+                entity.HasIndex(item => new { item.InstitutionId, item.CampusId, item.AcademicSessionId, item.Code })
+                    .IsUnique()
+                    .HasDatabaseName("UX_StudentDocumentRequirementMaster_Scope_Code");
+                entity.HasOne<Campus>().WithMany()
+                    .HasForeignKey(item => item.CampusId)
+                    .OnDelete(DeleteBehavior.Restrict)
+                    .HasConstraintName("FK_StudentDocumentRequirementMaster_Campus");
+                entity.HasOne<AcademicSession>().WithMany()
+                    .HasForeignKey(item => item.AcademicSessionId)
+                    .OnDelete(DeleteBehavior.Restrict)
+                    .HasConstraintName("FK_StudentDocumentRequirementMaster_AcademicSession");
+            });
+
+            modelBuilder.Entity<StudentBenefitSchemeMaster>(entity =>
+            {
+                entity.Property(item => item.MinimumDiscountPercent).HasPrecision(5, 2);
+                entity.Property(item => item.MaximumDiscountPercent).HasPrecision(5, 2);
+                entity.Property(item => item.EligibilityDescription).HasMaxLength(1000);
+                entity.HasIndex(item => new { item.InstitutionId, item.Code }).IsUnique()
+                    .HasFilter("\"IsSoftDeleted\" = false")
+                    .HasDatabaseName("UX_StudentBenefitSchemeMaster_Institution_Code");
+                entity.HasOne<Country>().WithMany().HasForeignKey(item => item.CountryId)
+                    .OnDelete(DeleteBehavior.Restrict).HasConstraintName("FK_StudentBenefitSchemeMaster_Country");
+                entity.HasOne<State>().WithMany().HasForeignKey(item => item.StateId)
+                    .OnDelete(DeleteBehavior.Restrict).HasConstraintName("FK_StudentBenefitSchemeMaster_State");
+                entity.HasOne<Campus>().WithMany().HasForeignKey(item => item.CampusId)
+                    .OnDelete(DeleteBehavior.Restrict).HasConstraintName("FK_StudentBenefitSchemeMaster_Campus");
+                entity.HasOne<AcademicSession>().WithMany().HasForeignKey(item => item.AcademicSessionId)
+                    .OnDelete(DeleteBehavior.Restrict).HasConstraintName("FK_StudentBenefitSchemeMaster_AcademicSession");
+                entity.HasOne<StudentDocumentRequirementMaster>().WithMany()
+                    .HasForeignKey(item => item.EvidenceRequirementId)
+                    .OnDelete(DeleteBehavior.Restrict)
+                    .HasConstraintName("FK_StudentBenefitSchemeMaster_EvidenceRequirement");
+            });
 
             modelBuilder.Entity<StaffCapabilityMaster>(entity =>
             {
@@ -3635,6 +4341,17 @@ namespace skolenza.persistance.Data.Context
             ModelBuilder modelBuilder,
             string tableName)
             where TEntity : InstitutionMasterEntity
+        {
+            modelBuilder.Entity<TEntity>(entity =>
+            {
+                entity.ToTable(tableName, "skolenza");
+            });
+        }
+
+        private static void ConfigureStudentInstitutionMaster<TEntity>(
+            ModelBuilder modelBuilder,
+            string tableName)
+            where TEntity : StudentInstitutionMasterEntity
         {
             modelBuilder.Entity<TEntity>(entity =>
             {

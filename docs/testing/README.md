@@ -2,6 +2,21 @@
 - [Bulk import worker graceful host shutdown — 2026-10-14](bulk/worker-graceful-shutdown/2026-10-14.md)
 # Skolenza scenario test reports
 
+- [Student permission behavior and admission detail — 2026-10-29](student/permission-behavior/2026-10-29.md)
+- [Student admission concurrency ordering — 2026-10-29](student/admission-concurrency/2026-10-29.md)
+- [Student Local/Render schema parity and anonymous API smoke — 2026-10-28](student/schema-parity-and-runtime-smoke/2026-10-28.md)
+- [Student Fees and Guardian API phasewise source audit — 2026-10-28](student/phasewise-source-audit/2026-10-28.md)
+- [Student Cashfree tuition checkout, reconciliation and webhook — 2026-10-28](student/cashfree-tuition-payments/2026-10-28.md)
+- [Student Cashfree credential AES-GCM/API configuration — 2026-10-28](student/cashfree-gateway-configuration/2026-10-28.md)
+- [Student country/authority education identifier master API — 2026-10-28](student/education-identifier-masters/2026-10-28.md)
+- [Student issued education identifier storage and verification API — 2026-10-28](student/education-identifiers/2026-10-28.md)
+- [Student fee ledger routes, rounding and installment allocation — 2026-10-28](student/fee-ledger-contracts/2026-10-28.md)
+- [Student enum-backed workflow options API — 2026-10-28](student/options-api/2026-10-28.md)
+- [Student Guardian profiles and links — 2026-10-28](student/guardian-profiles-and-links/2026-10-28.md)
+- [Student admission Guardian capture — 2026-10-28](student/admission-guardian-capture/2026-10-28.md)
+- [Student admission document upload/review API contracts — 2026-10-28](student/admission-documents/2026-10-28.md)
+- [Student approval readiness and currency precision — 2026-10-28](student/admission-approval-currency-precision/2026-10-28.md)
+
 - [Academic pagination and all 17 Staff list API variants — 2026-10-18](staff/academic-pagination/2026-10-18.md)
 
 - [Five Professional Structure tabs: API pagination — 2026-10-18](staff/professional-pagination/2026-10-18.md)
@@ -82,4 +97,16 @@ test run.
 - [Host-created categories and Position onboarding — 2026-10-17](staff/host-category-onboarding/2026-10-17.md)
 
 - [Host Staff Category Catalogue — 2026-10-14](staff/host-staff-category-catalogue/2026-10-14.md)
+
+
+- [Student master APIs and Local/Render schema application — 2026-10-27](student/master-apis-and-schema/2026-10-27.md)
+- [Student Cashfree gateway configuration and AES-GCM contracts — 2026-10-28](student/cashfree-gateway-configuration/2026-10-28.md)
+- [Student institution portal-domain DNS verification — 2026-10-28](student/portal-domain-master/2026-10-28.md)
+- [Student/Guardian portal authentication source contracts — 2026-10-28](student/portal-authentication/2026-10-28.md)
+- [Student Guardian/Student portal document self-service source contracts — 2026-10-28](student/portal-document-upload/2026-10-28.md)
+- [Student admission detail and status-history source contracts — 2026-10-28](student/admission-detail-status-history/2026-10-28.md)
+# Student admission approval
+
+- [Approval atomicity and Guardian effective dates — 2026-10-29](student/admission-approval-atomicity/2026-10-29.md)
+- [Local Guardian invitation template and queue — 2026-10-29](student/guardian-invitation-local/2026-10-29.md)
 

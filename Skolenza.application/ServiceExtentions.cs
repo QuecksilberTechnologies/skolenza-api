@@ -18,6 +18,7 @@ namespace skolenza.application
             services.AddAutoMapper(Assembly.GetExecutingAssembly());
             services.AddMediatR(conf => conf.RegisterServicesFromAssembly(Assembly.GetExecutingAssembly()));
             services.AddTransient( typeof(MediatR.IPipelineBehavior<,>),typeof(Features.StaffMemberCmd.StaffMemberInstitutionPermissionBehavior<,>));
+            services.AddTransient(typeof(MediatR.IPipelineBehavior<,>), typeof(Features.StudentCmd.StudentPermissionBehavior<,>));
             services.AddTransient(typeof(MediatR.IPipelineBehavior<,>), typeof(Features.DepartmentCmd.DepartmentPermissionBehavior<,>));
             services.AddTransient(typeof(MediatR.IPipelineBehavior<,>), typeof(Features.StaffEmploymentTypeCmd.StaffEmploymentTypePermissionBehavior<,>));
             services.AddTransient(typeof(MediatR.IPipelineBehavior<,>), typeof(Features.GenericPolicyCmd.GenericPolicyPermissionBehavior<,>));

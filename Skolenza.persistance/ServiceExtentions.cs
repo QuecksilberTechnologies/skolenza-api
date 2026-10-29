@@ -106,6 +106,16 @@ namespace skolenza.persistance
             services.AddScoped<IStaffCategoryRepository, StaffCategoryRepository>();
             services.AddScoped<IStaffProfessionalStructureRepository, StaffProfessionalStructureRepository>();
             services.AddScoped<IStaffAcademicStructureRepository, StaffAcademicStructureRepository>();
+            services.AddScoped<IStudentDocumentRequirementRepository, StudentDocumentRequirementRepository>();
+            services.AddScoped<IStudentFeeMasterRepository, StudentFeeMasterRepository>();
+            services.AddScoped<IStudentBenefitSchemeRepository, StudentBenefitSchemeRepository>();
+            services.AddScoped<IStudentEducationIdentifierMasterRepository, StudentEducationIdentifierMasterRepository>();
+            services.AddScoped<IInstitutionPortalDomainMasterRepository, InstitutionPortalDomainMasterRepository>();
+            services.AddScoped<IStudentEducationIdentifierRepository, StudentEducationIdentifierRepository>();
+            services.AddScoped<IStudentRegistryRepository, StudentRegistryRepository>();
+            services.AddScoped<IStudentPortalAuthRepository, StudentPortalAuthRepository>();
+            services.AddScoped<IStudentPortalDocumentRepository, StudentPortalDocumentRepository>();
+            services.AddScoped<IStudentAdmissionDocumentRepository, StudentAdmissionDocumentRepository>();
             services.AddScoped<IStaffEmploymentTypeBasicMenuRepository, StaffEmploymentTypeBasicMenuRepository>();
             services.AddScoped<IUserRolesPermissionOnModuleRepository, UserRolesPermissionOnModuleRepository>();
             services.AddScoped<IStaffMemberExperienceRepository, StaffMemberExpereinceRepository>();
@@ -126,6 +136,9 @@ namespace skolenza.persistance
             services.AddScoped<IDefaultEmailConfigRepository, DefaultEmailConfigRepository>();
             services.AddScoped<ISubscriptionRepository, SubscriptionRepository>();
             services.AddScoped<IHostBillingConfigurationRepository, HostBillingConfigurationRepository>();
+            services.AddScoped<IHostCountryCurrencyMasterRepository, HostCountryCurrencyMasterRepository>();
+            services.AddScoped<IStudentFeeLedgerRepository, StudentFeeLedgerRepository>();
+            services.AddScoped<IStudentPaymentGatewayConfigurationRepository, StudentPaymentGatewayConfigurationRepository>();
             services.AddScoped<IHostBillingAdministrationRepository, HostBillingAdministrationRepository>();
             services.AddScoped<IInstitutionSubscriptionRepository, InstitutionSubscriptionRepository>();
             services.AddScoped<IPlanModuleMappingRepository, PlanModuleMappingRepository>();

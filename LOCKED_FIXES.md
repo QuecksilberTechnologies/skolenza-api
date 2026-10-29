@@ -124,6 +124,8 @@ Every entry must include:
 | `LOCK-CURRICULUM-API-PAGINATION-022` | Permission-scoped curriculum pagination and independent Topics | LOCKED | New paging 9/9; affected Staff and tenant rollback combined 33/33; Release build and local HTTP probes | API deployment and UI integration PENDING | [2026-10-17](docs/testing/staff/curriculum-pagination/2026-10-17.md) |
 | `LOCK-PROFESSIONAL-API-PAGINATION-023` | All five institution Professional Structure tab lists use central paging | LOCKED | Combined Staff/Curriculum/rollback 38/38; Debug and Release builds; local HTTP paging/filter/error probes | API deployment and UI integration PENDING | [2026-10-18](docs/testing/staff/professional-pagination/2026-10-18.md) |
 | `LOCK-ACADEMIC-API-PAGINATION-024` | All six Academic master tab lists reuse central paging | LOCKED | Combined suite 41/41; Debug/Release builds; all 17 structure/curriculum list variants verified over local HTTP | API deployment and UI integration PENDING | [2026-10-18](docs/testing/staff/academic-pagination/2026-10-18.md) |
+| `WIP-STUDENT-PERMISSION-025` | Student admission detail and payment reconciliation permissions | WIP — authenticated HTTP acceptance pending | Student 84/84; protected Staff/Academic/Curriculum gate 41/41 before and after; Release build | API deployment and authenticated acceptance PENDING | [2026-10-29](docs/testing/student/permission-behavior/2026-10-29.md) |
+| `WIP-STUDENT-ADMISSION-CONCURRENCY-026` | Student admission and related write ordering | WIP — full approval and authenticated HTTP acceptance pending | Student 93/93 with disposable DB; protected gate 41/41; Release build | API deployment and authenticated acceptance PENDING | [2026-10-29](docs/testing/student/admission-concurrency/2026-10-29.md) |
 
 ## LOCK-TENANT-REG-001: Tenant registration transaction and actionable errors
 
@@ -1056,3 +1058,57 @@ including Academic active/custom-size/invalid-input/authentication cases.
 [consolidated endpoint index](docs/UIdeveloperDoc/STAFF_PAGINATION_API_INDEX.md).
 No Angular work or database migration was authorized/performed. UI integration
 and Render deployment remain pending acceptance.
+
+## WIP-STUDENT-PERMISSION-025: Student permission behavior (2026-10-29)
+
+Status: **WIP — not locked until authenticated HTTP acceptance is complete.**
+
+- Admission detail receives dynamic module and operation IDs from the query and
+  forwards the existing permission DTO through the Student MediatR behavior.
+- The behavior requires `STUDENT_ADMISSIONS` View for detail reads and
+  `STUDENT_FEES` Update for Cashfree reconciliation, which can post payment and
+  receipt changes. The existing role-permission pipeline remains authoritative.
+- Student suite passed 84/84; protected Staff/Academic/Curriculum gate passed
+  41/41 before and after, including Local PostgreSQL rollback probes. Release
+  build passed with 0 errors and 22 warnings.
+- Authenticated Local HTTP, real role grants, Cashfree sandbox and deployed
+  acceptance remain pending. See [scenario evidence](docs/testing/student/permission-behavior/2026-10-29.md)
+  for exact commands, scope and test limitations.
+
+## WIP-STUDENT-ADMISSION-CONCURRENCY-026: Admission write ordering (2026-10-29)
+
+Status: **WIP — not locked until full approval and authenticated HTTP acceptance.**
+
+- Institution-scoped admission transitions, edits, admission Guardian links,
+  admission document version/review persistence and fee quote creation use the
+  admission row lock within a transaction before checking current state.
+- The disposable Local PostgreSQL suite passed nine cases, including eight
+  competing writes and one uncontended repository flow. The full Student suite
+  passed 93/93 with that disposable database; the protected gate passed 41/41
+  and Release build had 0 errors and 22 warnings.
+- The database cases are opt-in and skip without a guarded disposable database.
+  Full approval/enrollment/invitation rollback and authenticated, provider and
+  deployed acceptance remain pending. Exact commands and limits are in the
+  [concurrency scenario](docs/testing/student/admission-concurrency/2026-10-29.md).
+
+## WIP-STUDENT-APPROVAL-027: Approval atomicity and Guardian dates (2026-10-29)
+
+Status: **WIP — real invitation and authenticated/deployed acceptance pending.**
+Approval requires an effective, unexpired primary Guardian. A disposable Local
+PostgreSQL fixture verifies Student/enrollment/Guardian creation and rollback on
+mocked invitation failure, plus rejection of future Guardian links. The full
+Student suite passed 96/96 with disposable DB. The exact scope and remaining
+checks are in [scenario evidence](docs/testing/student/admission-approval-atomicity/2026-10-29.md).
+Protected gate passed 41/41 before and after; Release and Debug builds passed
+with 22 and 583 warnings respectively. Local now has an invitation template but
+no verified portal domain. Render had neither at its last read-only check.
+Real approval remains blocked until the relevant school domain is DNS-verified.
+
+## WIP-STUDENT-INVITATION-028: Local invitation setup (2026-10-29)
+
+Status: **WIP — real domain, authenticated HTTP and email delivery pending.**
+The Local host invitation template was seeded idempotently without changing
+existing templates. A disposable database test verified approval with the real
+queue repository and synthetic verified domain; Student tests passed 97/97.
+The protected Staff gate passed 41/41 before and after; Release build passed.
+No Render data was modified. See [scenario evidence](docs/testing/student/guardian-invitation-local/2026-10-29.md).
