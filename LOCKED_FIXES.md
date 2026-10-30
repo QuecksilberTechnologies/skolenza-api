@@ -100,6 +100,27 @@ Every entry must include:
 
 ## Lock registry
 
+### Skolenza regression selector correction — 2026-10-29
+
+The inherited Employee/Tenant test selectors below are retained as historical
+references. Their current Skolenza equivalents use `StaffMember` and
+`Institution` names. For the affected Bank, contact/profile and registration
+gates, the following current selectors replace the obsolete selectors; other
+required gate commands remain in force. Zero matched tests never constitute a
+pass. No locked product behavior or test assertion is changed by this selector
+correction. Local verification:
+Bank 1/1, contact/profile 52/52, locality 9/9, institution creation/update
+15/15, role 26/26 and staff/academic/rollback 41/41. See
+[key-rotation investigation](docs/testing/student/portal-email-key-rotation/2026-10-29.md).
+
+```powershell
+dotnet test .\Skolenza.automationtests\Skolenza.automationtests.csproj -c Release --no-build --filter "TestCategory=StaffMemberBankEncryption&TestCategory!=StaffMemberBankEncryptionDatabase" --logger "console;verbosity=minimal"
+dotnet test .\Skolenza.automationtests\Skolenza.automationtests.csproj -c Release --no-build --filter "TestCategory=StaffMemberContactRelation|FullyQualifiedName~StaffMemberProfileCharacterizationTests" --logger "console;verbosity=minimal"
+dotnet test .\Skolenza.automationtests\Skolenza.automationtests.csproj -c Release --no-build --filter "FullyQualifiedName~HostApiRegressionTests.Institution_creation_awaits_dependencies_and_preserves_transaction_outcome|FullyQualifiedName~HostApiRegressionTests.Host_institution_update_synchronizes_the_canonical_location" --logger "console;verbosity=minimal"
+$env:SKOLENZA_HOST_DB_SETTINGS=(Resolve-Path '.\Skolenza.api\appsettings.Development.json').Path
+dotnet test .\Skolenza.automationtests\Skolenza.automationtests.csproj -c Release --no-build --filter "FullyQualifiedName~HostApiRegressionTests.Institution_creation_real_database_rollback_probe" --logger "console;verbosity=minimal"
+```
+
 | Lock ID | Area | Status | Local baseline | Deployed status | Evidence |
 | --- | --- | --- | --- | --- | --- |
 | `LOCK-TENANT-REG-001` | Tenant registration transaction and actionable errors | LOCKED | Backend 14/14; PostgreSQL rollback 2/2; Angular 44/44 and production build | PENDING | [2026-10-01](docs/testing/tenant/registration-actionable-errors/2026-10-01_old.md) |
@@ -1112,3 +1133,89 @@ existing templates. A disposable database test verified approval with the real
 queue repository and synthetic verified domain; Student tests passed 97/97.
 The protected Staff gate passed 41/41 before and after; Release build passed.
 No Render data was modified. See [scenario evidence](docs/testing/student/guardian-invitation-local/2026-10-29.md).
+
+## WIP-STUDENT-EMAIL-PROTECTION-029: Portal email queue protection (2026-10-29)
+
+Status: **WIP — real DNS, SMTP and key rotation acceptance remain pending.**
+New invitation and reset messages protect queue placeholders using authenticated
+institution-key encryption. The worker decrypts new messages while preserving
+legacy queue compatibility. Local invitation and reset templates are active;
+no Render changes were made. Student tests passed 102/102 with a disposable DB;
+the final combined protected/security gate passed 50/50 and Release build succeeded.
+Historical key rotation and any legacy plaintext queue data elsewhere require
+review. See [scenario evidence](docs/testing/student/portal-email-encryption/2026-10-29.md).
+
+## WIP-STUDENT-KEY-ROTATION-030: Shared-key retention investigation (2026-10-29)
+
+2026-10-30 characterization addendum: four synthetic tests verify that current Student AES-GCM envelopes need their original key, legacy Bank CBC has no authentication, numeric IDs currently use a global salt, and per-process key caches do not invalidate each other. Protected baseline 104/104 and 41/41 before, 108/108 including the characterization tests and 41/41 after. No rotation implementation, actual key change or database migration was made. See [scenario](docs/testing/student/portal-email-key-rotation/2026-10-30.md).
+
+Status: **WIP — Local shared-key design approved; implementation and acceptance pending.**
+A disposable-database Student suite failed 1/106 because the shared key table
+has a non-conditional unique InstitutionId constraint. The experimental
+inactive-key fallback was removed. After revert, the protected/security gate
+passed 50/50 and Release build succeeded. No Local or Render key schema or data
+was changed. Current Skolenza Bank 1/1 and profile/contact 52/52 selectors
+passed and are documented in the selector-correction addendum above. No key
+rotation implementation has been accepted. See
+[investigation](docs/testing/student/portal-email-key-rotation/2026-10-29.md).
+
+## WIP-STUDENT-RESET-031: Outstanding password-reset tokens (2026-10-29)
+
+Status: **WIP — forced-interleaving, authenticated HTTP and deployed acceptance pending.**
+Password reset completion now consumes other outstanding password-reset tokens
+for the same institution and account in the password-change transaction. The
+disposable Local database reproduced the old failure and the Student suite passed
+102/102 after the change. Protected staff/curriculum and Local rollback passed
+41/41; Bank/contact/profile/role passed 79/79. Parallel repository attempts
+and same-institution cross-account token isolation passed in a disposable DB;
+forced interleavings and serialization-conflict HTTP mapping remain pending. The sequential Release build
+passed. No Local application data, Render data or Angular was changed.
+[Scenario evidence](docs/testing/student/password-reset-token-revocation/2026-10-29.md).
+
+2026-10-30 addendum: a forced PostgreSQL account-lock race previously produced
+200/500. The repository now maps the specific serialization failure, including
+its EF wrapper, through the existing conflict pipeline. Disposable DB and
+in-process middleware tests verified 200/409 with a safe response; Student
+102/102, Staff/Curriculum with Local rollback 41/41 and Bank/profile/role 79/79
+passed. Release build had 0 errors and 22 warnings. Full running-product HTTP
+and deployed verification remain pending. [Evidence](docs/testing/student/password-reset-token-revocation/2026-10-30.md).
+
+## WIP-STUDENT-LOGIN-032: Portal failed-login lockout (2026-10-30)
+
+Status: **WIP — actual HTTP and deployed acceptance pending.** The portal login
+handler records a failure when an active verified account has no lockout end,
+as well as when a previous lockout has expired. A disposable PostgreSQL test
+verified the configured five-failure lockout. Student 106/106, protected
+Staff/Curriculum 41/41 and Bank/contact/profile/role 79/79 passed. No Angular,
+Local application data or Render data changed. [Evidence](docs/testing/student/portal-login-lockout/2026-10-30.md).
+
+2026-10-30 addendum: an isolated Local HTTP harness with synthetic domain and
+real portal controller, handlers, password hasher, JWT signer and policy passed
+Guardian login, profile, refresh/replay, logout/revocation and invalid-host
+checks. Student tests passed 106/106, protected Staff/Curriculum 41/41 and
+Bank/profile/role 79/79; Release build 0 errors/22 warnings. Full production
+startup, live DNS, SMTP, Staff permission and deployment acceptance remain
+pending. [Evidence](docs/testing/student/portal-auth-http/2026-10-30.md).
+
+## WIP-STUDENT-RENDER-TEMPLATES-033: Portal template parity (2026-10-30)
+
+Status: **WIP — live DNS, delivery, authenticated HTTP and deployment pending.**
+Student-related schema comparison found 1,198 matching catalog entries in Local
+and Render. Following a fresh Render backup, verified full Local restore and
+two-pass idempotency dry run, the existing invitation and password-reset template
+seeds were applied to Render. Both templates are active and their content matches
+Local. A disposable restore of the fresh Render backup passed Student 106/106;
+protected Staff/Curriculum 41/41 and Bank/profile/role 79/79 passed before and
+after. No role grants, domain verification or messages were created. See
+[scenario evidence](docs/testing/student/render-template-schema-sync/2026-10-30.md).
+# WIP-STUDENT-FEE-034: Fee payment database concurrency and timestamps
+
+Status: **WIP — authenticated HTTP, provider and deployed acceptance pending**. Local PostgreSQL forced concurrency verifies same-key deduplication and prevents competing payments from exceeding an installment balance. Payment UTC timestamps use the existing timestamp-without-time-zone column and PostgreSQL microsecond precision. Existing Staff/Curriculum gate passed 41/41 and Bank/Profile/Role 79/79 before and after; see [fee payment evidence](docs/testing/student/fee-payment-database/2026-10-30.md). This does not authorize changing any earlier locked behavior or claim complete Student acceptance.
+
+## WIP-STUDENT-EXIT-035: Student exit, Guardian and identifier persistence
+
+Status: **WIP — authenticated HTTP and deployed acceptance pending**. Local PostgreSQL forced concurrency verified one exit/history and one primary Guardian, and denied Guardian linking after a competing exit. Synthetic identifier persistence, masking and verification reset passed after UTC timestamp mapping correction. Student suite 106/106, protected Staff/Curriculum 41/41 and Bank/Profile/Role 79/79 passed. See [scenario evidence](docs/testing/student/exit-guardian-identifier/2026-10-30.md).
+
+## WIP-STUDENT-GUARDIAN-CHECKOUT-036: Guardian authorization and fee checkout
+
+Status: **WIP — real provider, running-product and deployed acceptance pending.** Guardian checkout rechecks the active linked account, Student, approved admission and installment while database rows are locked in the same transaction as payment-attempt preparation. A revoke committed first prevents a new attempt and replay; an attempt committed first may finish its provider call and later requests are denied. Both forced interleavings passed with a fake provider and disposable PostgreSQL; Student 114/114, affected Staff/Curriculum 41/41 and Bank/Profile/Role plus portal fee 87/87 passed. Run the same Student disposable-database suite and protected gates before and after related changes; exact commands and scope are in [scenario evidence](docs/testing/student/guardian-fee-portal/2026-10-30.md). This entry does not claim provider or Render acceptance.

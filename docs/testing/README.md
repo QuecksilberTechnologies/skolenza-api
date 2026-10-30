@@ -2,6 +2,10 @@
 - [Bulk import worker graceful host shutdown — 2026-10-14](bulk/worker-graceful-shutdown/2026-10-14.md)
 # Skolenza scenario test reports
 
+- [Student shared-key rotation compatibility — 2026-10-30](student/portal-email-key-rotation/2026-10-30.md)
+
+- [Guardian fee portal and checkout access — 2026-10-30](student/guardian-fee-portal/2026-10-30.md)
+
 - [Student permission behavior and admission detail — 2026-10-29](student/permission-behavior/2026-10-29.md)
 - [Student admission concurrency ordering — 2026-10-29](student/admission-concurrency/2026-10-29.md)
 - [Student Local/Render schema parity and anonymous API smoke — 2026-10-28](student/schema-parity-and-runtime-smoke/2026-10-28.md)
@@ -109,4 +113,18 @@ test run.
 
 - [Approval atomicity and Guardian effective dates — 2026-10-29](student/admission-approval-atomicity/2026-10-29.md)
 - [Local Guardian invitation template and queue — 2026-10-29](student/guardian-invitation-local/2026-10-29.md)
+- [Student portal email queue protection — 2026-10-29](student/portal-email-encryption/2026-10-29.md)
+- [Student portal key-rotation investigation — 2026-10-29](student/portal-email-key-rotation/2026-10-29.md)
+- [Student portal password-reset token revocation — 2026-10-29](student/password-reset-token-revocation/2026-10-29.md)
+- [Student portal concurrent reset response — 2026-10-30](student/password-reset-token-revocation/2026-10-30.md)
+- [Student portal login lockout — 2026-10-30](student/portal-login-lockout/2026-10-30.md)
+- [Student Guardian portal authentication HTTP harness — 2026-10-30](student/portal-auth-http/2026-10-30.md)
+- [Student Render template and schema alignment — 2026-10-30](student/render-template-schema-sync/2026-10-30.md)
+- [Student Local runtime smoke — 2026-10-30](student/local-runtime-smoke/2026-10-30.md)
+- [Local Student role-grant readiness — 2026-10-29](student/access-readiness/2026-10-29.md)
+
+# Student fee database verification
+
+- [Offline payment, checkout preparation and concurrent payment checks — 2026-10-30](student/fee-payment-database/2026-10-30.md)
+- [Student exit, Guardian concurrency and identifier persistence — 2026-10-30](student/exit-guardian-identifier/2026-10-30.md)
 

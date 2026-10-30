@@ -1,5 +1,89 @@
 # Student admissions API handoff for UI developer
 
+Shared-key rotation is **not implemented**. Do not replace an institution key as a prerequisite for testing these routes; historical portal emails, gateway credentials and other institution data require a coordinated migration. Synthetic compatibility evidence is in the [rotation scenario](../testing/student/portal-email-key-rotation/2026-10-30.md).
+
+## Guardian fee self service - source update 30 October 2026
+
+Five Guardian endpoints are in the uncommitted API source. They use the existing
+`StudentPortal` bearer policy; these routes do not use staff ModuleId or
+OperationId. Institution and account come from signed token claims. The account
+must have a currently active Guardian persona linked to the requested student;
+an optional Student persona alone does not authorize these endpoints. Admission
+must belong to that student and institution, be approved, and have a fee quote.
+Other students, admissions or installments are not exposed. An invalid or
+missing portal token returns 401; unavailable or unauthorized records return
+404. Subject to current configured exception middleware.
+
+Base: `/api/Student/portal/students/{studentId}/fees`. IDs are 64-bit.
+
+| Method and path | Purpose | Input |
+| --- | --- | --- |
+| GET `/admissions?pageNumber=1&pageSize=10` | Approved admissions with quote, session, campus and group summary | Paged; defaults 1 and 10 |
+| GET `/admissions/{admissionId}/quote` | Immutable fee components, discount and installment plan | Admission ID from admissions response |
+| GET `/admissions/{admissionId}/balance` | Current installment balances, overdue and paid amounts | Admission ID |
+| GET `/admissions/{admissionId}/receipts?pageNumber=1&pageSize=10` | Receipts restricted to the chosen admission | Paged; defaults 1 and 10 |
+| POST `/admissions/{admissionId}/installments/{installmentId}/cashfree-checkout` | Creates or resumes an idempotent school-owned Cashfree order for the server-calculated balance | JSON `{"idempotencyKey":"parent-order-2028-001"}`; max 100 characters |
+
+Example request (replace placeholder IDs and token):
+
+```http
+GET /api/Student/portal/students/101/fees/admissions/202/balance
+Authorization: Bearer <portal-access-token>
+```
+
+Representative balance envelope (amounts are examples, not school fees):
+
+```json
+{"isSucceeded":true,"message":"Student fee balance retrieved successfully.","data":{"studentAdmissionId":202,"studentId":101,"quoteId":303,"currencyCode":"INR","currencyDecimalPlaces":2,"netAnnualAmount":12000,"totalLateFeeAmount":0,"totalPaidAmount":3000,"totalOutstandingAmount":9000,"overdueAmount":0,"installments":[{"id":404,"quoteId":303,"installmentNumber":1,"dueDate":"2028-04-10","recurringAmount":3000,"oneTimeAmount":0,"lateFeeAmount":0,"paidAmount":3000,"outstandingAmount":0,"status":3}]}}
+```
+
+Checkout success returns `data.paymentAttemptId`, `gatewayOrderId`,
+`paymentSessionId`, `currencyCode`, `amount` and `expiresAt`. Reuse the same
+idempotency key only for retries of the same installment; generate a new key
+for a new attempt. The server decides the amount. The school must configure
+its own active Cashfree credentials; three-decimal currencies are rejected for
+Cashfree checkout. The payment callback is not proof of payment: rely on the
+server-side webhook/reconciliation and refresh balance/receipts. No Guardian
+reconciliation API is included. A previously issued payment session can be
+returned on an idempotent retry.
+
+Access is rechecked in the payment-attempt database transaction. If access is
+revoked first, checkout is denied. An attempt accepted before revocation may
+finish its provider request; revocation does not cancel an existing provider
+order. Subsequent requests require a currently authorized Guardian link.
+
+Other representative responses (illustrative IDs, labels and amounts):
+
+```json
+{"isSucceeded":true,"message":"Student fee admissions retrieved successfully.","data":[{"admissionId":202,"academicSessionId":12,"academicSessionName":"Academic Year 2028-29","campusId":2,"campusName":"Main Campus","academicGroupId":5,"academicGroupName":"Grade 5","quoteId":303,"currencyCode":"INR","netAnnualAmount":12000}],"pageNumber":1,"pageSize":10,"totalRecords":1,"totalPages":1}
+```
+
+```json
+{"isSucceeded":true,"message":"Student fee quote retrieved successfully.","data":{"id":303,"studentAdmissionId":202,"currencyCode":"INR","currencyDecimalPlaces":2,"discountPercent":0,"grossRecurringAmount":12000,"discountAmount":0,"oneTimeAmount":0,"netAnnualAmount":12000,"installmentsPerYear":4,"lines":[{"componentCode":"TUITION","componentName":"Tuition","chargeNature":1,"annualAmount":12000,"discountAmount":0,"netAmount":12000}],"installments":[]}}
+```
+
+```json
+{"isSucceeded":true,"message":"Student fee receipts retrieved successfully.","data":[{"id":505,"receiptNumber":"REC-EXAMPLE","studentAdmissionId":202,"studentFeeInstallmentId":404,"paymentTransactionId":606,"amount":3000,"currencyCode":"INR","issuedAt":"2028-04-10T09:00:00Z","paymentMethod":1,"recordedReference":"offline-example"}],"pageNumber":1,"pageSize":10,"totalRecords":1,"totalPages":1}
+```
+
+```json
+{"isSucceeded":true,"message":"Cashfree checkout session created successfully.","data":{"paymentAttemptId":707,"gatewayOrderId":"S-example","paymentSessionId":"example-provider-session","currencyCode":"INR","amount":3000,"expiresAt":"2028-04-10T09:15:00Z"}}
+```
+
+Treat the above as examples, not exact serialized payload snapshots: other
+fields may be present. The central options API supplies numeric statuses and
+methods. On checkout validation or provider errors, inspect the HTTP status and
+the common API error envelope (`isSucceeded`, `message`, `errors`, optional
+`errorCode`); handle retry and configuration failures without assuming payment
+was completed.
+
+No schema change or new staff permission mapping was needed for these routes.
+Local synthetic authenticated HTTP tests cover all four reads, wrong student and
+admission, anonymous access, checkout and retry, and a wrong installment. The
+checkout HTTP test uses a fake Cashfree provider. Real Cashfree checkout/webhooks,
+production hosting and deployment remain unverified. UI integration is pending
+with the UI developer. Detailed results: [Guardian fee scenario](../testing/student/guardian-fee-portal/2026-10-30.md).
+
 > **Codex continuation:** For current implementation order and resume
 > instructions, read [Student API continuation handoff](../STUDENT_CONTINUATION.md).
 > Latest source scenario: [approval readiness and currency precision](../testing/student/admission-approval-currency-precision/2026-10-28.md).
@@ -1138,7 +1222,7 @@ Current source audit: 75 Student-filtered tests passed, 0 failed, 0 skipped; pro
 
 ## Institution portal-domain ownership and DNS verification (source implemented; runtime acceptance pending)
 
-The Institution Administrator registers their institution's portal hostname and proves DNS ownership. Portal authentication handlers resolve login, invitation and reset tenant context only from an active, DNS-verified hostname. The schema has been applied on Local and Render, but authenticated HTTP and live DNS acceptance remain pending; do not treat a saved domain as a live login URL. On 29 October, Local has one active Guardian invitation template but no active verified portal domain. The earlier Render check found neither; Render configuration was not changed during Local setup.
+The Institution Administrator registers their institution's portal hostname and proves DNS ownership. Portal authentication handlers resolve login, invitation and reset tenant context only from an active, DNS-verified hostname. The schema has been applied on Local and Render, but authenticated HTTP and live DNS acceptance remain pending; do not treat a saved domain as a live login URL. On 30 October, both environments had the invitation and reset templates and no active verified portal domain.
 
 ### Authentication and permissions
 
@@ -1222,7 +1306,9 @@ Focused contract tests on 2026-10-28: **6 passed, 0 failed, 0 skipped**. Combine
 
 ## Student/Guardian portal authentication (source WIP; UI contract preview)
 
-Staff authentication is unchanged. Portal accounts and refresh tokens use separate `StudentPortalAccount`, `StudentPortalAccountGuardian`, `StudentPortalAccountStudent`, `StudentPortalRefreshToken` and `StudentPortalOneTimeToken` tables. `InstitutionPortalDomainMaster` must be active and DNS-verified; the request `Host` selects the institution. Email is normalized to uppercase for institution-scoped lookup. Login responses intentionally use the same Unauthorized result for unknown email, bad password, inactive account, unverified email or no active persona.
+Staff authentication is unchanged. Portal accounts and refresh tokens use separate `StudentPortalAccount`, `StudentPortalAccountGuardian`, `StudentPortalAccountStudent`, `StudentPortalRefreshToken` and `StudentPortalOneTimeToken` tables. `InstitutionPortalDomainMaster` must be active and DNS-verified; the request `Host` selects the institution. Email is normalized to uppercase for institution-scoped lookup. Login responses intentionally use the same Unauthorized result for unknown email, bad password, inactive account, unverified email or no active persona. The configured lockout counts failed attempts even when an account has never been locked; the current configured limit is five failures for fifteen minutes. A disposable PostgreSQL test verified persistence, while real-host HTTP and deployed acceptance are still pending. [Scenario](../testing/student/portal-login-lockout/2026-10-30.md).
+
+An isolated Local HTTP harness verified synthetic Guardian login, authenticated profile, refresh rotation/replay rejection, logout/revocation, anonymous-profile denial and unverified-host denial using the real controller, handlers, JWT signer and bearer policy. The harness used a synthetic domain and does not establish live school DNS, email or deployed acceptance. [HTTP test evidence](../testing/student/portal-auth-http/2026-10-30.md). On 30 October, the invitation and password-reset templates were seeded on Render after verified backup and disposable restore; both templates match Local. No live verified domain or delivery was confirmed. [Database evidence](../testing/student/render-template-schema-sync/2026-10-30.md).
 
 ### Current source routes
 
@@ -1267,9 +1353,13 @@ Guardian is the default persona. A Guardian gains access only through explicit a
 
 ### Invitation and password-reset behavior
 
-Admission approval automatically queues an invitation for the single active primary Guardian as part of the existing approval transaction. The Guardian link must already be effective and not expired on the current UTC date. The verified portal domain must exist, and the global EmailTemplate catalogue must have an active `STUDENT_PORTAL_INVITATION` template before admission can be approved. Available placeholders include `GuardianName`, `GuardianEmail`, `InvitationUrl`, `PortalDomain`, `ExpiresAtUtc`. The invite URL is `https://{verified-domain}/auth/portal/accept-invitation?token=...`; the UI must read the token and POST it to `invitations/accept`. The token table stores its SHA-256 hash, but the full invitation URL, including the raw token, currently remains in the email queue placeholder JSON. Treat queue data as sensitive and review its access and retention. The token expires in 30 minutes and is single-use. If the normalized email already has a portal account, that user signs in on the same institution domain and calls `invitations/claim`; the account must match the invited Guardian email. No automatic cross-institution linking occurs. Local disposable-database tests include real queue persistence using a synthetic domain; actual email and authenticated HTTP remain pending. See [Local invitation evidence](../testing/student/guardian-invitation-local/2026-10-29.md).
+Admission approval automatically queues an invitation for the single active primary Guardian as part of the existing approval transaction. The Guardian link must already be effective and not expired on the current UTC date. The verified portal domain must exist, and the global EmailTemplate catalogue must have an active `STUDENT_PORTAL_INVITATION` template before admission can be approved. Available placeholders include `GuardianName`, `GuardianEmail`, `InvitationUrl`, `PortalDomain`, `ExpiresAtUtc`. The invite URL is `https://{verified-domain}/auth/portal/accept-invitation?token=...`; the UI must read the token and POST it to `invitations/accept`. The token table stores its SHA-256 hash. New Student portal email placeholders are AES-GCM encrypted while stored in the queue; older plaintext queue records remain compatible and require separate review. The active institution key must remain available until queued messages are delivered. The token expires in 30 minutes and is single-use. If the normalized email already has a portal account, that user signs in on the same institution domain and calls `invitations/claim`; the account must match the invited Guardian email. No automatic cross-institution linking occurs. Local disposable-database tests verify encrypted queue persistence using a synthetic domain; actual email and authenticated HTTP remain pending. See [email protection evidence](../testing/student/portal-email-encryption/2026-10-29.md).
 
-Password reset request always returns the same generic response, whether the email/account/persona exists or not. Email is queued only when the account is active, verified, has an active persona and the hostname is a verified institution domain. Configure an active global `STUDENT_PORTAL_PASSWORD_RESET` template with placeholders `Email`, `PasswordResetUrl`, `PortalDomain`, `ExpiresAtUtc`. The reset link is `https://{verified-domain}/auth/portal/reset-password?token=...`; POST the token and new password to `password-reset/complete`. The token table stores the hash; the token-bearing URL is also included in the sensitive email queue placeholders. Tokens are single-use and expire in 30 minutes. Completion atomically changes the password hash/security stamp, clears lockout and revokes all active refresh tokens. Passwords must be 12–128 characters. A missing reset-email template silently suppresses delivery while retaining the generic response; monitor/configure email templates operationally.
+Password reset request always returns the same generic response, whether the email/account/persona exists or not. Email is queued only when the account is active, verified, has an active persona and the hostname is a verified institution domain. Configure an active global `STUDENT_PORTAL_PASSWORD_RESET` template with placeholders `Email`, `PasswordResetUrl`, `PortalDomain`, `ExpiresAtUtc`. The reset link is `https://{verified-domain}/auth/portal/reset-password?token=...`; POST the token and new password to `password-reset/complete`. The token table stores the hash; new queue placeholders are encrypted at rest. Tokens are single-use and expire in 30 minutes. Completion atomically changes the password hash/security stamp, clears lockout, revokes all active refresh tokens and invalidates other outstanding password-reset links for that institution/account. An invalidated link must not be retried; request a new reset. If simultaneous requests conflict, the API returns HTTP 409 with the standard error envelope and instructs the user to request a new link. Passwords must be 12–128 characters. A missing reset-email template silently suppresses delivery while retaining the generic response; monitor/configure email templates operationally. Local and Render invitation and reset templates are active; actual email delivery remains unverified. A forced PostgreSQL lock race passed through the real error middleware in process; full running HTTP and deployment remain pending. [Scenario](../testing/student/password-reset-token-revocation/2026-10-30.md).
+
+Key rotation is not yet supported for queued portal emails: the shared key table currently enforces one key row per institution, and changing that key can make an encrypted pending email unreadable. The same key is used by other existing features; the [rotation investigation](../testing/student/portal-email-key-rotation/2026-10-29.md) documents the failed Local test and the pending shared-key design.
+
+Local readiness for the `RRSMS` institution: a read-only check found no active granted role-permission rows for the Student Admissions, Student Fees, or Student Portal Domains modules. Use the existing role-management flow to assign and verify the intended operations. No permission IDs are hardcoded, no grants were modified by this check, and authenticated acceptance remains pending. See [role-grant readiness](../testing/student/access-readiness/2026-10-29.md).
 
 Example reset request:
 
@@ -1365,3 +1455,8 @@ Latest combined Student source checks (2026-10-28): portal document focused test
 The database changes in the ten Student SQL scripts were dry-run against a restored scratch copy and applied to both Local and Render. Both targets contain 38/38 Student tables and have the same column/constraint/index fingerprint. The four associated dynamic modules expose active View/Add/Update/Delete operation mappings, without role grants. Full backup restoration, Student tests (75/75), protected gate (41 pass, 0 skips) and Release build (0 errors) are evidenced in the current [scenario report](../testing/student/schema-parity-and-runtime-smoke/2026-10-28.md). Anonymous Local HTTP was smoke-tested only; no authenticated workflow or provider round trip is claimed. The API code is not deployed.
 
 Before UI/client acceptance, run the authenticated Local scenarios listed in the [continuation plan](../STUDENT_CONTINUATION.md), configure effective role grants with the existing permission flow, then publish and test the deployed API. The database row contents are environment-specific and were not synchronized.
+# Local fee payment correction 2026-10-30
+
+The offline payment and Cashfree checkout preparation paths now execute their PostgreSQL idempotency locks with the required scalar alias. Payment timestamps, checkout expiry and receipt issue times use UTC in their existing columns; the offline payment retry compares timestamps at PostgreSQL microsecond precision. Under a serialization race the repository retries once, then returns a conflict instructing the client to retry with the same idempotency key. Clients must retain the same key and identical payment details for a retry; a different timestamp or payment detail is a conflict. A guarded Local PostgreSQL scenario verified partial and final payment, replay, overpayment rejection, receipt times, checkout expiry, forced concurrent offline requests, and simulated failure and concurrent duplicate success webhook events. This is not an authenticated HTTP or Cashfree sandbox acceptance. See [fee-payment scenario](../testing/student/fee-payment-database/2026-10-30.md).
+
+Student exit and Guardian-link changes now serialize on the Student row. A competing second exit or a second primary Guardian receives the existing conflict response; a Guardian link cannot be created after an exit completes. Education identifier creation, verification and updates use UTC values in the existing timestamp columns. A guarded Local DB verified these paths, masked/encrypted test identifiers and retained previous/destination school history. Authenticated HTTP and deployed acceptance remain pending. See [exit, Guardian and identifier scenario](../testing/student/exit-guardian-identifier/2026-10-30.md).

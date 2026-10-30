@@ -118,6 +118,7 @@ namespace skolenza.infrastructure
 
             services.AddScoped<IEncryptionService, AesEncryptionService>();
             services.AddScoped<IStudentGatewaySecretProtector, StudentGatewaySecretProtector>();
+            services.AddScoped<IStudentPortalEmailProtector, StudentGatewaySecretProtector>();
             services.AddHttpClient<IStudentCashfreeClient, StudentCashfreeClient>();
             services.AddHttpClient<IDnsTxtResolver, DnsOverHttpsTxtResolver>(client =>
             {

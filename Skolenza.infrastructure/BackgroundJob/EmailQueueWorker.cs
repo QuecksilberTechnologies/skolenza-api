@@ -1,4 +1,6 @@
 using System.Text.Json;
+using skolenza.application.Constants;
+using skolenza.application.Interfaces;
 using skolenza.application.Interfaces.IEmail;
 using skolenza.application.Interfaces.IRepositories;
 using Microsoft.Extensions.DependencyInjection;
@@ -37,6 +39,21 @@ public sealed class EmailQueueWorker(IServiceScopeFactory scopeFactory, ILogger<
                     {
                         await queueRepository.MarkFailedAsync(item.Id, "Template code is missing.", stoppingToken);
                         continue;
+                    }
+
+                    if ((templateCode == StudentConstants.PortalInvitationTemplateCode ||
+                         templateCode == StudentConstants.PortalPasswordResetTemplateCode) &&
+                        placeholders.TryGetValue(StudentConstants.PortalEmailProtectedPayloadKey, out var protectedPayload))
+                    {
+                        if (!item.InstitutionId.HasValue)
+                        {
+                            throw new InvalidOperationException("A Student portal email requires an institution.");
+                        }
+
+                        var protector = scope.ServiceProvider.GetRequiredService<IStudentPortalEmailProtector>();
+                        var decrypted = await protector.UnprotectAsync(item.InstitutionId.Value, protectedPayload, stoppingToken);
+                        placeholders = JsonSerializer.Deserialize<Dictionary<string, string>>(decrypted)
+                            ?? throw new InvalidOperationException("The protected portal email payload is invalid.");
                     }
 
                     var sent = await emailService.SendTemplatedEmailAsync(

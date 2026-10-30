@@ -9,6 +9,9 @@ using skolenza.application.Common.Enums;
 using skolenza.application.Constants;
 using skolenza.application.DTOS.Student;
 using skolenza.application.Features.StudentPortalAuthCmd;
+using skolenza.application.Interfaces.IHashed;
+using skolenza.application.Interfaces.IRepositories;
+using skolenza.application.Interfaces.ITokenService;
 using skolenza.domain.Entity;
 using skolenza.persistance.Data.Context;
 
@@ -18,6 +21,61 @@ namespace skolenza.automationtests.Unit;
 [Category("StudentPortalAuth")]
 public sealed class StudentPortalAuthApiTests
 {
+    [TestCase("never-locked", true)]
+    [TestCase("expired", true)]
+    [TestCase("active", false)]
+    [TestCase("inactive", false)]
+    public void Failed_login_updates_counter_only_for_active_unlocked_accounts(string state, bool shouldRecordFailure)
+    {
+        var account = new StudentPortalAccount
+        {
+            Id = 7,
+            InstitutionId = 12,
+            NormalizedEmail = "TEST@EXAMPLE.TEST",
+            PasswordHash = "AQAAAA-synthetic-hash",
+            IsActive = state != "inactive",
+            IsEmailVerified = true,
+            LockoutEndDateTime = state switch
+            {
+                "expired" => DateTime.UtcNow.AddMinutes(-1),
+                "active" => DateTime.UtcNow.AddMinutes(1),
+                _ => null
+            }
+        };
+        var recordedFailures = 0;
+        var repository = Proxy<IStudentPortalAuthRepository>((method, arguments) => method.Name switch
+        {
+            nameof(IStudentPortalAuthRepository.ResolveVerifiedInstitutionAsync) => Task.FromResult<long?>(12),
+            nameof(IStudentPortalAuthRepository.GetAccountForLoginAsync) => Task.FromResult<StudentPortalAccount?>(account),
+            nameof(IStudentPortalAuthRepository.RegisterFailedLoginAsync) => RecordFailure(arguments),
+            _ => throw new AssertionException($"Unexpected repository call: {method.Name}")
+        });
+        Task RecordFailure(object?[]? arguments)
+        {
+            Assert.That(arguments![2], Is.EqualTo(StudentConstants.PortalLoginFailureLimit));
+            recordedFailures++;
+            return Task.CompletedTask;
+        }
+        var passwords = Proxy<IPasswordService>((method, _) => method.Name == nameof(IPasswordService.VerifyPassword)
+            ? false : throw new AssertionException($"Unexpected password call: {method.Name}"));
+        var tokens = Proxy<ITokenService>((method, _) => throw new AssertionException($"Unexpected token call: {method.Name}"));
+        var handler = new StudentPortalLoginCommandHandler(repository, passwords, tokens);
+        var command = new StudentPortalLoginCommand("portal.example.test", new StudentPortalLoginRequestDTO
+        {
+            Email = "test@example.test",
+            Password = "wrong-test-password"
+        });
+
+        Assert.ThrowsAsync<UnauthorizedAccessException>(async () => await handler.Handle(command, CancellationToken.None));
+        Assert.That(recordedFailures, Is.EqualTo(shouldRecordFailure ? 1 : 0));
+    }
+
+    private static T Proxy<T>(Func<MethodInfo, object?[]?, object?> invoke) where T : class
+    {
+        var proxy = DispatchProxy.Create<T, BulkImportPermissionTests.TestProxy>();
+        ((BulkImportPermissionTests.TestProxy)(object)proxy).InvokeMethod = invoke;
+        return proxy;
+    }
     [Test]
     public void Portal_login_and_refresh_are_anonymous_but_logout_requires_portal_policy()
     {

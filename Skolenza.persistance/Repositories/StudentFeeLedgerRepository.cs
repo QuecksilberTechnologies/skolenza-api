@@ -9,11 +9,75 @@ using skolenza.application.Interfaces.IRepositories;
 using skolenza.domain.Entity;
 using skolenza.persistance.Data.Context;
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 
 namespace skolenza.persistance.Repositories;
 
-public sealed class StudentFeeLedgerRepository(SkolenzaDbContext context) : IStudentFeeLedgerRepository
+public sealed class StudentFeeLedgerRepository(
+    SkolenzaDbContext context,
+    IStudentPortalAuthRepository? portalAuth = null) : IStudentFeeLedgerRepository
 {
+    private sealed record PortalCheckoutScope(long AccountId, long StudentId, long AdmissionId);
+    public async Task<PagedResponseDTO<StudentPortalFeeAdmissionResponseDTO>> GetPortalAdmissionsAsync(
+        long institutionId,
+        long studentId,
+        StudentPortalFeeFilterDTO filter,
+        CancellationToken cancellationToken)
+    {
+        var query = from admission in context.StudentAdmissions.AsNoTracking()
+                    join quote in context.StudentAdmissionFeeQuotes.AsNoTracking()
+                        on admission.Id equals quote.StudentAdmissionId
+                    join session in context.AcademicSessions.AsNoTracking()
+                        on admission.AcademicSessionId equals session.Id
+                    join campus in context.Campuss.AsNoTracking()
+                        on admission.CampusId equals campus.Id
+                    join academicGroup in context.AcademicGroups.AsNoTracking()
+                        on admission.AcademicGroupId equals academicGroup.Id
+                    where admission.InstitutionId == institutionId && quote.InstitutionId == institutionId &&
+                        session.InstitutionId == institutionId && campus.InstitutionId == institutionId &&
+                        academicGroup.InstitutionId == institutionId &&
+                        admission.StudentId == studentId && admission.Status == (short)StudentAdmissionStatus.Approved
+                    orderby admission.AcademicSessionId descending, admission.Id descending
+                    select new StudentPortalFeeAdmissionResponseDTO
+                    {
+                        AdmissionId = admission.Id,
+                        AcademicSessionId = admission.AcademicSessionId,
+                        AcademicSessionName = session.Name,
+                        CampusId = admission.CampusId,
+                        CampusName = campus.LocationName,
+                        AcademicGroupId = admission.AcademicGroupId,
+                        AcademicGroupName = academicGroup.Name,
+                        QuoteId = quote.Id,
+                        CurrencyCode = quote.CurrencyCode,
+                        NetAnnualAmount = quote.NetAnnualAmount
+                    };
+
+        return await query.ToPageAsync(filter.PageNumber, filter.PageSize, cancellationToken);
+    }
+
+    public Task<bool> AdmissionBelongsToStudentAsync(
+        long institutionId,
+        long studentId,
+        long admissionId,
+        CancellationToken cancellationToken) => context.StudentAdmissions.AsNoTracking().AnyAsync(
+            item => item.Id == admissionId && item.InstitutionId == institutionId &&
+                item.StudentId == studentId && item.Status == (short)StudentAdmissionStatus.Approved,
+            cancellationToken);
+
+    public Task<bool> InstallmentBelongsToAdmissionAsync(
+        long institutionId,
+        long admissionId,
+        long installmentId,
+        CancellationToken cancellationToken)
+    {
+        return (from installment in context.StudentFeeInstallments.AsNoTracking()
+                join quote in context.StudentAdmissionFeeQuotes.AsNoTracking()
+                    on installment.StudentAdmissionFeeQuoteId equals quote.Id
+                where installment.InstitutionId == institutionId && quote.InstitutionId == institutionId &&
+                    installment.Id == installmentId && quote.StudentAdmissionId == admissionId
+                select installment.Id).AnyAsync(cancellationToken);
+    }
+
     public async Task<PagedResponseDTO<StudentFeeStructureResponseDTO>> GetStructuresAsync(
         long institutionId,
         StudentFeeStructureFilterDTO filter,
@@ -444,6 +508,20 @@ public sealed class StudentFeeLedgerRepository(SkolenzaDbContext context) : IStu
         };
     }
 
+    public async Task<StudentAdmissionFeeQuoteResponseDTO> GetAdmissionQuoteAsync(
+        long admissionId,
+        long institutionId,
+        CancellationToken cancellationToken)
+    {
+        var quoteId = await context.StudentAdmissionFeeQuotes.AsNoTracking()
+            .Where(item => item.StudentAdmissionId == admissionId && item.InstitutionId == institutionId)
+            .Select(item => (long?)item.Id)
+            .SingleOrDefaultAsync(cancellationToken)
+            ?? throw new NotFoundException("Admission fee quote was not found.");
+
+        return await GetQuoteAsync(quoteId, institutionId, cancellationToken);
+    }
+
     public async Task<StudentAdmissionFeeBalanceResponseDTO> GetAdmissionBalanceAsync(
         long admissionId,
         long institutionId,
@@ -581,6 +659,17 @@ public sealed class StudentFeeLedgerRepository(SkolenzaDbContext context) : IStu
         StudentOfflinePaymentRequestDTO request,
         CancellationToken cancellationToken)
     {
+        return await RetrySerializationFailureAsync(() => RecordOfflinePaymentCoreAsync(
+            installmentId, institutionId, actorId, request, cancellationToken));
+    }
+
+    private async Task<StudentFeePaymentResponseDTO> RecordOfflinePaymentCoreAsync(
+        long installmentId,
+        long institutionId,
+        long actorId,
+        StudentOfflinePaymentRequestDTO request,
+        CancellationToken cancellationToken)
+    {
         if (request.PaidAt == default || request.PaidAt > DateTimeOffset.UtcNow.AddMinutes(5) || string.IsNullOrWhiteSpace(request.IdempotencyKey))
         {
             throw new ValidationErrorException("A valid payment date and idempotency key are required.");
@@ -602,7 +691,7 @@ public sealed class StudentFeeLedgerRepository(SkolenzaDbContext context) : IStu
         await using var transaction = await context.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable, cancellationToken);
         var idempotencyLockKey = $"{institutionId}:{request.IdempotencyKey.Trim()}";
         await context.Database.SqlQuery<bool>(
-                $"SELECT pg_advisory_xact_lock(hashtextextended({idempotencyLockKey}, 0)) IS NULL")
+                $"SELECT pg_advisory_xact_lock(hashtextextended({idempotencyLockKey}, 0)) IS NULL AS \"Value\"")
             .SingleAsync(cancellationToken);
         existing = await context.StudentFeePaymentTransactions.AsNoTracking().SingleOrDefaultAsync(item =>
             item.InstitutionId == institutionId && item.IdempotencyKey == request.IdempotencyKey.Trim(), cancellationToken);
@@ -621,6 +710,7 @@ public sealed class StudentFeeLedgerRepository(SkolenzaDbContext context) : IStu
         var installment = await context.StudentFeeInstallments.FromSqlInterpolated($"SELECT * FROM skolenza.\"StudentFeeInstallment\" WHERE \"Id\" = {installmentId} AND \"InstitutionId\" = {institutionId} FOR UPDATE")
             .SingleOrDefaultAsync(cancellationToken)
             ?? throw new NotFoundException("Student fee installment was not found.");
+        await context.Entry(installment).ReloadAsync(cancellationToken);
         var quote = await context.StudentAdmissionFeeQuotes.AsNoTracking().SingleAsync(item =>
             item.Id == installment.StudentAdmissionFeeQuoteId && item.InstitutionId == institutionId, cancellationToken);
         var structure = await context.StudentFeeStructures.AsNoTracking().SingleAsync(item =>
@@ -658,7 +748,7 @@ public sealed class StudentFeeLedgerRepository(SkolenzaDbContext context) : IStu
             CurrencyCode = quote.CurrencyCode,
             RecordedReference = string.IsNullOrWhiteSpace(request.RecordedReference) ? null : request.RecordedReference.Trim(),
             RecordedById = actorId,
-            PaidDateTime = request.PaidAt.UtcDateTime,
+            PaidDateTime = DateTime.SpecifyKind(request.PaidAt.UtcDateTime, DateTimeKind.Unspecified),
             AddedDateTime = DateTime.UtcNow
         };
         context.StudentFeePaymentTransactions.Add(payment);
@@ -676,7 +766,7 @@ public sealed class StudentFeeLedgerRepository(SkolenzaDbContext context) : IStu
             ReceiptNumber = $"RCT-{institutionId}-{DateTime.UtcNow:yyyyMMdd}-{payment.Id:D8}",
             Amount = amount,
             CurrencyCode = quote.CurrencyCode,
-            IssuedDateTime = DateTime.UtcNow
+            IssuedDateTime = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified)
         };
         context.StudentFeeReceipts.Add(receipt);
         await context.SaveChangesAsync(cancellationToken);
@@ -690,28 +780,62 @@ public sealed class StudentFeeLedgerRepository(SkolenzaDbContext context) : IStu
         string idempotencyKey,
         CancellationToken cancellationToken)
     {
+        return await RetrySerializationFailureAsync(() => PrepareCashfreeCheckoutCoreAsync(
+            installmentId, institutionId, idempotencyKey, null, cancellationToken));
+    }
+
+    public async Task<StudentCashfreeCheckoutDataDTO> PreparePortalCashfreeCheckoutAsync(
+        long institutionId,
+        long accountId,
+        long studentId,
+        long admissionId,
+        long installmentId,
+        string idempotencyKey,
+        CancellationToken cancellationToken)
+    {
+        return await RetrySerializationFailureAsync(() => PrepareCashfreeCheckoutCoreAsync(
+            installmentId, institutionId, idempotencyKey,
+            new PortalCheckoutScope(accountId, studentId, admissionId), cancellationToken));
+    }
+
+    private async Task<StudentCashfreeCheckoutDataDTO> PrepareCashfreeCheckoutCoreAsync(
+        long installmentId,
+        long institutionId,
+        string idempotencyKey,
+        PortalCheckoutScope? portalScope,
+        CancellationToken cancellationToken)
+    {
         var normalizedKey = idempotencyKey.Trim();
         if (normalizedKey.Length == 0)
         {
             throw new ValidationErrorException("An idempotency key is required.");
         }
 
-        var existing = await context.StudentFeePaymentAttempts.AsNoTracking().SingleOrDefaultAsync(item =>
-            item.InstitutionId == institutionId && item.IdempotencyKey == normalizedKey, cancellationToken);
-        if (existing is not null)
+        StudentFeePaymentAttempt? existing = null;
+        if (portalScope is null)
         {
-            if (existing.StudentFeeInstallmentId != installmentId || existing.GatewayCode != StudentConstants.CashfreeGatewayCode)
+            existing = await context.StudentFeePaymentAttempts.AsNoTracking().SingleOrDefaultAsync(item =>
+                item.InstitutionId == institutionId && item.IdempotencyKey == normalizedKey, cancellationToken);
+            if (existing is not null)
             {
-                throw new ConflictException("The idempotency key was already used for a different fee installment.");
-            }
+                if (existing.StudentFeeInstallmentId != installmentId || existing.GatewayCode != StudentConstants.CashfreeGatewayCode)
+                {
+                    throw new ConflictException("The idempotency key was already used for a different fee installment.");
+                }
 
-            return await GetCashfreeCheckoutDataAsync(existing.Id, institutionId, cancellationToken);
+                return await GetCashfreeCheckoutDataAsync(existing.Id, institutionId, cancellationToken);
+            }
         }
 
         await using var transaction = await context.Database.BeginTransactionAsync(
             System.Data.IsolationLevel.Serializable, cancellationToken);
+        if (portalScope is not null)
+        {
+            await LockAndAuthorizePortalCheckoutAsync(
+                institutionId, installmentId, portalScope, cancellationToken);
+        }
         var lockKey = $"{institutionId}:{normalizedKey}";
-        await context.Database.SqlQuery<bool>($"SELECT pg_advisory_xact_lock(hashtextextended({lockKey}, 0)) IS NULL")
+        await context.Database.SqlQuery<bool>($"SELECT pg_advisory_xact_lock(hashtextextended({lockKey}, 0)) IS NULL AS \"Value\"")
             .SingleAsync(cancellationToken);
         existing = await context.StudentFeePaymentAttempts.AsNoTracking().SingleOrDefaultAsync(item =>
             item.InstitutionId == institutionId && item.IdempotencyKey == normalizedKey, cancellationToken);
@@ -730,6 +854,7 @@ public sealed class StudentFeeLedgerRepository(SkolenzaDbContext context) : IStu
                 $"SELECT * FROM skolenza.\"StudentFeeInstallment\" WHERE \"Id\" = {installmentId} AND \"InstitutionId\" = {institutionId} FOR UPDATE")
             .SingleOrDefaultAsync(cancellationToken)
             ?? throw new NotFoundException("Student fee installment was not found.");
+        await context.Entry(installment).ReloadAsync(cancellationToken);
         var quote = await context.StudentAdmissionFeeQuotes.AsNoTracking().SingleAsync(item =>
             item.Id == installment.StudentAdmissionFeeQuoteId && item.InstitutionId == institutionId, cancellationToken);
         if (quote.CurrencyDecimalPlaces == 3)
@@ -810,6 +935,39 @@ public sealed class StudentFeeLedgerRepository(SkolenzaDbContext context) : IStu
         };
     }
 
+    private async Task LockAndAuthorizePortalCheckoutAsync(
+        long institutionId,
+        long installmentId,
+        PortalCheckoutScope scope,
+        CancellationToken cancellationToken)
+    {
+        if (portalAuth is null)
+        {
+            throw new InvalidOperationException("Portal authorization is not configured for student fee checkout.");
+        }
+
+        // Student is locked first, matching Guardian-link updates and student exit.
+        await context.Database.SqlQuery<long>($"SELECT \"Id\" AS \"Value\" FROM skolenza.\"Student\" WHERE \"InstitutionId\" = {institutionId} AND \"Id\" = {scope.StudentId} FOR UPDATE")
+            .ToListAsync(cancellationToken);
+        await context.Database.SqlQuery<long>($"SELECT \"Id\" AS \"Value\" FROM skolenza.\"StudentPortalAccount\" WHERE \"InstitutionId\" = {institutionId} AND \"Id\" = {scope.AccountId} FOR SHARE")
+            .ToListAsync(cancellationToken);
+        await context.Database.SqlQuery<long>($"SELECT sg.\"Id\" AS \"Value\" FROM skolenza.\"StudentGuardian\" sg JOIN skolenza.\"StudentPortalAccountGuardian\" ag ON ag.\"GuardianId\" = sg.\"GuardianId\" AND ag.\"InstitutionId\" = sg.\"InstitutionId\" JOIN skolenza.\"Guardian\" g ON g.\"Id\" = sg.\"GuardianId\" AND g.\"InstitutionId\" = sg.\"InstitutionId\" WHERE sg.\"InstitutionId\" = {institutionId} AND sg.\"StudentId\" = {scope.StudentId} AND ag.\"StudentPortalAccountId\" = {scope.AccountId} ORDER BY sg.\"Id\" FOR SHARE OF sg, ag, g")
+            .ToListAsync(cancellationToken);
+        await context.Database.SqlQuery<long>($"SELECT \"Id\" AS \"Value\" FROM skolenza.\"StudentAdmission\" WHERE \"InstitutionId\" = {institutionId} AND \"Id\" = {scope.AdmissionId} FOR SHARE")
+            .ToListAsync(cancellationToken);
+
+        var profile = await portalAuth.GetProfileAsync(institutionId, scope.AccountId, cancellationToken);
+        var hasGuardianAccess = profile?.Personas.Any(persona =>
+            persona.Type == StudentPortalPersonaType.Guardian &&
+            persona.LinkedStudents.Any(student => student.StudentId == scope.StudentId)) == true;
+        if (!hasGuardianAccess ||
+            !await AdmissionBelongsToStudentAsync(institutionId, scope.StudentId, scope.AdmissionId, cancellationToken) ||
+            !await InstallmentBelongsToAdmissionAsync(institutionId, scope.AdmissionId, installmentId, cancellationToken))
+        {
+            throw new NotFoundException("Student fee information was not found.");
+        }
+    }
+
     public async Task<StudentCashfreeCheckoutResponseDTO> SaveCashfreeOrderAsync(
         long attemptId,
         long institutionId,
@@ -828,7 +986,7 @@ public sealed class StudentFeeLedgerRepository(SkolenzaDbContext context) : IStu
         }
 
         attempt.GatewayPaymentSessionId = paymentSessionId;
-        attempt.ExpiresDateTime = expiresAt.UtcDateTime;
+        attempt.ExpiresDateTime = DateTime.SpecifyKind(expiresAt.UtcDateTime, DateTimeKind.Unspecified);
         if (attempt.Status == (short)StudentFeePaymentAttemptStatus.Created)
         {
             attempt.Status = (short)StudentFeePaymentAttemptStatus.Pending;
@@ -870,6 +1028,18 @@ public sealed class StudentFeeLedgerRepository(SkolenzaDbContext context) : IStu
         string? webhookPayloadSha256,
         CancellationToken cancellationToken)
     {
+        return await RetrySerializationFailureAsync(() => RecordCashfreePaymentCoreAsync(
+            attemptId, payment, webhookEventId, webhookEventType, webhookPayloadSha256, cancellationToken));
+    }
+
+    private async Task<StudentCashfreePaymentStatusResponseDTO> RecordCashfreePaymentCoreAsync(
+        long attemptId,
+        StudentCashfreePaymentDetailsDTO payment,
+        string? webhookEventId,
+        string? webhookEventType,
+        string? webhookPayloadSha256,
+        CancellationToken cancellationToken)
+    {
         var attempt = await context.StudentFeePaymentAttempts.AsNoTracking().SingleOrDefaultAsync(item =>
             item.Id == attemptId && item.GatewayCode == StudentConstants.CashfreeGatewayCode, cancellationToken)
             ?? throw new NotFoundException("Cashfree payment attempt was not found.");
@@ -877,6 +1047,7 @@ public sealed class StudentFeeLedgerRepository(SkolenzaDbContext context) : IStu
         await using var transaction = await context.Database.BeginTransactionAsync(
             System.Data.IsolationLevel.Serializable, cancellationToken);
 
+        StudentFeePaymentWebhookEvent? webhookEvent = null;
         if (!string.IsNullOrWhiteSpace(webhookEventId))
         {
             var alreadySeen = await context.StudentFeePaymentWebhookEvents.AnyAsync(item =>
@@ -887,7 +1058,7 @@ public sealed class StudentFeeLedgerRepository(SkolenzaDbContext context) : IStu
                 return await GetCashfreePaymentStatusAsync(attemptId, attempt.InstitutionId, cancellationToken);
             }
 
-            context.StudentFeePaymentWebhookEvents.Add(new StudentFeePaymentWebhookEvent
+            webhookEvent = new StudentFeePaymentWebhookEvent
             {
                 StudentFeePaymentAttemptId = attemptId,
                 EventId = webhookEventId,
@@ -895,7 +1066,8 @@ public sealed class StudentFeeLedgerRepository(SkolenzaDbContext context) : IStu
                 PayloadSha256 = webhookPayloadSha256 ?? string.Empty,
                 ProcessingStatus = (short)StudentFeeWebhookProcessingStatus.Pending,
                 ReceivedDateTime = DateTime.UtcNow
-            });
+            };
+            context.StudentFeePaymentWebhookEvents.Add(webhookEvent);
         }
 
         var currentAttempt = await context.StudentFeePaymentAttempts.FromSqlInterpolated(
@@ -937,7 +1109,7 @@ public sealed class StudentFeeLedgerRepository(SkolenzaDbContext context) : IStu
                 Amount = payment.Amount,
                 CurrencyCode = quote.CurrencyCode,
                 BankReference = payment.BankReference,
-                PaidDateTime = payment.PaidAt?.UtcDateTime ?? DateTime.UtcNow,
+                PaidDateTime = DateTime.SpecifyKind(payment.PaidAt?.UtcDateTime ?? DateTime.UtcNow, DateTimeKind.Unspecified),
                 AddedDateTime = DateTime.UtcNow
             };
             context.StudentFeePaymentTransactions.Add(paymentTransaction);
@@ -957,7 +1129,7 @@ public sealed class StudentFeeLedgerRepository(SkolenzaDbContext context) : IStu
                 ReceiptNumber = $"RCT-{currentAttempt.InstitutionId}-{DateTime.UtcNow:yyyyMMdd}-{paymentTransaction.Id:D8}",
                 Amount = payment.Amount,
                 CurrencyCode = quote.CurrencyCode,
-                IssuedDateTime = DateTime.UtcNow
+                IssuedDateTime = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified)
             });
         }
         else if (existingTransaction is null)
@@ -965,10 +1137,8 @@ public sealed class StudentFeeLedgerRepository(SkolenzaDbContext context) : IStu
             currentAttempt.Status = (short)attemptStatus;
         }
 
-        if (!string.IsNullOrWhiteSpace(webhookEventId))
+        if (webhookEvent is not null)
         {
-            var webhookEvent = await context.StudentFeePaymentWebhookEvents.SingleAsync(item =>
-                item.EventId == webhookEventId, cancellationToken);
             webhookEvent.ProcessingStatus = (short)StudentFeeWebhookProcessingStatus.Processed;
             webhookEvent.ProcessedDateTime = DateTime.UtcNow;
         }
@@ -1185,6 +1355,38 @@ public sealed class StudentFeeLedgerRepository(SkolenzaDbContext context) : IStu
         PaidAt = payment.PaidDateTime.HasValue ? new DateTimeOffset(DateTime.SpecifyKind(payment.PaidDateTime.Value, DateTimeKind.Utc)) : null
     };
 
+    private async Task<T> RetrySerializationFailureAsync<T>(Func<Task<T>> operation)
+    {
+        for (var attempt = 1; ; attempt++)
+        {
+            try
+            {
+                return await operation();
+            }
+            catch (Exception exception) when (IsSerializationFailure(exception))
+            {
+                context.ChangeTracker.Clear();
+                if (attempt >= StudentConstants.FeeTransactionMaximumAttempts)
+                {
+                    throw new ConflictException(StudentConstants.FeeTransactionConcurrencyMessage);
+                }
+            }
+        }
+    }
+
+    private static bool IsSerializationFailure(Exception exception)
+    {
+        for (Exception? current = exception; current is not null; current = current.InnerException)
+        {
+            if (current is PostgresException { SqlState: PostgresErrorCodes.SerializationFailure })
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     private async Task<int> GetPaymentDecimalPlacesAsync(
         long paymentId,
         long institutionId,
@@ -1209,5 +1411,7 @@ public sealed class StudentFeeLedgerRepository(SkolenzaDbContext context) : IStu
         payment.StudentFeeInstallmentId == installmentId &&
         payment.Amount == StudentFeeQuoteCalculator.RoundCurrency(request.Amount, currencyDecimalPlaces) &&
         payment.RecordedReference == (string.IsNullOrWhiteSpace(request.RecordedReference) ? null : request.RecordedReference.Trim()) &&
-        payment.PaidDateTime == request.PaidAt.UtcDateTime;
+        payment.PaidDateTime.HasValue &&
+        payment.PaidDateTime.Value.Ticks / TimeSpan.TicksPerMicrosecond ==
+            request.PaidAt.UtcDateTime.Ticks / TimeSpan.TicksPerMicrosecond;
 }

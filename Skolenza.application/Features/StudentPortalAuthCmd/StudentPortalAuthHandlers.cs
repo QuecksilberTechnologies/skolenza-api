@@ -211,7 +211,8 @@ public sealed class StudentPortalLoginCommandHandler(
             account.LockoutEndDateTime > now || !IsIdentityPasswordHash(account.PasswordHash) ||
             !passwordService.VerifyPassword(account.PasswordHash, command.Request.Password))
         {
-            if (account is not null && account.IsActive && account.IsEmailVerified && account.LockoutEndDateTime <= now)
+            if (account is not null && account.IsActive && account.IsEmailVerified &&
+                (!account.LockoutEndDateTime.HasValue || account.LockoutEndDateTime <= now))
             {
                 await repository.RegisterFailedLoginAsync(
                     institutionId.Value,

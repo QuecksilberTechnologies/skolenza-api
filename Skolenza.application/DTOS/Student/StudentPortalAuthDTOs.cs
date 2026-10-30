@@ -70,6 +70,33 @@ public sealed class StudentPortalDocumentFilterDTO
     public StudentDocumentReviewStatus? Status { get; set; }
 }
 
+/// <summary>Pagination for Guardian fee records; tenant and portal identity come from the bearer token.</summary>
+public sealed class StudentPortalFeeFilterDTO
+{
+    public int PageNumber { get; set; } = PaginationDefaults.PageNumber;
+    public int PageSize { get; set; } = PaginationDefaults.PageSize;
+}
+
+public sealed class StudentPortalFeeAdmissionResponseDTO
+{
+    public long AdmissionId { get; set; }
+    public long AcademicSessionId { get; set; }
+    public string AcademicSessionName { get; set; } = string.Empty;
+    public long CampusId { get; set; }
+    public string CampusName { get; set; } = string.Empty;
+    public long AcademicGroupId { get; set; }
+    public string AcademicGroupName { get; set; } = string.Empty;
+    public long QuoteId { get; set; }
+    public string CurrencyCode { get; set; } = string.Empty;
+    public decimal NetAnnualAmount { get; set; }
+}
+
+public sealed class StudentPortalCashfreeCheckoutRequestDTO
+{
+    [Required, StringLength(100)]
+    public string IdempotencyKey { get; set; } = string.Empty;
+}
+
 public sealed class StudentRecordDocumentResponseDTO
 {
     public long Id { get; init; }

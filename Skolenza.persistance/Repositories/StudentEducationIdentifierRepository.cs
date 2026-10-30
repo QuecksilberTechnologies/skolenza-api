@@ -64,7 +64,7 @@ public sealed class StudentEducationIdentifierRepository(
             throw new ConflictException("This student already has a value for the selected identifier type. Update the existing record.");
         }
 
-        var now = DateTime.UtcNow;
+        var now = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified);
         var entity = new StudentEducationIdentifier
         {
             InstitutionId = institutionId,
@@ -108,7 +108,7 @@ public sealed class StudentEducationIdentifierRepository(
         entity.VerifiedById = null;
         entity.VerifiedDateTime = null;
         entity.UpdatedById = actorStaffMemberId;
-        entity.UpdatedDateTime = DateTime.UtcNow;
+        entity.UpdatedDateTime = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified);
         if (previousStatus != (short)StudentEducationIdentifierVerificationStatus.Unverified)
         {
             context.StudentEducationIdentifierVerificationHistories.Add(
@@ -153,7 +153,7 @@ public sealed class StudentEducationIdentifierRepository(
         }
 
         var previousStatus = entity.VerificationStatus;
-        var now = DateTime.UtcNow;
+        var now = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified);
         entity.VerificationStatus = verificationStatus;
         entity.VerifiedById = actorStaffMemberId;
         entity.VerifiedDateTime = now;

@@ -613,9 +613,11 @@ public sealed class StudentRegistryRepository(
             throw new ValidationErrorException("Exit reason is invalid.");
         }
 
-        var student = await context.Students.SingleOrDefaultAsync(
-            item => item.Id == studentId && item.InstitutionId == institutionId && !item.IsSoftDeleted,
-            cancellationToken) ?? throw new KeyNotFoundException("Student was not found.");
+        await using var transaction = await context.Database.BeginTransactionAsync(cancellationToken);
+        var student = await context.Students
+            .FromSqlInterpolated($"SELECT * FROM skolenza.\"Student\" WHERE \"Id\" = {studentId} AND \"InstitutionId\" = {institutionId} AND NOT \"IsSoftDeleted\" FOR UPDATE")
+            .SingleOrDefaultAsync(cancellationToken) ?? throw new KeyNotFoundException("Student was not found.");
+        await context.Entry(student).ReloadAsync(cancellationToken);
         if (student.LifecycleStatus == (short)StudentLifecycleStatus.Exited)
         {
             throw new ConflictException("Student exit has already been recorded.");
@@ -632,7 +634,6 @@ public sealed class StudentRegistryRepository(
 
         await ValidateCountryAsync(request.PreviousSchoolCountryId, cancellationToken);
         await ValidateCountryAsync(request.DestinationSchoolCountryId, cancellationToken);
-        await using var transaction = await context.Database.BeginTransactionAsync(cancellationToken);
         var now = DateTime.UtcNow;
         var history = new StudentExitHistory
         {
@@ -847,13 +848,14 @@ public sealed class StudentRegistryRepository(
     {
         ValidateGuardianLink(request);
         await using var transaction = await context.Database.BeginTransactionAsync(cancellationToken);
-        var studentExists = await context.Students.AnyAsync(item =>
-            item.Id == studentId && item.InstitutionId == institutionId && !item.IsSoftDeleted &&
-            item.LifecycleStatus != (short)StudentLifecycleStatus.Exited, cancellationToken);
+        var student = await context.Students
+            .FromSqlInterpolated($"SELECT * FROM skolenza.\"Student\" WHERE \"Id\" = {studentId} AND \"InstitutionId\" = {institutionId} AND NOT \"IsSoftDeleted\" FOR UPDATE")
+            .AsNoTracking()
+            .SingleOrDefaultAsync(cancellationToken);
         var guardian = await context.Guardians.SingleOrDefaultAsync(item =>
             item.Id == request.GuardianId && item.InstitutionId == institutionId && item.IsActive && !item.IsSoftDeleted,
             cancellationToken);
-        if (!studentExists || guardian is null)
+        if (student is null || student.LifecycleStatus == (short)StudentLifecycleStatus.Exited || guardian is null)
         {
             throw new KeyNotFoundException("Student or active Guardian was not found in this institution.");
         }
@@ -890,6 +892,16 @@ public sealed class StudentRegistryRepository(
         CancellationToken cancellationToken)
     {
         ValidateGuardianLink(request);
+        await using var transaction = await context.Database.BeginTransactionAsync(cancellationToken);
+        var student = await context.Students
+            .FromSqlInterpolated($"SELECT * FROM skolenza.\"Student\" WHERE \"Id\" = {studentId} AND \"InstitutionId\" = {institutionId} AND NOT \"IsSoftDeleted\" FOR UPDATE")
+            .AsNoTracking()
+            .SingleOrDefaultAsync(cancellationToken);
+        if (student is null)
+        {
+            throw new KeyNotFoundException("Active Guardian link was not found.");
+        }
+
         var entity = await context.StudentGuardians.SingleOrDefaultAsync(item =>
             item.Id == linkId && item.InstitutionId == institutionId && item.StudentId == studentId && item.IsActive,
             cancellationToken) ?? throw new KeyNotFoundException("Active Guardian link was not found.");
@@ -910,6 +922,7 @@ public sealed class StudentRegistryRepository(
         entity.EffectiveFrom = request.EffectiveFrom;
         entity.EffectiveTo = request.EffectiveTo;
         await context.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
         return Map(entity, guardian);
     }
 

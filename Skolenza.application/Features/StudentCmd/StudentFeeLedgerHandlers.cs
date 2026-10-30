@@ -280,15 +280,37 @@ public sealed class CreateStudentCashfreeCheckoutCommandHandler(
         CancellationToken cancellationToken)
     {
         var actor = await StudentRequestContext.ResolveActorAsync(common);
-        var configuration = await configurationRepository.GetCredentialsAsync(actor.InstitutionId, cancellationToken)
+        return await StudentCashfreeCheckoutOperation.CreateAsync(
+            actor.InstitutionId, request.InstallmentId, request.DTO.IdempotencyKey,
+            feeRepository, configurationRepository, secretProtector, cashfreeClient, cancellationToken);
+    }
+}
+
+/// <summary>Shared provider checkout flow for staff and authorized Guardians.</summary>
+public static class StudentCashfreeCheckoutOperation
+{
+    public static async Task<ApiResponse<StudentCashfreeCheckoutResponseDTO>> CreateAsync(
+        long institutionId,
+        long installmentId,
+        string idempotencyKey,
+        IStudentFeeLedgerRepository feeRepository,
+        IStudentPaymentGatewayConfigurationRepository configurationRepository,
+        IStudentGatewaySecretProtector secretProtector,
+        IStudentCashfreeClient cashfreeClient,
+        CancellationToken cancellationToken,
+        Func<CancellationToken, Task<StudentCashfreeCheckoutDataDTO>>? prepareCheckout = null)
+    {
+        var configuration = await configurationRepository.GetCredentialsAsync(institutionId, cancellationToken)
             ?? throw new skolenza.application.Exceptions.NotFoundException("An active Cashfree tuition gateway configuration is required.");
         if (!Enum.IsDefined((StudentPaymentGatewayEnvironment)configuration.Environment))
         {
             throw new skolenza.application.Exceptions.ValidationErrorException("The configured Cashfree environment is invalid.");
         }
 
-        var checkout = await feeRepository.PrepareCashfreeCheckoutAsync(
-            request.InstallmentId, actor.InstitutionId, request.DTO.IdempotencyKey, cancellationToken);
+        var checkout = prepareCheckout is null
+            ? await feeRepository.PrepareCashfreeCheckoutAsync(
+                installmentId, institutionId, idempotencyKey, cancellationToken)
+            : await prepareCheckout(cancellationToken);
         if (!string.IsNullOrWhiteSpace(checkout.PaymentSessionId) && checkout.ExpiresAt.HasValue)
         {
             return ApiResponse<StudentCashfreeCheckoutResponseDTO>.Success(new StudentCashfreeCheckoutResponseDTO
@@ -303,7 +325,7 @@ public sealed class CreateStudentCashfreeCheckoutCommandHandler(
         }
 
         var clientSecret = await secretProtector.UnprotectAsync(
-            actor.InstitutionId, configuration.ProtectedClientSecret, cancellationToken);
+            institutionId, configuration.ProtectedClientSecret, cancellationToken);
         var providerOrder = await cashfreeClient.CreateOrderAsync(
             (StudentPaymentGatewayEnvironment)configuration.Environment,
             configuration.ClientId,
@@ -313,7 +335,7 @@ public sealed class CreateStudentCashfreeCheckoutCommandHandler(
             cancellationToken);
         var response = await feeRepository.SaveCashfreeOrderAsync(
             checkout.PaymentAttemptId,
-            actor.InstitutionId,
+            institutionId,
             providerOrder.PaymentSessionId,
             providerOrder.ExpiresAt ?? DateTimeOffset.UtcNow.AddMinutes(15),
             cancellationToken);

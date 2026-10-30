@@ -7,13 +7,21 @@ namespace skolenza.infrastructure.EncryptionService;
 
 /// <summary>Uses the institution's existing active encryption key with AES-GCM for gateway secrets.</summary>
 public sealed class StudentGatewaySecretProtector(IInstitutionKeyResolver institutionKeyResolver)
-    : IStudentGatewaySecretProtector
+    : IStudentGatewaySecretProtector, IStudentPortalEmailProtector
 {
     private const string FormatPrefix = "v1";
+    private const string GatewaySecretPurpose = "student-gateway-secret";
+    private const string PortalEmailPurpose = "student-portal-email";
     private const int NonceSize = 12;
     private const int TagSize = 16;
 
     public async Task<string> ProtectAsync(long institutionId, string plainText, CancellationToken cancellationToken)
+        => await ProtectCoreAsync(institutionId, plainText, GatewaySecretPurpose, cancellationToken);
+
+    async Task<string> IStudentPortalEmailProtector.ProtectAsync(long institutionId, string plainText, CancellationToken cancellationToken)
+        => await ProtectCoreAsync(institutionId, plainText, PortalEmailPurpose, cancellationToken);
+
+    private async Task<string> ProtectCoreAsync(long institutionId, string plainText, string purpose, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
         ArgumentException.ThrowIfNullOrWhiteSpace(plainText);
@@ -25,7 +33,7 @@ public sealed class StudentGatewaySecretProtector(IInstitutionKeyResolver instit
         try
         {
             using var aes = new AesGcm(key, TagSize);
-            aes.Encrypt(nonce, plainBytes, cipherBytes, tag, BuildAssociatedData(institutionId));
+            aes.Encrypt(nonce, plainBytes, cipherBytes, tag, BuildAssociatedData(institutionId, purpose));
         }
         finally
         {
@@ -40,6 +48,12 @@ public sealed class StudentGatewaySecretProtector(IInstitutionKeyResolver instit
     }
 
     public async Task<string> UnprotectAsync(long institutionId, string protectedValue, CancellationToken cancellationToken)
+        => await UnprotectCoreAsync(institutionId, protectedValue, GatewaySecretPurpose, cancellationToken);
+
+    async Task<string> IStudentPortalEmailProtector.UnprotectAsync(long institutionId, string protectedValue, CancellationToken cancellationToken)
+        => await UnprotectCoreAsync(institutionId, protectedValue, PortalEmailPurpose, cancellationToken);
+
+    private async Task<string> UnprotectCoreAsync(long institutionId, string protectedValue, string purpose, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
         ArgumentException.ThrowIfNullOrWhiteSpace(protectedValue);
@@ -73,7 +87,7 @@ public sealed class StudentGatewaySecretProtector(IInstitutionKeyResolver instit
         try
         {
             using var aes = new AesGcm(key, TagSize);
-            aes.Decrypt(nonce, cipherBytes, tag, plainBytes, BuildAssociatedData(institutionId));
+            aes.Decrypt(nonce, cipherBytes, tag, plainBytes, BuildAssociatedData(institutionId, purpose));
             return Encoding.UTF8.GetString(plainBytes);
         }
         catch (AuthenticationTagMismatchException exception)
@@ -103,6 +117,6 @@ public sealed class StudentGatewaySecretProtector(IInstitutionKeyResolver instit
         return SHA256.HashData(Encoding.UTF8.GetBytes(institutionKey));
     }
 
-    private static byte[] BuildAssociatedData(long institutionId) =>
-        Encoding.UTF8.GetBytes($"skolenza:student-gateway-secret:{institutionId}:v1");
+    private static byte[] BuildAssociatedData(long institutionId, string purpose) =>
+        Encoding.UTF8.GetBytes($"skolenza:{purpose}:{institutionId}:v1");
 }

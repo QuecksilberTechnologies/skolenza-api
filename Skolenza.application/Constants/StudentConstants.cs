@@ -21,9 +21,13 @@ public static class StudentConstants
     public const int PortalTokenHashLength = 64;
     public const string PortalInvitationTemplateCode = "STUDENT_PORTAL_INVITATION";
     public const string PortalPasswordResetTemplateCode = "STUDENT_PORTAL_PASSWORD_RESET";
+    public const string PortalEmailProtectedPayloadKey = "_skolenzaProtectedPortalPayload";
     public const string PortalInvitationPath = "/auth/portal/accept-invitation";
     public const string PortalPasswordResetPath = "/auth/portal/reset-password";
     public const string PortalPasswordResetGenericMessage = "If an active portal account exists for this email, password reset instructions will be sent.";
+    public const string PortalPasswordResetConcurrencyMessage = "The password reset conflicted with another request. Request a new reset link and try again.";
+    public const int FeeTransactionMaximumAttempts = 2;
+    public const string FeeTransactionConcurrencyMessage = "The fee transaction conflicted with another request. Please retry with the same idempotency key.";
     public const long PortalDocumentAbsoluteMaximumFileSizeBytes = 104_857_600;
     public const string AdmissionApplicationNumberPrefix = "APP";
     public const string StudentCodePrefix = "STD";

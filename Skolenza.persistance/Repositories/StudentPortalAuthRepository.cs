@@ -1,9 +1,11 @@
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 using skolenza.application.Common.Enums;
 using skolenza.application.Common.Helpers;
 using skolenza.application.Constants;
 using skolenza.application.DTOS.Student;
 using skolenza.application.Exceptions;
+using skolenza.application.Interfaces;
 using skolenza.application.Interfaces.IRepositories;
 using skolenza.domain.Entity;
 using skolenza.persistance.Data.Context;
@@ -12,7 +14,8 @@ namespace skolenza.persistance.Repositories;
 
 public sealed class StudentPortalAuthRepository(
     SkolenzaDbContext context,
-    IEmailQueueRepository emailQueueRepository) : IStudentPortalAuthRepository
+    IEmailQueueRepository emailQueueRepository,
+    IStudentPortalEmailProtector portalEmailProtector) : IStudentPortalAuthRepository
 {
     public Task<long?> ResolveVerifiedInstitutionAsync(string hostname, CancellationToken cancellationToken) =>
         context.InstitutionPortalDomainMasters.AsNoTracking()
@@ -213,11 +216,12 @@ public sealed class StudentPortalAuthRepository(
             ["ExpiresAtUtc"] = expiresAtUtc.ToString("O")
         });
 
+        var protectedPlaceholders = await ProtectEmailPlaceholdersAsync(institutionId, placeholdersJson, cancellationToken);
         var queuedEmailId = await emailQueueRepository.EnqueueAsync(
             StudentConstants.PortalInvitationTemplateCode,
             guardian.Email,
             institutionId,
-            placeholdersJson,
+            protectedPlaceholders,
             cancellationToken);
         if (!queuedEmailId.HasValue)
         {
@@ -368,17 +372,19 @@ public sealed class StudentPortalAuthRepository(
         await context.SaveChangesAsync(cancellationToken);
 
         var resetUrl = $"https://{domain}{StudentConstants.PortalPasswordResetPath}?token={Uri.EscapeDataString(rawToken)}";
+        var placeholdersJson = System.Text.Json.JsonSerializer.Serialize(new Dictionary<string, string>
+        {
+            ["Email"] = normalizedEmail,
+            ["PasswordResetUrl"] = resetUrl,
+            ["PortalDomain"] = domain,
+            ["ExpiresAtUtc"] = expiresAtUtc.ToString("O")
+        });
+        var protectedPlaceholders = await ProtectEmailPlaceholdersAsync(institutionId, placeholdersJson, cancellationToken);
         var queuedEmailId = await emailQueueRepository.EnqueueAsync(
             StudentConstants.PortalPasswordResetTemplateCode,
             normalizedEmail,
             institutionId,
-            System.Text.Json.JsonSerializer.Serialize(new Dictionary<string, string>
-            {
-                ["Email"] = normalizedEmail,
-                ["PasswordResetUrl"] = resetUrl,
-                ["PortalDomain"] = domain,
-                ["ExpiresAtUtc"] = expiresAtUtc.ToString("O")
-            }),
+            protectedPlaceholders,
             cancellationToken);
         if (!queuedEmailId.HasValue)
         {
@@ -389,7 +395,46 @@ public sealed class StudentPortalAuthRepository(
         await transaction.CommitAsync(cancellationToken);
     }
 
+    private async Task<string> ProtectEmailPlaceholdersAsync(
+        long institutionId,
+        string placeholdersJson,
+        CancellationToken cancellationToken)
+    {
+        var encrypted = await portalEmailProtector.ProtectAsync(institutionId, placeholdersJson, cancellationToken);
+        return System.Text.Json.JsonSerializer.Serialize(new Dictionary<string, string>
+        {
+            [StudentConstants.PortalEmailProtectedPayloadKey] = encrypted
+        });
+    }
+
     public async Task ResetPasswordAsync(
+        long institutionId,
+        string tokenHash,
+        string passwordHash,
+        DateTime resetAtUtc,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            await ResetPasswordCoreAsync(institutionId, tokenHash, passwordHash, resetAtUtc, cancellationToken);
+        }
+        catch (PostgresException exception) when (exception.SqlState == PostgresErrorCodes.SerializationFailure)
+        {
+            throw new ConflictException(StudentConstants.PortalPasswordResetConcurrencyMessage);
+        }
+        catch (DbUpdateException exception) when (
+            exception.InnerException is PostgresException { SqlState: PostgresErrorCodes.SerializationFailure })
+        {
+            throw new ConflictException(StudentConstants.PortalPasswordResetConcurrencyMessage);
+        }
+        catch (InvalidOperationException exception) when (
+            exception.InnerException is PostgresException { SqlState: PostgresErrorCodes.SerializationFailure })
+        {
+            throw new ConflictException(StudentConstants.PortalPasswordResetConcurrencyMessage);
+        }
+    }
+
+    private async Task ResetPasswordCoreAsync(
         long institutionId,
         string tokenHash,
         string passwordHash,
@@ -399,19 +444,29 @@ public sealed class StudentPortalAuthRepository(
         await using var transaction = await context.Database.BeginTransactionAsync(
             System.Data.IsolationLevel.Serializable,
             cancellationToken);
-        var resetToken = await context.StudentPortalOneTimeTokens
-            .FromSqlInterpolated($"SELECT * FROM skolenza.\"StudentPortalOneTimeToken\" WHERE \"TokenHash\" = {tokenHash} AND \"InstitutionId\" = {institutionId} FOR UPDATE")
+        var accountId = await context.StudentPortalOneTimeTokens.AsNoTracking()
+            .Where(item => item.TokenHash == tokenHash && item.InstitutionId == institutionId &&
+                item.Purpose == (short)StudentPortalOneTimeTokenPurpose.PasswordReset)
+            .Select(item => item.StudentPortalAccountId)
             .SingleOrDefaultAsync(cancellationToken);
-        if (resetToken is null || resetToken.Purpose != (short)StudentPortalOneTimeTokenPurpose.PasswordReset ||
-            resetToken.ConsumedDateTime.HasValue || resetToken.ExpiresDateTime <= resetAtUtc ||
-            !resetToken.StudentPortalAccountId.HasValue)
+        if (!accountId.HasValue)
         {
             throw new UnauthorizedAccessException(AppConstants.ErrorMessages.Unauthorized);
         }
 
         var account = await context.StudentPortalAccounts
-            .FromSqlInterpolated($"SELECT * FROM skolenza.\"StudentPortalAccount\" WHERE \"Id\" = {resetToken.StudentPortalAccountId.Value} AND \"InstitutionId\" = {institutionId} FOR UPDATE")
+            .FromSqlInterpolated($"SELECT * FROM skolenza.\"StudentPortalAccount\" WHERE \"Id\" = {accountId.Value} AND \"InstitutionId\" = {institutionId} FOR UPDATE")
             .SingleOrDefaultAsync(cancellationToken);
+        var resetToken = await context.StudentPortalOneTimeTokens
+            .FromSqlInterpolated($"SELECT * FROM skolenza.\"StudentPortalOneTimeToken\" WHERE \"TokenHash\" = {tokenHash} AND \"InstitutionId\" = {institutionId} FOR UPDATE")
+            .SingleOrDefaultAsync(cancellationToken);
+        if (resetToken is null || resetToken.StudentPortalAccountId != accountId ||
+            resetToken.Purpose != (short)StudentPortalOneTimeTokenPurpose.PasswordReset ||
+            resetToken.ConsumedDateTime.HasValue || resetToken.ExpiresDateTime <= resetAtUtc)
+        {
+            throw new UnauthorizedAccessException(AppConstants.ErrorMessages.Unauthorized);
+        }
+
         if (account is null || !account.IsActive || !account.IsEmailVerified ||
             !await HasActivePersonaAsync(institutionId, account.Id, cancellationToken))
         {
@@ -424,6 +479,12 @@ public sealed class StudentPortalAuthRepository(
         account.LockoutEndDateTime = null;
         account.UpdatedDateTime = resetAtUtc;
         resetToken.ConsumedDateTime = resetAtUtc;
+        await context.StudentPortalOneTimeTokens
+            .Where(item => item.InstitutionId == institutionId &&
+                item.StudentPortalAccountId == account.Id && item.Id != resetToken.Id &&
+                item.Purpose == (short)StudentPortalOneTimeTokenPurpose.PasswordReset &&
+                !item.ConsumedDateTime.HasValue)
+            .ExecuteUpdateAsync(setters => setters.SetProperty(item => item.ConsumedDateTime, resetAtUtc), cancellationToken);
         await context.StudentPortalRefreshTokens
             .Where(item => item.InstitutionId == institutionId &&
                 item.StudentPortalAccountId == account.Id && !item.RevokedDateTime.HasValue)

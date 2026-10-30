@@ -5,6 +5,24 @@ namespace skolenza.application.Interfaces.IRepositories;
 
 public interface IStudentFeeLedgerRepository
 {
+    Task<PagedResponseDTO<StudentPortalFeeAdmissionResponseDTO>> GetPortalAdmissionsAsync(
+        long institutionId,
+        long studentId,
+        StudentPortalFeeFilterDTO filter,
+        CancellationToken cancellationToken);
+
+    Task<bool> AdmissionBelongsToStudentAsync(
+        long institutionId,
+        long studentId,
+        long admissionId,
+        CancellationToken cancellationToken);
+
+    Task<bool> InstallmentBelongsToAdmissionAsync(
+        long institutionId,
+        long admissionId,
+        long installmentId,
+        CancellationToken cancellationToken);
+
     Task<PagedResponseDTO<StudentFeeStructureResponseDTO>> GetStructuresAsync(
         long institutionId,
         StudentFeeStructureFilterDTO filter,
@@ -31,6 +49,11 @@ public interface IStudentFeeLedgerRepository
         StudentFeeQuoteListRequestDTO filter,
         CancellationToken cancellationToken);
 
+    Task<StudentAdmissionFeeQuoteResponseDTO> GetAdmissionQuoteAsync(
+        long admissionId,
+        long institutionId,
+        CancellationToken cancellationToken);
+
     Task<StudentAdmissionFeeBalanceResponseDTO> GetAdmissionBalanceAsync(
         long admissionId,
         long institutionId,
@@ -51,6 +74,15 @@ public interface IStudentFeeLedgerRepository
     Task<StudentCashfreeCheckoutDataDTO> PrepareCashfreeCheckoutAsync(
         long installmentId,
         long institutionId,
+        string idempotencyKey,
+        CancellationToken cancellationToken);
+
+    Task<StudentCashfreeCheckoutDataDTO> PreparePortalCashfreeCheckoutAsync(
+        long institutionId,
+        long accountId,
+        long studentId,
+        long admissionId,
+        long installmentId,
         string idempotencyKey,
         CancellationToken cancellationToken);
 

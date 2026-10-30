@@ -1,8 +1,61 @@
 # Student API work — continuation handoff
 
-**Last updated:** 2026-10-29 (Asia/Kolkata)  
+**30 October key compatibility:** Four synthetic characterization tests verified that existing portal/gateway AES-GCM envelopes require the original key, Bank CBC is unauthenticated, numeric IDs currently use a global salt, and invalidating one process cache does not invalidate another. Protected checks 104/104 before, 108/108 including the new tests after, and Staff/Curriculum 41/41 before/after. These tests do not implement rotation. No actual keys or schema were changed; key history, token/write coordination, legacy-data migration and provider/deployed acceptance remain open. See [scenario](testing/student/portal-email-key-rotation/2026-10-30.md).
+
+**30 October Guardian fees:** Added portal-policy Guardian admission list, quote, balance, receipts and Cashfree checkout source routes. Checkout now locks and rechecks portal authorization, approved admission and installment ownership in the payment-attempt transaction. Forced PostgreSQL/HTTP races passed for both revoke-first and checkout-first ordering; an attempt accepted before revocation may finish its provider call, while later requests are denied. Full Student tests 114/114 with disposable Local PostgreSQL and synthetic HTTP using a fake provider, protected gates 41/41 and 87/87. Real Cashfree provider/webhook and deployed acceptance remain open. See [scenario](testing/student/guardian-fee-portal/2026-10-30.md). No Angular or target schema change; uncommitted and not deployed.
+
+**Last updated:** 2026-10-30 (Asia/Kolkata)
 **Current state:** API-only source changes are uncommitted and not deployed. Local and Render schemas are applied and structurally matched.  
 **Resume instruction:** If the user says only **“continue”**, begin with the open acceptance gates at the end of this file. Do not ask the user to repeat approved design decisions.
+
+## Completed and pending snapshot — 2026-10-29
+
+**30 October Local runtime:** User started API and UI. IPv4 loopback Swagger returned 200 and anonymous Student options returned 401; authenticated institution-admin testing remains pending. The running binary revision was not verified. [Evidence](testing/student/local-runtime-smoke/2026-10-30.md).
+
+**30 October Local/Render alignment:** Selected Student-related catalog comparison: 1,198 entries each, no differences. Render was missing Guardian invitation and portal password-reset templates; a fresh full Render backup was archive-checked and restored locally, both seed scripts were dry-run twice, then applied to Render. Each target now has one active template per code with matching content. Full Student tests on a disposable Local restore of the fresh Render backup passed 106/106; protected Staff/Curriculum 41/41 and Bank/profile/role 79/79 passed before and after. Both targets had zero active verified portal domains. Real DNS, email, role grants, authenticated running-product and deployment acceptance remain pending. See [scenario](testing/student/render-template-schema-sync/2026-10-30.md).
+
+**30 October portal HTTP harness:** A temporary Local HTTP host using the real portal controller, handlers, repository, password hasher, JWT signer and bearer policy passed synthetic Guardian login, profile, refresh/replay, logout/revoked refresh, anonymous profile and unverified-domain checks. Full Student suite passed 106/106 with disposable PostgreSQL; protected Staff/Curriculum 41/41 and Bank/profile/role 79/79 passed; Release build 0 errors/22 warnings. This test uses a synthetic verified-domain row and a dedicated host, not production `Program`, real DNS/SMTP, Staff permission grants or Render. See [scenario](testing/student/portal-auth-http/2026-10-30.md).
+
+**30 October login lockout:** Fixed failure counting when the portal account had never previously been locked. A guarded disposable PostgreSQL test verified that five failed login attempts persist a lockout. Student suite 106/106, protected Staff/Curriculum 41/41 and Bank/contact/profile/role 79/79 passed. This does not constitute actual HTTP, verified-domain or deployed acceptance. See [scenario](testing/student/portal-login-lockout/2026-10-30.md).
+
+**30 October concurrent reset:** A forced Local PostgreSQL race previously returned 200/500. The reset repository now maps the observed serialization failure and its EF wrapper to the existing safe 409 Conflict response, without changing unrelated database errors. Student tests passed 102/102 including the forced account-lock race through the actual error middleware. This is not a full running-product HTTP or deployment test. See [scenario](testing/student/password-reset-token-revocation/2026-10-30.md).
+
+**Portal password-reset fix:** A disposable DB regression exposed that a second outstanding reset link could change the password after the first had been used. The working-tree repository now invalidates remaining reset links for the same account and institution in the password-change transaction. The Student suite passed 102/102 with disposable DB, including parallel repository attempts and same-institution cross-account token isolation; protected Staff/Curriculum 41/41 and Bank/contact/profile/role 79/79 passed. Forced lock interleavings, HTTP handling of serialization conflicts, authenticated HTTP and deployment remain pending. See [scenario](testing/student/password-reset-token-revocation/2026-10-29.md).
+
+**Shared key rotation update:** The user approved a Local-only safe design and tests preserving Bank data and login. The lock registry now documents the current Skolenza selectors while retaining the old commands as historical references: Bank 1/1 and contact/profile 52/52 passed. Locality 9/9, institution creation/update 15/15, role 26/26 and Staff/Curriculum including Local rollback 41/41 also passed; Release build succeeded with 0 errors and 16 warnings. Key-rotation implementation and its tests remain pending. The scope includes old JWT claims and multi-instance cache lifetime, card lookup hashes and device commands as well as Bank, SMTP and Student data. Do not change or retire an existing refresh endpoint. No Local or Render keys were changed. See [rotation investigation](testing/student/portal-email-key-rotation/2026-10-29.md).
+
+**Completed / locally tested:** Student, Guardian, admission, document, fee,
+portal and options API source is in the working tree. The Local and Render
+Student schema fingerprints matched on 28 October. Local invitation and
+password-reset templates are active. New portal email queue placeholders are
+encrypted; disposable-database and worker checks passed. Latest Student suite:
+102 passed in a fresh disposable Local database; protected plus focused security tests: 50 passed, no skips. The 102-case run is not a live DNS, SMTP, Cashfree, authenticated HTTP or rotation acceptance test.
+
+**Pending:** DNS-verified school portal domain and actual SMTP delivery;
+authenticated Local HTTP/permission, storage and Cashfree sandbox acceptance;
+UI integration by the UI developer; reviewed commit, API deployment and Render
+acceptance. The current encryption-key resolver only returns the active key;
+queued email may become unreadable if that key is rotated. Earlier plaintext
+Student portal queue entries in other environments have not been audited.
+Code in the working tree and schema parity do not establish live readiness.
+
+Read-only Local check for the `RRSMS` institution found zero active, granted
+role-permission rows for each of `STUDENT_ADMISSIONS`, `STUDENT_FEES` and
+`STUDENT_PORTAL_DOMAINS`. Assign and verify required grants using the existing
+permission-management pipeline; module-operation catalogue mappings alone do
+not give a role access. Do not directly seed grants to bypass that pipeline.
+
+**Key-rotation investigation:** A disposable PostgreSQL test failed with
+`UQ_InstitutionKey_InstitutionId`: the existing shared key table permits only
+one row per institution, including inactive rows. The attempted inactive-key
+fallback was removed. Current Student email encryption still relies on the
+active key; rotation is not fixed. The shared key is also used by Bank data,
+identifiers and other existing flows. Before changing that reference/schema,
+follow the repository's explicit approval and locked-regression gates. See
+[rotation investigation](testing/student/portal-email-key-rotation/2026-10-29.md).
+Post-revert protected/security gate: 50 passed, 0 failed, 0 skipped; Release
+build: 0 errors and 22 warnings. The rejected experiment was 105 passed and
+1 failed, and is not a rotation acceptance result.
 
 ## Permission behavior correction — 2026-10-29
 
@@ -139,12 +192,19 @@ Latest education identifier verification (2026-10-28): focused identifier source
 ## Latest exact verification
 
 - Protected regression gate: **41 passed, 0 failed, 0 skipped / 41 total**.
-- Student API tests: **97 passed, 0 failed, 0 skipped** with disposable DB enabled (2026-10-29); without it, database-dependent cases skip. Approval commit, rollback on mocked queue failure, future Guardian rejection and a real repository queue insert in scratch are covered in [approval evidence](testing/student/admission-approval-atomicity/2026-10-29.md) and [Local invitation evidence](testing/student/guardian-invitation-local/2026-10-29.md).
-- Local readiness (2026-10-29): the Guardian invitation template was seeded and verified locally. Local has **0 active verified portal domains**. The earlier read-only Render check found 0 domains and 0 invitation templates; Render was not changed in this scenario. Actual email delivery is unverified.
-- Invitation token hashes are stored in the one-time-token table, but the email queue currently retains the full token-bearing invitation URL in `PlaceholdersJson`. Restrict access and review retention; do not claim that the raw token is never stored.
+- Student API tests: **102 passed, 0 failed, 0 skipped** with disposable DB enabled (2026-10-29); without it, database-dependent cases skip. Approval, reset and encrypted queue persistence in scratch are recorded in [portal email protection evidence](testing/student/portal-email-encryption/2026-10-29.md).
+- Readiness (2026-10-30): both Local and Render have the Guardian invitation and password-reset templates, and both have **0 active verified portal domains**. Actual email delivery is unverified.
+- New Student invitation/reset queue placeholders are AES-GCM encrypted using the existing institution key and a distinct portal-email purpose. The worker remains compatible with previously queued plaintext messages; Local had none when checked, while other environments were not checked. The active-key resolver has no historical key version, so rotation before delivery remains a risk. See [portal email protection evidence](testing/student/portal-email-encryption/2026-10-29.md).
+- Local Guardian invitation and Student password-reset templates are both active and were seeded idempotently. DNS, real SMTP, authenticated HTTP and deployment acceptance remain pending; no Render change was made.
+- Final focused portal email/gateway encryption and worker suite: **9 passed, 0 failed, 0 skipped**. Final combined protected/security suite: **50 passed, 0 failed, 0 skipped**. Actual SMTP sending was not performed.
 - Protected gate after approval fix: **41 passed, 0 failed, 0 skipped**; Release build **0 errors, 22 warnings**; Debug build **0 errors, 583 warnings**. The approval scratch database was dropped and its absence verified.
 - Release solution build: **0 errors, 22 warnings**.
 - Local API smoke: `GET /swagger/v1/swagger.json` → 200; 59 Student/CountryCurrency routes; unauthenticated `GET /api/Student/options` → 401.
 - Database: Local/Render each 38/38 target tables; identical schema fingerprint; 4/4 Student-related dynamic modules have View/Add/Update/Delete mappings. Role grants are intentionally left to the existing permission UI.
 - Backups: full restore to disposable scratch DB succeeded on both; no production data was replaced, and scratch DBs were removed.
 - Angular: untouched. Deployment: not performed. Authenticated HTTP and external provider acceptance: not performed.
+# Latest fee payment progress 2026-10-30
+
+Guarded Local PostgreSQL testing found and corrected missing scalar aliases in offline and Cashfree preparation locks, inconsistent UTC storage in payment/receipt/checkout-expiry timestamp columns, same-key serialization failures, stale tracked installment balances and a webhook event queried before it had been saved. Forced same-key and different-key offline races, simulated failure and duplicate success webhooks, overpayment rejection and receipt totals passed in a disposable DB; full Student suite **106 passed, 0 failed, 0 skipped**. Existing Student payment, attempt and receipt counts were zero in Local and Render when checked. These source changes are uncommitted and not deployed. Full hosted/API/provider verification remains pending; other Student timestamp fields require separate verification. See [fee-payment database scenario](testing/student/fee-payment-database/2026-10-30.md).
+
+Further Local tests reproduced and fixed duplicate concurrent Student exits, Guardian linking after a concurrent exit, a concurrent primary-Guardian database exception, and education identifier verification timestamp writes. The disposable DB verified one exit/history, retained school history, tenant isolation and synthetic identifier encryption/masking/verification reset; Student **106/106**, protected gates **41/41** and **79/79**. A mixed concrete-master EF tracking collision appeared in a shared test fixture; separate request-like contexts passed, but the broader tracking concern remains an investigation item. [Scenario report](testing/student/exit-guardian-identifier/2026-10-30.md). Authenticated, provider and deployed acceptance remain pending.

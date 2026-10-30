@@ -3482,6 +3482,7 @@ namespace skolenza.persistance.Data.Context
                 entity.Property(item => item.GatewayCode).HasMaxLength(40).IsRequired();
                 entity.Property(item => item.GatewayOrderId).HasMaxLength(100).IsRequired();
                 entity.Property(item => item.GatewayPaymentSessionId).HasMaxLength(2000);
+                entity.Property(item => item.ExpiresDateTime).HasColumnType("timestamp without time zone");
                 entity.Property(item => item.Amount).HasPrecision(18, 3);
                 entity.Property(item => item.CurrencyCode).HasMaxLength(3).IsRequired();
                 entity.HasIndex(item => new { item.InstitutionId, item.IdempotencyKey }).IsUnique()
@@ -3515,6 +3516,7 @@ namespace skolenza.persistance.Data.Context
                 entity.ToTable("StudentFeePaymentTransaction", "skolenza", table =>
                     table.HasCheckConstraint("CK_StudentFeePaymentTransaction_Amount", "\"Amount\" > 0"));
                 entity.HasKey(item => item.Id);
+                entity.Property(item => item.PaidDateTime).HasColumnType("timestamp without time zone");
                 entity.Property(item => item.GatewayPaymentId).HasMaxLength(100);
                 entity.Property(item => item.IdempotencyKey).HasMaxLength(100);
                 entity.Property(item => item.Amount).HasPrecision(18, 3);
@@ -3550,6 +3552,7 @@ namespace skolenza.persistance.Data.Context
             {
                 entity.ToTable("StudentFeeReceipt", "skolenza");
                 entity.HasKey(item => item.Id);
+                entity.Property(item => item.IssuedDateTime).HasColumnType("timestamp without time zone");
                 entity.Property(item => item.ReceiptNumber).HasMaxLength(100).IsRequired();
                 entity.Property(item => item.Amount).HasPrecision(18, 3);
                 entity.Property(item => item.CurrencyCode).HasMaxLength(3).IsRequired();
@@ -3624,6 +3627,8 @@ namespace skolenza.persistance.Data.Context
                 entity.Property(item => item.EncryptedValue).HasMaxLength(2000).IsRequired();
                 entity.Property(item => item.MaskedValue).HasMaxLength(80).IsRequired();
                 entity.Property(item => item.IssuerReference).HasMaxLength(150);
+                entity.Property(item => item.AddedDateTime).HasColumnType("timestamp without time zone");
+                entity.Property(item => item.VerifiedDateTime).HasColumnType("timestamp without time zone");
                 entity.Property(item => item.UpdatedDateTime).HasColumnType("timestamp without time zone");
                 entity.HasIndex(item => new { item.InstitutionId, item.StudentId, item.IdentifierMasterId }).IsUnique();
                 entity.HasOne<Student>().WithMany().HasForeignKey(item => item.StudentId)
