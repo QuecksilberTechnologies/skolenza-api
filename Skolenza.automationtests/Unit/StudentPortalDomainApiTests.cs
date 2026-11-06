@@ -2,8 +2,15 @@ using System.Reflection;
 using System.Net;
 using System.Text;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Cors.Infrastructure;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Routing;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using NUnit.Framework;
 using skolenza.api.Controllers.Student;
 using skolenza.application.Common.Enums;
@@ -14,6 +21,8 @@ using skolenza.application.Features.StudentCmd;
 using skolenza.domain.Entity;
 using skolenza.persistance.Data.Context;
 using skolenza.infrastructure.Dns;
+using skolenza.api.Middlewares;
+using skolenza.application.Interfaces.IRepositories;
 using Microsoft.Extensions.Options;
 
 namespace skolenza.automationtests.Unit;
@@ -22,6 +31,113 @@ namespace skolenza.automationtests.Unit;
 [Category("StudentPortalDomain")]
 public sealed class StudentPortalDomainApiTests
 {
+    [TestCase("https://school.example.test", "/api/Student/portal-auth/login", true, true)]
+    [TestCase("https://school.example.test", "/api/Student/portal/students/1/documents", true, true)]
+    [TestCase("https://unknown.example.test", "/api/Student/portal-auth/login", false, true)]
+    [TestCase("http://school.example.test", "/api/Student/portal-auth/login", false, false)]
+    [TestCase("https://school.example.test:444", "/api/Student/portal-auth/login", false, false)]
+    [TestCase("https://school.example.test.", "/api/Student/portal-auth/login", false, false)]
+    [TestCase("https://school.example.test.evil.test", "/api/Student/portal-auth/login", false, true)]
+    [TestCase("null", "/api/Student/portal-auth/login", false, false)]
+    [TestCase("https://school.example.test", "/api/Student/portal-domains", false, false)]
+    [TestCase("https://school.example.test", "/api/Staff", false, false)]
+    [TestCase("https://skolenza.vercel.app", "/api/Student/portal-auth/login", true, false)]
+    public async Task Verified_school_origins_are_allowed_only_for_portal_routes(
+        string origin, string path, bool expectedAllowed, bool expectedLookup)
+    {
+        var lookups = 0;
+        var repository = DispatchProxy.Create<IStudentPortalAuthRepository, BulkImportPermissionTests.TestProxy>();
+        ((BulkImportPermissionTests.TestProxy)(object)repository).InvokeMethod = (method, arguments) =>
+        {
+            Assert.That(method.Name, Is.EqualTo(nameof(IStudentPortalAuthRepository.ResolveVerifiedInstitutionAsync)));
+            lookups++;
+            return Task.FromResult<long?>(string.Equals(arguments![0] as string, "school.example.test", StringComparison.Ordinal) ? 12L : null);
+        };
+        using var services = new ServiceCollection().AddSingleton(repository).BuildServiceProvider();
+        var options = new CorsOptions();
+        options.AddPolicy(VerifiedPortalCorsPolicyProvider.FrontendPolicyName,
+            policy => policy.WithOrigins("https://skolenza.vercel.app").AllowAnyHeader().AllowAnyMethod().AllowCredentials());
+        var provider = new VerifiedPortalCorsPolicyProvider(Options.Create(options),
+            NullLogger<VerifiedPortalCorsPolicyProvider>.Instance);
+        var context = new DefaultHttpContext { RequestServices = services };
+        context.Request.Path = path;
+        context.Request.Headers.Origin = origin;
+
+        var policy = await provider.GetPolicyAsync(context, VerifiedPortalCorsPolicyProvider.FrontendPolicyName);
+
+        Assert.That(policy, Is.Not.Null);
+        Assert.That(policy!.Origins.Contains(origin, StringComparer.OrdinalIgnoreCase), Is.EqualTo(expectedAllowed));
+        Assert.That(lookups > 0, Is.EqualTo(expectedLookup));
+        if (expectedAllowed)
+        {
+            Assert.That(policy.SupportsCredentials, Is.True);
+        }
+    }
+
+    [Test]
+    public async Task Portal_cors_fails_closed_if_domain_lookup_fails()
+    {
+        var repository = DispatchProxy.Create<IStudentPortalAuthRepository, BulkImportPermissionTests.TestProxy>();
+        ((BulkImportPermissionTests.TestProxy)(object)repository).InvokeMethod = (_, _) =>
+            throw new InvalidOperationException("Synthetic lookup failure.");
+        using var services = new ServiceCollection().AddSingleton(repository).BuildServiceProvider();
+        var options = new CorsOptions();
+        options.AddPolicy(VerifiedPortalCorsPolicyProvider.FrontendPolicyName,
+            policy => policy.WithOrigins("https://skolenza.vercel.app"));
+        var provider = new VerifiedPortalCorsPolicyProvider(Options.Create(options),
+            NullLogger<VerifiedPortalCorsPolicyProvider>.Instance);
+        var context = new DefaultHttpContext { RequestServices = services };
+        context.Request.Path = "/api/Student/portal-auth/login";
+        context.Request.Headers.Origin = "https://school.example.test";
+
+        var policy = await provider.GetPolicyAsync(context, VerifiedPortalCorsPolicyProvider.FrontendPolicyName);
+
+        Assert.That(policy!.Origins, Does.Not.Contain("https://school.example.test"));
+    }
+
+    [Test]
+    public async Task Portal_cors_preflight_allows_verified_school_without_widening_staff_routes()
+    {
+        var repository = DispatchProxy.Create<IStudentPortalAuthRepository, BulkImportPermissionTests.TestProxy>();
+        ((BulkImportPermissionTests.TestProxy)(object)repository).InvokeMethod = (method, arguments) =>
+        {
+            Assert.That(method.Name, Is.EqualTo(nameof(IStudentPortalAuthRepository.ResolveVerifiedInstitutionAsync)));
+            return Task.FromResult<long?>(arguments![0] as string == "school.example.test" ? 12L : null);
+        };
+        var builder = WebApplication.CreateBuilder(new WebApplicationOptions { EnvironmentName = "Testing" });
+        builder.Logging.ClearProviders();
+        builder.WebHost.UseUrls("http://127.0.0.1:0");
+        builder.Services.AddSingleton(repository);
+        builder.Services.AddCors(options => options.AddPolicy(VerifiedPortalCorsPolicyProvider.FrontendPolicyName,
+            policy => policy.WithOrigins("https://skolenza.vercel.app").AllowAnyHeader().AllowAnyMethod().AllowCredentials()));
+        builder.Services.AddSingleton<ICorsPolicyProvider, VerifiedPortalCorsPolicyProvider>();
+        await using var app = builder.Build();
+        app.UseRouting();
+        app.UseCors(VerifiedPortalCorsPolicyProvider.FrontendPolicyName);
+        app.MapPost("/api/Student/portal-auth/login", () => Results.Ok());
+        app.MapPost("/api/Staff", () => Results.Ok());
+        await app.StartAsync();
+        using var client = new HttpClient { BaseAddress = new Uri(app.Urls.Single()) };
+
+        async Task<string?> PreflightAsync(string origin, string path)
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Options, path);
+            request.Headers.TryAddWithoutValidation("Origin", origin);
+            request.Headers.TryAddWithoutValidation("Access-Control-Request-Method", "POST");
+            using var response = await client.SendAsync(request);
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NoContent));
+            return response.Headers.TryGetValues("Access-Control-Allow-Origin", out var values)
+                ? values.Single()
+                : null;
+        }
+
+        Assert.That(await PreflightAsync("https://school.example.test", "/api/Student/portal-auth/login"),
+            Is.EqualTo("https://school.example.test"));
+        Assert.That(await PreflightAsync("https://unknown.example.test", "/api/Student/portal-auth/login"), Is.Null);
+        Assert.That(await PreflightAsync("https://school.example.test", "/api/Staff"), Is.Null);
+        Assert.That(await PreflightAsync("https://skolenza.vercel.app", "/api/Staff"),
+            Is.EqualTo("https://skolenza.vercel.app"));
+    }
     [Test]
     public void Controller_is_authenticated_and_exposes_domain_lifecycle_routes()
     {

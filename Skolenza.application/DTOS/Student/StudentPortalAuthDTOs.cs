@@ -5,18 +5,24 @@ using System.ComponentModel.DataAnnotations;
 
 namespace skolenza.application.DTOS.Student;
 
-public sealed class StudentPortalLoginRequestDTO
+/// <summary>Optionally selects an institution through its verified portal hostname.</summary>
+public abstract class StudentPortalTenantRequestDTO
+{
+    public string? PortalHostname { get; set; }
+}
+
+public sealed class StudentPortalLoginRequestDTO : StudentPortalTenantRequestDTO
 {
     public string Email { get; set; } = string.Empty;
     public string Password { get; set; } = string.Empty;
 }
 
-public sealed class StudentPortalRefreshRequestDTO
+public sealed class StudentPortalRefreshRequestDTO : StudentPortalTenantRequestDTO
 {
     public string RefreshToken { get; set; } = string.Empty;
 }
 
-public sealed class StudentPortalInvitationAcceptanceRequestDTO
+public sealed class StudentPortalInvitationAcceptanceRequestDTO : StudentPortalTenantRequestDTO
 {
     public string Token { get; set; } = string.Empty;
     public string? Password { get; set; }
@@ -29,12 +35,12 @@ public sealed class StudentPortalInvitationAcceptedResponseDTO
     public bool RequiresLogin { get; init; }
 }
 
-public sealed class StudentPortalPasswordResetRequestDTO
+public sealed class StudentPortalPasswordResetRequestDTO : StudentPortalTenantRequestDTO
 {
     public string Email { get; set; } = string.Empty;
 }
 
-public sealed class StudentPortalPasswordResetCompletionRequestDTO
+public sealed class StudentPortalPasswordResetCompletionRequestDTO : StudentPortalTenantRequestDTO
 {
     public string Token { get; set; } = string.Empty;
     public string NewPassword { get; set; } = string.Empty;

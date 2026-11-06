@@ -13,13 +13,14 @@ namespace skolenza.api.Controllers.Student;
 [Route("api/Student/portal-auth")]
 public sealed class StudentPortalAuthController(IMediator mediator) : ControllerBase
 {
-    /// <summary>Authenticates a verified portal account under the verified DNS hostname in the request Host header.</summary>
+    /// <summary>Authenticates a verified portal account using the optional portal hostname or the request Host fallback.</summary>
+    /// <remarks>The hostname selects an active verified institution; it does not authenticate the account.</remarks>
     [AllowAnonymous]
     [HttpPost("login")]
     public async Task<IActionResult> Login(
         [FromBody] StudentPortalLoginRequestDTO request,
         CancellationToken cancellationToken) =>
-        Ok(await mediator.Send(new StudentPortalLoginCommand(Request.Host.Host, request), cancellationToken));
+        Ok(await mediator.Send(new StudentPortalLoginCommand(ResolvePortalHostname(request), request), cancellationToken));
 
     /// <summary>Rotates a portal refresh token; the hostname must resolve to the token's institution.</summary>
     [AllowAnonymous]
@@ -27,7 +28,7 @@ public sealed class StudentPortalAuthController(IMediator mediator) : Controller
     public async Task<IActionResult> Refresh(
         [FromBody] StudentPortalRefreshRequestDTO request,
         CancellationToken cancellationToken) =>
-        Ok(await mediator.Send(new StudentPortalRefreshCommand(Request.Host.Host, request), cancellationToken));
+        Ok(await mediator.Send(new StudentPortalRefreshCommand(ResolvePortalHostname(request), request), cancellationToken));
 
     /// <summary>Revokes this portal account's supplied refresh token.</summary>
     [Authorize(Policy = StudentConstants.PortalAuthenticationPolicy)]
@@ -69,7 +70,7 @@ public sealed class StudentPortalAuthController(IMediator mediator) : Controller
         [FromBody] StudentPortalInvitationAcceptanceRequestDTO request,
         CancellationToken cancellationToken) =>
         Ok(await mediator.Send(new AcceptStudentPortalInvitationCommand(
-            Request.Host.Host, request, null), cancellationToken));
+            ResolvePortalHostname(request), request, null), cancellationToken));
 
     /// <summary>Links an invited Guardian to the signed-in portal account that matches the Guardian email.</summary>
     [Authorize(Policy = StudentConstants.PortalAuthenticationPolicy)]
@@ -85,7 +86,7 @@ public sealed class StudentPortalAuthController(IMediator mediator) : Controller
         }
 
         return Ok(await mediator.Send(new AcceptStudentPortalInvitationCommand(
-            Request.Host.Host, request, accountId), cancellationToken));
+            ResolvePortalHostname(request), request, accountId), cancellationToken));
     }
 
     /// <summary>Requests a generic-response password-reset email for an active portal account on this verified domain.</summary>
@@ -95,7 +96,7 @@ public sealed class StudentPortalAuthController(IMediator mediator) : Controller
         [FromBody] StudentPortalPasswordResetRequestDTO request,
         CancellationToken cancellationToken) =>
         Ok(await mediator.Send(new RequestStudentPortalPasswordResetCommand(
-            Request.Host.Host, request), cancellationToken));
+            ResolvePortalHostname(request), request), cancellationToken));
 
     /// <summary>Completes a single-use, institution-scoped portal password reset and revokes existing refresh sessions.</summary>
     [AllowAnonymous]
@@ -104,5 +105,8 @@ public sealed class StudentPortalAuthController(IMediator mediator) : Controller
         [FromBody] StudentPortalPasswordResetCompletionRequestDTO request,
         CancellationToken cancellationToken) =>
         Ok(await mediator.Send(new CompleteStudentPortalPasswordResetCommand(
-            Request.Host.Host, request), cancellationToken));
+            ResolvePortalHostname(request), request), cancellationToken));
+
+    private string ResolvePortalHostname(StudentPortalTenantRequestDTO request) =>
+        string.IsNullOrWhiteSpace(request.PortalHostname) ? Request.Host.Host : request.PortalHostname;
 }

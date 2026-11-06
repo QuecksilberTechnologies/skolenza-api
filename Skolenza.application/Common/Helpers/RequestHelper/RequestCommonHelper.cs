@@ -37,6 +37,7 @@ namespace skolenza.application.Common.Helpers.RequestHelper
                 InstitutionEncriptionKey =  EncryptionSanitizer.SuperSanitize(rawClaims.InstitutionEncriptionKey),
                 RoleId = rawClaims.RoleId,
                 RoleTypeId = rawClaims.RoleTypeId,
+                UserType = rawClaims.UserType,
                 Expiry = rawClaims.Expiry,
                 IsExpired = rawClaims.IsExpired,
                 TokenPurpose = rawClaims.TokenPurpose,

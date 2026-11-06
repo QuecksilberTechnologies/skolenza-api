@@ -30,6 +30,12 @@ public enum StudentFeeInstallmentStatus : short
     Cancelled = 5
 }
 
+public enum StudentFeeArrearsPolicy : short
+{
+    OldestDueFirst = 1,
+    SelectedInstallmentFirst = 2
+}
+
 public enum StudentFeePaymentMethod : short
 {
     Offline = 1,

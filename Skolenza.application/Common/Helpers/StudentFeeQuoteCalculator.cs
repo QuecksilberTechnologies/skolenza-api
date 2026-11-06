@@ -45,7 +45,10 @@ public static class StudentFeeQuoteCalculator
         var oneTime = Round(items
             .Where(item => item.ChargeNature == (short)StudentFeeComponentChargeNature.OneTime)
             .Sum(item => item.Amount));
-        var discount = Round(recurring * discountPercent / 100m);
+        var discountBase = Round(items
+            .Where(item => item.ChargeNature == (short)StudentFeeComponentChargeNature.RecurringAnnual && item.IsDiscountEligible)
+            .Sum(item => item.Amount));
+        var discount = Round(discountBase * discountPercent / 100m);
         var netRecurring = Round(recurring - discount);
         var regularInstallmentAmount = Round(netRecurring / installmentsPerYear);
         var installments = new List<StudentFeeInstallmentResponseDTO>(installmentsPerYear);
@@ -53,9 +56,10 @@ public static class StudentFeeQuoteCalculator
 
         foreach (var dueDate in orderedDueDates)
         {
+            var remainingRecurring = Round(netRecurring - allocatedRecurring);
             var recurringAmount = dueDate.InstallmentNumber == installmentsPerYear
-                ? Round(netRecurring - allocatedRecurring)
-                : regularInstallmentAmount;
+                ? remainingRecurring
+                : Math.Min(regularInstallmentAmount, remainingRecurring);
             allocatedRecurring = Round(allocatedRecurring + recurringAmount);
             installments.Add(new StudentFeeInstallmentResponseDTO
             {
@@ -71,7 +75,8 @@ public static class StudentFeeQuoteCalculator
 
         var lines = items.Select(item =>
         {
-            var discountAmount = item.ChargeNature == (short)StudentFeeComponentChargeNature.RecurringAnnual
+            var isEligible = item.ChargeNature == (short)StudentFeeComponentChargeNature.RecurringAnnual && item.IsDiscountEligible;
+            var discountAmount = isEligible
                 ? Round(item.Amount * discountPercent / 100m)
                 : 0m;
             return new StudentAdmissionFeeQuoteLineResponseDTO
@@ -81,29 +86,36 @@ public static class StudentFeeQuoteCalculator
                 ChargeNature = item.ChargeNature,
                 AnnualAmount = item.Amount,
                 DiscountAmount = discountAmount,
-                NetAmount = Round(item.Amount - discountAmount)
+                NetAmount = Round(item.Amount - discountAmount),
+                IsDiscountEligible = isEligible
             };
         }).ToList();
         var lineDiscountTotal = Round(lines.Sum(item => item.DiscountAmount));
         var discountRemainder = Round(discount - lineDiscountTotal);
         if (discountRemainder != 0m)
         {
-            var lastRecurringLine = lines.FindLastIndex(item =>
-                item.ChargeNature == (short)StudentFeeComponentChargeNature.RecurringAnnual);
-            if (lastRecurringLine < 0)
+            foreach (var line in lines.Where(item => item.IsDiscountEligible).Reverse())
             {
-                throw new ValidationErrorException("A recurring discount requires at least one recurring annual fee component.");
+                var capacity = discountRemainder > 0m
+                    ? Round(line.AnnualAmount - line.DiscountAmount)
+                    : line.DiscountAmount;
+                var adjustment = Math.Min(Math.Abs(discountRemainder), capacity);
+                if (discountRemainder < 0m)
+                {
+                    adjustment = -adjustment;
+                }
+                line.DiscountAmount = Round(line.DiscountAmount + adjustment);
+                line.NetAmount = Round(line.AnnualAmount - line.DiscountAmount);
+                discountRemainder = Round(discountRemainder - adjustment);
+                if (discountRemainder == 0m)
+                {
+                    break;
+                }
             }
-
-            var adjustedLine = lines[lastRecurringLine];
-            var adjustedDiscount = Round(adjustedLine.DiscountAmount + discountRemainder);
-            if (adjustedDiscount < 0m || adjustedDiscount > adjustedLine.AnnualAmount)
+            if (discountRemainder != 0m)
             {
                 throw new ValidationErrorException("The rounded discount cannot be allocated to the configured recurring fee components.");
             }
-
-            adjustedLine.DiscountAmount = adjustedDiscount;
-            adjustedLine.NetAmount = Round(adjustedLine.AnnualAmount - adjustedDiscount);
         }
 
         return new StudentAdmissionFeeQuoteResponseDTO

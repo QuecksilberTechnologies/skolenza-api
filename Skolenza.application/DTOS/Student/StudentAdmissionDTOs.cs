@@ -157,6 +157,7 @@ public sealed class StudentOptionsResponseDTO
     public IReadOnlyList<StudentOptionValueDTO> DocumentReviewStatuses { get; init; } = [];
     public IReadOnlyList<StudentOptionValueDTO> FeeChargeNatures { get; init; } = [];
     public IReadOnlyList<StudentOptionValueDTO> FeeInstallmentStatuses { get; init; } = [];
+    public IReadOnlyList<StudentOptionValueDTO> FeeArrearsPolicies { get; init; } = [];
     public IReadOnlyList<StudentOptionValueDTO> FeePaymentMethods { get; init; } = [];
     public IReadOnlyList<StudentOptionValueDTO> FeePaymentStatuses { get; init; } = [];
     public IReadOnlyList<StudentOptionValueDTO> FeePaymentAttemptStatuses { get; init; } = [];

@@ -20,6 +20,22 @@ using skolenza.application.Wrappers;
 using skolenza.domain.Entity;
 using skolenza.persistance.Data.Context;
 using System.Reflection;
+using System.IdentityModel.Tokens.Jwt;
+using System.Net;
+using System.Net.Http.Headers;
+using System.Net.Http.Json;
+using System.Security.Claims;
+using System.Text;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
+using Microsoft.IdentityModel.Tokens;
+using skolenza.api.Middlewares;
+using skolenza.application.Interfaces.IEncryptionService;
+using skolenza.infrastructure.CommonRequest;
 
 namespace skolenza.automationtests.Unit;
 
@@ -209,6 +225,232 @@ public sealed class StudentRegistryApiTests
         Assert.That(invoked, Is.EqualTo(allowed));
     }
 
+    [Test]
+    public async Task Student_document_review_controller_forwards_the_permission_and_document_context()
+    {
+        ReviewStudentRecordDocumentCommand? captured = null;
+        var mediator = Proxy<IMediator>((method, args) =>
+        {
+            Assert.That(method.Name, Is.EqualTo("Send"));
+            captured = args![0] as ReviewStudentRecordDocumentCommand;
+            return Task.FromResult(ApiResponse<StudentRecordDocumentResponseDTO>.Success(new StudentRecordDocumentResponseDTO()));
+        });
+        var request = new StudentAdmissionDocumentReviewDTO
+        {
+            ModuleId = 101,
+            OperationId = 3,
+            Status = StudentDocumentReviewStatus.Approved
+        };
+
+        var result = await new StudentAdmissionsController(mediator)
+            .ReviewStudentRecordDocument(123, 456, request, CancellationToken.None);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(result, Is.InstanceOf<OkObjectResult>());
+            Assert.That(captured?.StudentId, Is.EqualTo(123));
+            Assert.That(captured?.DocumentId, Is.EqualTo(456));
+            Assert.That(captured?.DTO, Is.SameAs(request));
+        });
+    }
+
+    [TestCase(StudentConstants.AdmissionsModuleCode, "Update", true, 1, true)]
+    [TestCase(StudentConstants.AdmissionsModuleCode, "View", true, 1, false)]
+    [TestCase(StudentConstants.FeesModuleCode, "Update", true, 1, false)]
+    [TestCase(StudentConstants.AdmissionsModuleCode, "Update", false, 1, false)]
+    [TestCase(StudentConstants.AdmissionsModuleCode, "Update", true, 0, false)]
+    public async Task Student_document_review_requires_active_admissions_update_permission(
+        string moduleCode, string operationName, bool operationActive, int permissionResult, bool allowed)
+    {
+        var common = Proxy<ICommonRequestService>((method, _) => method.Name switch
+        {
+            nameof(ICommonRequestService.GetModuleCodeAsync) => Task.FromResult<string?>(moduleCode),
+            nameof(ICommonRequestService.ValidateInstitutionUserRequestAsync) => Task.FromResult(new CommonDecodedResult
+            {
+                Success = true,
+                InstitutionId = 8,
+                LoggedInStaffMemberId = 4,
+                RoleId = 2
+            }),
+            _ => throw new AssertionException($"Unexpected request: {method.Name}")
+        });
+        var operations = Proxy<IOperationRepository>((method, _) => method.Name switch
+        {
+            nameof(IOperationRepository.GetAllOperationAsync) => Task.FromResult(new List<Operation>
+            {
+                new() { Id = 3, OperationName = operationName, IsActive = operationActive }
+            }),
+            _ => throw new AssertionException($"Unexpected operation request: {method.Name}")
+        });
+        var permissions = Proxy<IStoreProcedureRepository>((method, args) => method.Name switch
+        {
+            nameof(IStoreProcedureRepository.CheckInstitutionStaffMemberPermissionAsync) => Task.FromResult(
+                new InstitutionsUserPermissionCheckResponseDTO { ResultCode = permissionResult }),
+            _ => throw new AssertionException($"Unexpected permission request: {method.Name}")
+        });
+        var unit = Proxy<IUnitOfWork>((method, _) => method.Name switch
+        {
+            "get_OperationRepository" => operations,
+            "get_StoreProcedureRepository" => permissions,
+            _ => throw new AssertionException($"Unexpected unit-of-work request: {method.Name}")
+        });
+        var behavior = new StudentPermissionBehavior<ReviewStudentRecordDocumentCommand, ApiResponse<StudentRecordDocumentResponseDTO>>(unit, common);
+        var invoked = false;
+        Task<ApiResponse<StudentRecordDocumentResponseDTO>> Next(CancellationToken _)
+        {
+            invoked = true;
+            return Task.FromResult(ApiResponse<StudentRecordDocumentResponseDTO>.Success(new StudentRecordDocumentResponseDTO()));
+        }
+
+        var request = new ReviewStudentRecordDocumentCommand(123, 456,
+            new StudentAdmissionDocumentReviewDTO { ModuleId = 101, OperationId = 3 });
+        if (allowed)
+        {
+            await behavior.Handle(request, Next, CancellationToken.None);
+        }
+        else
+        {
+            Assert.ThrowsAsync<ForbiddenAccessException>(async () =>
+                await behavior.Handle(request, Next, CancellationToken.None));
+        }
+
+        Assert.That(invoked, Is.EqualTo(allowed));
+    }
+
+    [Test]
+    public async Task Student_document_review_http_requires_bearer_and_existing_update_permission()
+    {
+        const string signingKey = "synthetic-document-review-key-at-least-32-bytes";
+        var allowed = true;
+        var reviewed = 0;
+        var staffLookups = 0;
+        var modules = Proxy<IModuleRepository>((method, _) => method.Name switch
+        {
+            nameof(IModuleRepository.GetModuleByIdIncludingInactiveAsync) => Task.FromResult<skolenza.domain.Entity.Module?>(
+                new skolenza.domain.Entity.Module { ModuleCode = StudentConstants.AdmissionsModuleCode }),
+            _ => throw new AssertionException($"Unexpected module request: {method.Name}")
+        });
+        var operations = Proxy<IOperationRepository>((method, _) => method.Name switch
+        {
+            nameof(IOperationRepository.GetAllOperationAsync) => Task.FromResult(new List<Operation>
+            {
+                new() { Id = 3, OperationName = "Update", IsActive = true },
+                new() { Id = 4, OperationName = "View", IsActive = true }
+            }),
+            _ => throw new AssertionException($"Unexpected operation request: {method.Name}")
+        });
+        var permissions = Proxy<IStoreProcedureRepository>((method, _) => method.Name switch
+        {
+            nameof(IStoreProcedureRepository.CheckInstitutionStaffMemberPermissionAsync) => Task.FromResult(
+                new InstitutionsUserPermissionCheckResponseDTO { ResultCode = allowed ? 1 : 0 }),
+            nameof(IStoreProcedureRepository.ValidateActiveUserLoginOnlyAsync) => ActiveStaff(),
+            _ => throw new AssertionException($"Unexpected permission request: {method.Name}")
+        });
+        Task<long> ActiveStaff()
+        {
+            staffLookups++;
+            return Task.FromResult(4L);
+        }
+        var unit = Proxy<IUnitOfWork>((method, _) => method.Name switch
+        {
+            "get_ModuleRepository" => modules,
+            "get_OperationRepository" => operations,
+            "get_StoreProcedureRepository" => permissions,
+            _ => throw new AssertionException($"Unexpected unit-of-work request: {method.Name}")
+        });
+        var encoder = Proxy<IIdEncoderService>((method, _) => method.Name == nameof(IIdEncoderService.DecodeId_long)
+            ? 8L : throw new AssertionException($"Unexpected encoder request: {method.Name}"));
+        var documents = Proxy<IStudentPortalDocumentRepository>((method, args) =>
+        {
+            Assert.That(method.Name, Is.EqualTo(nameof(IStudentPortalDocumentRepository.ReviewAsync)));
+            Assert.That(args![0], Is.EqualTo(8L));
+            Assert.That(args[1], Is.EqualTo(4L));
+            Assert.That(args[2], Is.EqualTo(123L));
+            Assert.That(args[3], Is.EqualTo(456L));
+            reviewed++;
+            return Task.FromResult(new StudentRecordDocumentResponseDTO());
+        });
+
+        var builder = WebApplication.CreateBuilder(new WebApplicationOptions { EnvironmentName = "Testing" });
+        builder.Logging.ClearProviders();
+        builder.WebHost.UseUrls("http://127.0.0.1:0");
+        builder.Configuration.AddInMemoryCollection(new Dictionary<string, string?> { ["JWTSettings:Secret"] = signingKey });
+        builder.Services.AddMediatR(settings => settings.RegisterServicesFromAssembly(typeof(ReviewStudentRecordDocumentCommand).Assembly));
+        builder.Services.AddTransient(typeof(IPipelineBehavior<,>), typeof(StudentPermissionBehavior<,>));
+        builder.Services.AddHttpContextAccessor();
+        builder.Services.AddScoped<ICommonRequestService, CommonRequestService>();
+        builder.Services.AddSingleton(encoder);
+        builder.Services.AddSingleton(unit);
+        builder.Services.AddSingleton(documents);
+        builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(settings =>
+        {
+            settings.RequireHttpsMetadata = false;
+            settings.TokenValidationParameters = new TokenValidationParameters
+            {
+                ValidateIssuer = false,
+                ValidateAudience = false,
+                ValidateLifetime = true,
+                ValidateIssuerSigningKey = true,
+                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(signingKey)),
+                ClockSkew = TimeSpan.Zero
+            };
+        });
+        builder.Services.AddAuthorization();
+        builder.Services.AddControllers().AddApplicationPart(typeof(StudentAdmissionsController).Assembly);
+        await using var app = builder.Build();
+        app.UseMiddleware<ErrorHandlerMiddleware>();
+        app.UseAuthentication();
+        app.UseAuthorization();
+        app.MapControllers();
+        await app.StartAsync();
+        using var client = new HttpClient { BaseAddress = new Uri(app.Urls.Single()) };
+        const string path = "/api/Student/records/123/documents/456/review";
+        var updateRequest = new { moduleId = 101, operationId = 3, status = (short)StudentDocumentReviewStatus.Approved };
+
+        using var anonymous = await client.PostAsJsonAsync(path, updateRequest);
+        Assert.That(anonymous.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
+        string Token(string? userType)
+        {
+            var claims = new List<Claim>
+            {
+                new("UserId", "synthetic-staff"),
+                new("InstitutionId", "synthetic-institution"),
+                new("InstitutionEncriptionKey", "synthetic-key"),
+                new("RoleId", "2"),
+                new("RoleTypeId", "2")
+            };
+            if (userType is not null)
+            {
+                claims.Add(new Claim(AppConstants.UserTypeClaim, userType));
+            }
+            return new JwtSecurityTokenHandler().WriteToken(new JwtSecurityToken(
+                claims: claims,
+                expires: DateTime.UtcNow.AddMinutes(5),
+                signingCredentials: new SigningCredentials(
+                    new SymmetricSecurityKey(Encoding.UTF8.GetBytes(signingKey)), SecurityAlgorithms.HmacSha256)));
+        }
+        var token = Token(AppConstants.InstitutionUserType);
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        using var approved = await client.PostAsJsonAsync(path, updateRequest);
+        Assert.That(approved.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        using var wrongOperation = await client.PostAsJsonAsync(path,
+            new { moduleId = 101, operationId = 4, status = (short)StudentDocumentReviewStatus.Approved });
+        Assert.That(wrongOperation.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
+        allowed = false;
+        using var denied = await client.PostAsJsonAsync(path, updateRequest);
+        Assert.That(denied.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
+        allowed = true;
+        var lookupsBeforePortal = staffLookups;
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", Token(StudentConstants.PortalUserType));
+        using var portal = await client.PostAsJsonAsync(path, updateRequest);
+        Assert.That(portal.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
+        Assert.That(staffLookups, Is.EqualTo(lookupsBeforePortal));
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", Token(null));
+        using var legacy = await client.PostAsJsonAsync(path, updateRequest);
+        Assert.That(legacy.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        Assert.That(reviewed, Is.EqualTo(2));
+    }
+
     private static T Proxy<T>(Func<MethodInfo, object?[]?, object?> invoke) where T : class
     {
         var proxy = DispatchProxy.Create<T, BulkImportPermissionTests.TestProxy>();
@@ -301,6 +543,8 @@ public sealed class StudentRegistryApiTests
                 Is.EquivalentTo(Enum.GetValues<StudentDocumentPersonScope>().Select(value => Convert.ToInt16(value))));
             Assert.That(result.Data.FeeChargeNatures.Select(item => item.Name),
                 Is.EquivalentTo(Enum.GetNames<StudentFeeComponentChargeNature>()));
+            Assert.That(result.Data.FeeArrearsPolicies.Select(item => item.Value),
+                Is.EquivalentTo(Enum.GetValues<StudentFeeArrearsPolicy>().Select(value => Convert.ToInt16(value))));
             Assert.That(result.Data.ExitReasons.Select(item => item.Value),
                 Is.EquivalentTo(Enum.GetValues<StudentExitReason>().Select(value => Convert.ToInt16(value))));
             Assert.That(result.Data.GuardianRelationships.Select(item => item.Name),

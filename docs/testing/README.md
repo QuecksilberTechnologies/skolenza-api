@@ -2,6 +2,32 @@
 - [Bulk import worker graceful host shutdown — 2026-10-14](bulk/worker-graceful-shutdown/2026-10-14.md)
 # Skolenza scenario test reports
 
+- [Fee payment batch schema — 2026-11-03](student/fee-payment-batch-schema/2026-11-03.md): scratch schema and constraint probes only; API and app migrations pending.
+- [Fee arrears policy configuration — 2026-11-03](student/fee-arrears-policy/2026-11-03.md): schema is applied to Local/Render; batch integration and deployment pending.
+- [Fee reversal calculation — 2026-11-01](student/fee-reversal-calculation/2026-11-01.md): synthetic partial-reversal calculation only; persistence, API and actual refund remain pending.
+- [Fee-head discount eligibility — 2026-11-01](student/fee-head-discount/2026-11-01.md): recurring-head discount controls tested in source and applied locally; deployment and remaining payment flows pending.
+- [Single-installment fee-head payment allocation — 2026-11-01](student/fee-head-payment-allocation/2026-11-01.md): partial offline/simulated gateway allocations and Local/Render schema verified; batches, refunds and provider acceptance remain pending.
+
+- [Student fee installment head snapshot — 2026-11-01](student/fee-head-snapshot/2026-11-01.md): Local additive schema and new-quote snapshot verified; payment allocation and Render migration remain pending.
+
+- [Fee head allocation foundation and quote rounding — 2026-11-01](student/fee-head-allocation/2026-11-01.md): standalone calculator and rounding tests pass; API/ledger, DB migration and gateway acceptance remain pending.
+
+- [Student isolated Local database regression — 2026-11-01](student/disposable-database-regression/2026-11-01.md): 165 passed with no skips; real provider and deployed acceptance remain pending.
+
+- [Institution key rotation local inventory — 2026-10-31](student/portal-email-key-rotation/2026-10-31.md)
+
+- [Student portal and staff principal boundary — 2026-10-31](student/portal-principal-boundary/2026-10-31.md)
+
+- [Student record document review permission — 2026-10-31](student/document-review-permission/2026-10-31.md)
+
+- [Student portal local prerequisites — 2026-10-31](student/local-portal-prerequisites/2026-10-31.md)
+
+- [Student document storage development smoke — 2026-10-31](student/portal-document-storage/2026-10-31.md)
+
+- [Student portal document runtime and review concurrency — 2026-10-30](student/portal-document-runtime/2026-10-30.md)
+
+- [Render Guardian fee publish smoke — 2026-10-30](student/render-guardian-fee-publish/2026-10-30.md)
+
 - [Student shared-key rotation compatibility — 2026-10-30](student/portal-email-key-rotation/2026-10-30.md)
 
 - [Guardian fee portal and checkout access — 2026-10-30](student/guardian-fee-portal/2026-10-30.md)
@@ -127,4 +153,8 @@ test run.
 
 - [Offline payment, checkout preparation and concurrent payment checks — 2026-10-30](student/fee-payment-database/2026-10-30.md)
 - [Student exit, Guardian concurrency and identifier persistence — 2026-10-30](student/exit-guardian-identifier/2026-10-30.md)
+
+# Latest Student portal cross-origin evidence
+
+- [Optional verified portal hostname and scoped CORS — 2026-11-01](student/portal-cross-origin-hostname/2026-11-01.md): local focused and protected checks passed; 13 Student DB tests, real provider checks and deployment acceptance remain pending.
 

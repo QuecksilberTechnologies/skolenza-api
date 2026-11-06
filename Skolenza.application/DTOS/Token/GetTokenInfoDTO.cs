@@ -22,6 +22,7 @@ namespace skolenza.application.DTOS.Token
         public string RoleId { get; set; } = string.Empty;
         public string RoleTypeId { get; set; } = string.Empty;
         public string RoleTypeName { get; set; } = string.Empty;
+        public string? UserType { get; set; }
 
         public string StaffEmploymentTypeId { get; set; } = string.Empty;
         public string StaffEmploymentTypeName { get; set; } = string.Empty;

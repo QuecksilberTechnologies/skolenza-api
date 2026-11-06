@@ -10,6 +10,8 @@ public static class StudentConstants
     public const string PortalDomainChallengePrefix = "skolenza-portal-domain-verification=";
     public const int PortalDomainChallengeExpiryHours = 24;
     public const string PortalAuthenticationPolicy = "StudentPortal";
+    public const string PortalAuthenticationApiPath = "/api/Student/portal-auth";
+    public const string PortalSelfServiceApiPath = "/api/Student/portal";
     public const string PortalUserType = "StudentPortal";
     public const string PortalAccountIdClaim = "StudentPortalAccountId";
     public const int PortalRefreshTokenExpiryDays = 14;
@@ -29,6 +31,8 @@ public static class StudentConstants
     public const int FeeTransactionMaximumAttempts = 2;
     public const string FeeTransactionConcurrencyMessage = "The fee transaction conflicted with another request. Please retry with the same idempotency key.";
     public const long PortalDocumentAbsoluteMaximumFileSizeBytes = 104_857_600;
+    public const int PortalDocumentTransactionMaximumAttempts = 2;
+    public const string PortalDocumentConcurrencyMessage = "The document upload conflicted with another request. Please retry.";
     public const string AdmissionApplicationNumberPrefix = "APP";
     public const string StudentCodePrefix = "STD";
     public const string CashfreeGatewayCode = "CASHFREE";

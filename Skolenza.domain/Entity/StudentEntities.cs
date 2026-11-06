@@ -448,6 +448,7 @@ public sealed class StudentFeeStructure
     public long CountryCurrencyMasterId { get; set; }
     public string CurrencyCode { get; set; } = string.Empty;
     public short CurrencyDecimalPlaces { get; set; } = 2;
+    public short ArrearsPolicy { get; set; } = 1;
     public decimal LateFeePerInstallment { get; set; }
     public short GracePeriodDays { get; set; }
     public decimal? LateFeeCap { get; set; }
@@ -470,6 +471,7 @@ public sealed class StudentFeeStructureItem
     public string ComponentName { get; set; } = string.Empty;
     public short ChargeNature { get; set; }
     public decimal Amount { get; set; }
+    public bool IsDiscountEligible { get; set; } = true;
     public bool IsActive { get; set; } = true;
 }
 
@@ -524,6 +526,7 @@ public sealed class StudentAdmissionFeeQuoteLine
     public decimal AnnualAmount { get; set; }
     public decimal DiscountAmount { get; set; }
     public decimal NetAmount { get; set; }
+    public bool IsDiscountEligible { get; set; } = true;
 }
 
 public sealed class StudentFeeInstallment
@@ -538,6 +541,29 @@ public sealed class StudentFeeInstallment
     public decimal LateFeeAmount { get; set; }
     public decimal PaidAmount { get; set; }
     public short Status { get; set; }
+}
+
+/// <summary>Immutable allocation of one quote head to one installment.</summary>
+public sealed class StudentFeeInstallmentHead
+{
+    public long Id { get; set; }
+    public long InstitutionId { get; set; }
+    public long StudentAdmissionFeeQuoteId { get; set; }
+    public long StudentFeeInstallmentId { get; set; }
+    public long StudentAdmissionFeeQuoteLineId { get; set; }
+    public decimal ScheduledAmount { get; set; }
+    public short? AllocationPriority { get; set; }
+}
+
+/// <summary>Immutable payment allocation to a fee head, or to the installment's late fee.</summary>
+public sealed class StudentFeePaymentAllocation
+{
+    public long Id { get; set; }
+    public long InstitutionId { get; set; }
+    public long StudentFeeInstallmentId { get; set; }
+    public long StudentFeePaymentTransactionId { get; set; }
+    public long? StudentFeeInstallmentHeadId { get; set; }
+    public decimal Amount { get; set; }
 }
 
 public sealed class StudentFeePaymentAttempt
@@ -571,6 +597,34 @@ public sealed class StudentPaymentGatewayConfiguration
     public DateTime CreatedDateTime { get; set; }
     public long? UpdatedById { get; set; }
     public DateTime? UpdatedDateTime { get; set; }
+}
+
+/// <summary>One offline payment spanning a single quote's installments.</summary>
+public sealed class StudentFeePaymentBatch
+{
+    public long Id { get; set; }
+    public long InstitutionId { get; set; }
+    public long StudentAdmissionFeeQuoteId { get; set; }
+    public string IdempotencyKey { get; set; } = string.Empty;
+    public short ArrearsPolicy { get; set; }
+    public long? SelectedInstallmentId { get; set; }
+    public decimal Amount { get; set; }
+    public string CurrencyCode { get; set; } = string.Empty;
+    public string? RecordedReference { get; set; }
+    public long RecordedById { get; set; }
+    public DateTime PaidDateTime { get; set; }
+    public DateTime AddedDateTime { get; set; }
+}
+
+/// <summary>Links one batch to one installment's existing payment transaction.</summary>
+public sealed class StudentFeePaymentBatchItem
+{
+    public long Id { get; set; }
+    public long InstitutionId { get; set; }
+    public long StudentAdmissionFeeQuoteId { get; set; }
+    public long StudentFeePaymentBatchId { get; set; }
+    public long StudentFeeInstallmentId { get; set; }
+    public long StudentFeePaymentTransactionId { get; set; }
 }
 
 public sealed class StudentFeePaymentTransaction

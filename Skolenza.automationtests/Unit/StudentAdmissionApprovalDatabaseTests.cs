@@ -5,6 +5,7 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Cors.Infrastructure;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
@@ -22,6 +23,7 @@ using skolenza.application.DTOS.Student;
 using skolenza.application.Exceptions;
 using skolenza.application.Interfaces;
 using skolenza.application.Interfaces.IRepositories;
+using skolenza.application.Interfaces.IFileStorage;
 using skolenza.application.Interfaces.IHashed;
 using skolenza.application.Interfaces.ITokenService;
 using skolenza.application.Interfaces.IEncryptionService;
@@ -46,6 +48,8 @@ public sealed class StudentAdmissionApprovalDatabaseTests
     [TestCase(1, TestName = "Approval rolls back when invitation queue fails")]
     [TestCase(2, TestName = "Approval rejects a future primary guardian")]
     [TestCase(3, TestName = "Approval persists the real invitation queue and token in a disposable database")]
+    [TestCase(4, TestName = "Quote persists a reconciled installment head snapshot")]
+    [TestCase(5, TestName = "Competing head payments do not exceed the installment balance")]
     public async Task Approval_is_atomic_and_requires_a_current_primary_guardian(int scenario)
     {
         var connection = Environment.GetEnvironmentVariable("SKOLENZA_STUDENT_TEST_CONNECTION");
@@ -200,6 +204,258 @@ public sealed class StudentAdmissionApprovalDatabaseTests
         };
         setup.StudentFeeStructureFrequencies.Add(allowedFrequency);
         await setup.SaveChangesAsync();
+        if (scenario is 4 or 5)
+        {
+            await setup.StudentFeeStructureItems
+                .Where(item => item.InstitutionId == scope.InstitutionId && item.StudentFeeStructureId == structure.Id)
+                .ExecuteUpdateAsync(update => update.SetProperty(item => item.IsActive, false));
+            var recurringMaster = new StudentFeeComponentMaster
+            {
+                InstitutionId = scope.InstitutionId,
+                Code = $"RECUR-{Guid.NewGuid():N}",
+                Name = "Recurring test fee",
+                ChargeNature = (short)StudentFeeComponentChargeNature.RecurringAnnual,
+                DisplayOrder = 2,
+                IsActive = true,
+                AddedById = 1,
+                AddedDateTime = now
+            };
+            var oneTimeMaster = new StudentFeeComponentMaster
+            {
+                InstitutionId = scope.InstitutionId,
+                Code = $"ONETIME-{Guid.NewGuid():N}",
+                Name = "One-time test fee",
+                ChargeNature = (short)StudentFeeComponentChargeNature.OneTime,
+                DisplayOrder = 1,
+                IsActive = true,
+                AddedById = 1,
+                AddedDateTime = now
+            };
+            var excludedMaster = new StudentFeeComponentMaster
+            {
+                InstitutionId = scope.InstitutionId,
+                Code = $"EXCLUDED-{Guid.NewGuid():N}",
+                Name = "Discount-excluded recurring test fee",
+                ChargeNature = (short)StudentFeeComponentChargeNature.RecurringAnnual,
+                DisplayOrder = 3,
+                IsActive = true,
+                AddedById = 1,
+                AddedDateTime = now
+            };
+            setup.StudentFeeComponentMasters.AddRange(recurringMaster, oneTimeMaster, excludedMaster);
+            await setup.SaveChangesAsync();
+            setup.StudentFeeStructureItems.AddRange(
+                new StudentFeeStructureItem
+                {
+                    InstitutionId = scope.InstitutionId,
+                    StudentFeeStructureId = structure.Id,
+                    FeeComponentMasterId = recurringMaster.Id,
+                    ComponentCode = recurringMaster.Code,
+                    ComponentName = recurringMaster.Name,
+                    ChargeNature = recurringMaster.ChargeNature,
+                    Amount = 100m
+                },
+                new StudentFeeStructureItem
+                {
+                    InstitutionId = scope.InstitutionId,
+                    StudentFeeStructureId = structure.Id,
+                    FeeComponentMasterId = oneTimeMaster.Id,
+                    ComponentCode = oneTimeMaster.Code,
+                    ComponentName = oneTimeMaster.Name,
+                    ChargeNature = oneTimeMaster.ChargeNature,
+                    Amount = 30m
+                },
+                new StudentFeeStructureItem
+                {
+                    InstitutionId = scope.InstitutionId,
+                    StudentFeeStructureId = structure.Id,
+                    FeeComponentMasterId = excludedMaster.Id,
+                    ComponentCode = excludedMaster.Code,
+                    ComponentName = excludedMaster.Name,
+                    ChargeNature = excludedMaster.ChargeNature,
+                    Amount = 10m,
+                    IsDiscountEligible = false
+                });
+            setup.StudentFeeStructureInstallmentDueDates.Add(new StudentFeeStructureInstallmentDueDate
+            {
+                InstitutionId = scope.InstitutionId,
+                StudentFeeStructureFrequencyId = allowedFrequency.Id,
+                InstallmentNumber = 1,
+                DueDate = today
+            });
+            var benefitScheme = new StudentBenefitSchemeMaster
+            {
+                InstitutionId = scope.InstitutionId,
+                Code = $"DISCOUNT-{Guid.NewGuid():N}",
+                Name = "Synthetic discount scheme",
+                MinimumDiscountPercent = 0m,
+                MaximumDiscountPercent = 20m,
+                IsActive = true,
+                AddedById = 1,
+                AddedDateTime = now
+            };
+            setup.StudentBenefitSchemeMasters.Add(benefitScheme);
+            await setup.SaveChangesAsync();
+            await using var quoteContext = new SkolenzaDbContext(options);
+            var repository = new StudentFeeLedgerRepository(quoteContext);
+            var saved = await repository.CreateQuoteAsync(admission.Id, scope.InstitutionId, 1,
+                new StudentAdmissionFeeQuoteRequestDTO
+                {
+                    StudentFeeStructureId = structure.Id,
+                    StudentFeeStructureFrequencyId = allowedFrequency.Id,
+                    StudentBenefitSchemeMasterId = benefitScheme.Id,
+                    DiscountPercent = 10m
+                }, CancellationToken.None);
+            await using var snapshotContext = new SkolenzaDbContext(options);
+            var snapshot = await snapshotContext.StudentFeeInstallmentHeads.AsNoTracking()
+                .Where(item => item.InstitutionId == scope.InstitutionId && item.StudentAdmissionFeeQuoteId == saved.Id)
+                .ToListAsync();
+            var lines = await snapshotContext.StudentAdmissionFeeQuoteLines.AsNoTracking()
+                .Where(item => item.InstitutionId == scope.InstitutionId && item.StudentAdmissionFeeQuoteId == saved.Id)
+                .ToListAsync();
+            Assert.That(lines.Single(item => item.ComponentCode == recurringMaster.Code).IsDiscountEligible, Is.True);
+            Assert.That(lines.Single(item => item.ComponentCode == oneTimeMaster.Code).IsDiscountEligible, Is.False);
+            Assert.That(lines.Single(item => item.ComponentCode == excludedMaster.Code).IsDiscountEligible, Is.False);
+            Assert.That(lines.Single(item => item.ComponentCode == recurringMaster.Code).DiscountAmount, Is.EqualTo(10m));
+            Assert.That(lines.Single(item => item.ComponentCode == excludedMaster.Code).DiscountAmount, Is.Zero);
+            Assert.That(lines.Single(item => item.ComponentCode == oneTimeMaster.Code).DiscountAmount, Is.Zero);
+            Assert.That(snapshot.Sum(item => item.ScheduledAmount), Is.EqualTo(saved.NetAnnualAmount));
+            foreach (var line in lines)
+            {
+                Assert.That(snapshot.Where(item => item.StudentAdmissionFeeQuoteLineId == line.Id)
+                    .Sum(item => item.ScheduledAmount), Is.EqualTo(line.NetAmount));
+            }
+            Assert.That(snapshot.Count, Is.GreaterThanOrEqualTo(2));
+            // The quote owns its historical allocation order even if a school edits the master later.
+            await snapshotContext.StudentFeeComponentMasters
+                .Where(item => item.Id == recurringMaster.Id)
+                .ExecuteUpdateAsync(update => update.SetProperty(item => item.DisplayOrder, (short)0));
+            await snapshotContext.StudentFeeComponentMasters
+                .Where(item => item.Id == oneTimeMaster.Id)
+                .ExecuteUpdateAsync(update => update.SetProperty(item => item.DisplayOrder, (short)20));
+            var installmentId = saved.Installments.Single().Id;
+            if (scenario == 5)
+            {
+                async Task<bool> AttemptAsync()
+                {
+                    await using var attemptContext = new SkolenzaDbContext(options);
+                    try
+                    {
+                        await new StudentFeeLedgerRepository(attemptContext).RecordOfflinePaymentAsync(
+                            installmentId, scope.InstitutionId, 1, new StudentOfflinePaymentRequestDTO
+                            {
+                                IdempotencyKey = $"head-race-{Guid.NewGuid():N}",
+                                Amount = 100m,
+                                PaidAt = DateTimeOffset.UtcNow
+                            }, CancellationToken.None);
+                        return true;
+                    }
+                    catch (ValidationErrorException)
+                    {
+                        return false;
+                    }
+                    catch (ConflictException)
+                    {
+                        return false;
+                    }
+                }
+                var results = await Task.WhenAll(AttemptAsync(), AttemptAsync());
+                Assert.That(results.Count(item => item), Is.EqualTo(1));
+                var storedInstallment = await snapshotContext.StudentFeeInstallments.AsNoTracking()
+                    .SingleAsync(item => item.Id == installmentId);
+                var storedAllocations = await snapshotContext.StudentFeePaymentAllocations.AsNoTracking()
+                    .Where(item => item.InstitutionId == scope.InstitutionId && item.StudentFeeInstallmentId == installmentId)
+                    .ToListAsync();
+                Assert.That(storedInstallment.PaidAmount, Is.EqualTo(100m));
+                Assert.That(storedAllocations.Sum(item => item.Amount), Is.EqualTo(100m));
+                Assert.That(storedInstallment.PaidAmount, Is.LessThanOrEqualTo(saved.NetAnnualAmount));
+                return;
+            }
+            var offlineRequest = new StudentOfflinePaymentRequestDTO
+            {
+                IdempotencyKey = $"head-payment-{Guid.NewGuid():N}",
+                Amount = 85m,
+                PaidAt = DateTimeOffset.UtcNow,
+                RecordedReference = "synthetic-partial"
+            };
+            await using (var offlineContext = new SkolenzaDbContext(options))
+            {
+                var offline = new StudentFeeLedgerRepository(offlineContext);
+                var payment = await offline.RecordOfflinePaymentAsync(
+                    installmentId, scope.InstitutionId, 1, offlineRequest, CancellationToken.None);
+                var replay = await offline.RecordOfflinePaymentAsync(
+                    installmentId, scope.InstitutionId, 1, offlineRequest, CancellationToken.None);
+                Assert.That(replay.Id, Is.EqualTo(payment.Id));
+                var allocated = await snapshotContext.StudentFeePaymentAllocations.AsNoTracking()
+                    .Where(item => item.StudentFeePaymentTransactionId == payment.Id)
+                    .ToListAsync();
+                Assert.That(allocated.Sum(item => item.Amount), Is.EqualTo(85m));
+                Assert.That(allocated.All(item => item.StudentFeeInstallmentHeadId.HasValue), Is.True);
+                var firstHead = snapshot.Single(item => item.AllocationPriority == 1);
+                var secondHead = snapshot.Single(item => item.AllocationPriority == 2);
+                Assert.That(allocated.Single(item => item.StudentFeeInstallmentHeadId == firstHead.Id).Amount,
+                    Is.EqualTo(30m));
+                Assert.That(allocated.Single(item => item.StudentFeeInstallmentHeadId == secondHead.Id).Amount,
+                    Is.EqualTo(55m));
+                var balance = await offline.GetAdmissionBalanceAsync(admission.Id, scope.InstitutionId, CancellationToken.None);
+                var installment = balance.Installments.Single();
+                Assert.That(installment.HeadAllocationComplete, Is.True);
+                Assert.That(installment.Heads.Sum(item => item.PaidAmount), Is.EqualTo(85m));
+                Assert.That(installment.Heads.Sum(item => item.OutstandingAmount),
+                    Is.EqualTo(saved.NetAnnualAmount - 85m));
+                var receipts = await offline.GetReceiptsAsync(scope.InstitutionId,
+                    new StudentFeeReceiptListRequestDTO { StudentAdmissionId = admission.Id }, CancellationToken.None);
+                var receipt = receipts.Data.Single(item => item.PaymentTransactionId == payment.Id);
+                Assert.That(receipt.HeadAllocationComplete, Is.True);
+                Assert.That(receipt.Allocations.Sum(item => item.Amount), Is.EqualTo(85m));
+            }
+
+            await snapshotContext.StudentFeeInstallments.Where(item => item.Id == installmentId)
+                .ExecuteUpdateAsync(update => update.SetProperty(item => item.PaidAmount, 86m));
+            await using (var mismatchContext = new SkolenzaDbContext(options))
+            {
+                var mismatch = new StudentFeeLedgerRepository(mismatchContext);
+                Assert.ThrowsAsync<ConflictException>(async () => await mismatch.RecordOfflinePaymentAsync(
+                    installmentId, scope.InstitutionId, 1, new StudentOfflinePaymentRequestDTO
+                    {
+                        IdempotencyKey = $"head-mismatch-{Guid.NewGuid():N}",
+                        Amount = 1m,
+                        PaidAt = DateTimeOffset.UtcNow
+                    }, CancellationToken.None));
+            }
+            await snapshotContext.StudentFeeInstallments.Where(item => item.Id == installmentId)
+                .ExecuteUpdateAsync(update => update.SetProperty(item => item.PaidAmount, 85m));
+            await using (var gatewayContext = new SkolenzaDbContext(options))
+            {
+                var gateway = new StudentFeeLedgerRepository(gatewayContext);
+                var checkout = await gateway.PrepareCashfreeCheckoutAsync(
+                    installmentId, scope.InstitutionId, $"head-checkout-{Guid.NewGuid():N}", CancellationToken.None);
+                var details = new StudentCashfreePaymentDetailsDTO
+                {
+                    OrderId = checkout.GatewayOrderId,
+                    PaymentId = $"head-gateway-{Guid.NewGuid():N}",
+                    Status = "SUCCESS",
+                    Amount = checkout.Amount,
+                    CurrencyCode = checkout.CurrencyCode
+                };
+                var eventId = $"head-event-{Guid.NewGuid():N}";
+                var recorded = await gateway.RecordCashfreePaymentAsync(checkout.PaymentAttemptId, details,
+                    eventId, "PAYMENT_SUCCESS", new string('b', 64), CancellationToken.None);
+                var replay = await gateway.RecordCashfreePaymentAsync(checkout.PaymentAttemptId, details,
+                    eventId, "PAYMENT_SUCCESS", new string('b', 64), CancellationToken.None);
+                Assert.That(replay.PaymentTransactionId, Is.EqualTo(recorded.PaymentTransactionId));
+            }
+            var finalAllocations = await snapshotContext.StudentFeePaymentAllocations.AsNoTracking()
+                .Where(item => item.InstitutionId == scope.InstitutionId && item.StudentFeeInstallmentId == installmentId)
+                .ToListAsync();
+            Assert.That(finalAllocations.Sum(item => item.Amount), Is.EqualTo(saved.NetAnnualAmount));
+            foreach (var head in snapshot)
+            {
+                Assert.That(finalAllocations.Where(item => item.StudentFeeInstallmentHeadId == head.Id).Sum(item => item.Amount),
+                    Is.EqualTo(head.ScheduledAmount));
+            }
+            return;
+        }
         var quote = new StudentAdmissionFeeQuote
         {
             InstitutionId = scope.InstitutionId,
@@ -229,19 +485,30 @@ public sealed class StudentAdmissionApprovalDatabaseTests
         if (scenario == 3)
         {
             // A synthetic verified domain is valid only inside the guarded disposable database.
-            setup.InstitutionPortalDomainMasters.Add(new InstitutionPortalDomainMaster
+            var existingDomain = await setup.InstitutionPortalDomainMasters.AsNoTracking()
+                .SingleOrDefaultAsync(item => item.InstitutionId == scope.InstitutionId && !item.IsSoftDeleted);
+            if (existingDomain is null)
             {
-                InstitutionId = scope.InstitutionId,
-                DomainName = $"test-{Guid.NewGuid():N}.example.test",
-                ChallengeValueHash = new string('a', 64),
-                ChallengeExpiresAt = now.AddHours(1),
-                VerificationStatus = (short)StudentPortalDomainVerificationStatus.Verified,
-                VerifiedAt = now,
-                IsActive = true,
-                AddedById = 1,
-                AddedDateTime = now
-            });
-            await setup.SaveChangesAsync();
+                setup.InstitutionPortalDomainMasters.Add(new InstitutionPortalDomainMaster
+                {
+                    InstitutionId = scope.InstitutionId,
+                    DomainName = $"test-{Guid.NewGuid():N}.example.test",
+                    ChallengeValueHash = new string('a', 64),
+                    ChallengeExpiresAt = now.AddHours(1),
+                    VerificationStatus = (short)StudentPortalDomainVerificationStatus.Verified,
+                    VerifiedAt = now,
+                    IsActive = true,
+                    AddedById = 1,
+                    AddedDateTime = now
+                });
+                await setup.SaveChangesAsync();
+            }
+            else
+            {
+                Assert.That(existingDomain.DomainName, Does.EndWith(".example.test"));
+                Assert.That(existingDomain.IsActive, Is.True);
+                Assert.That(existingDomain.VerificationStatus, Is.EqualTo((short)StudentPortalDomainVerificationStatus.Verified));
+            }
         }
 
         var calls = 0;
@@ -405,6 +672,12 @@ public sealed class StudentAdmissionApprovalDatabaseTests
                     Is.EqualTo(firstRequest.PaidAt.UtcDateTime.Ticks / TimeSpan.TicksPerMicrosecond));
             });
             var replay = await ledger.RecordOfflinePaymentAsync(installment.Id, scope.InstitutionId, 1, firstRequest, CancellationToken.None);
+            var legacyBalance = await ledger.GetAdmissionBalanceAsync(admission.Id, scope.InstitutionId, CancellationToken.None);
+            Assert.That(legacyBalance.Installments.Single().HeadAllocationComplete, Is.False);
+            Assert.That(legacyBalance.Installments.Single().Heads, Is.Empty);
+            var legacyReceipts = await ledger.GetReceiptsAsync(scope.InstitutionId,
+                new StudentFeeReceiptListRequestDTO { StudentAdmissionId = admission.Id }, CancellationToken.None);
+            Assert.That(legacyReceipts.Data.Single(item => item.PaymentTransactionId == replay.Id).HeadAllocationComplete, Is.False);
             Assert.That(replay.Id, Is.EqualTo(first.Id));
             var conflictingReplay = new StudentOfflinePaymentRequestDTO
             {
@@ -1229,7 +1502,40 @@ public sealed class StudentAdmissionApprovalDatabaseTests
             builder.Services.AddDbContext<SkolenzaDbContext>(settings => settings.UseNpgsql(connection));
             builder.Services.AddMediatR(settings => settings.RegisterServicesFromAssembly(typeof(StudentPortalLoginCommandHandler).Assembly));
             builder.Services.AddScoped<IStudentPortalAuthRepository, StudentPortalAuthRepository>();
+            builder.Services.AddCors(settings => settings.AddPolicy(VerifiedPortalCorsPolicyProvider.FrontendPolicyName,
+                policy => policy.WithOrigins("https://skolenza.vercel.app").AllowAnyHeader().AllowAnyMethod().AllowCredentials()));
+            builder.Services.AddSingleton<ICorsPolicyProvider, VerifiedPortalCorsPolicyProvider>();
             builder.Services.AddScoped<IStudentFeeLedgerRepository, StudentFeeLedgerRepository>();
+            builder.Services.AddScoped<IStudentPortalDocumentRepository, StudentPortalDocumentRepository>();
+            var storedObjects = new HashSet<string>();
+            var fileStorage = DispatchProxy.Create<IFileStorageService, BulkImportPermissionTests.TestProxy>();
+            ((BulkImportPermissionTests.TestProxy)(object)fileStorage).InvokeMethod = (method, args) =>
+            {
+                switch (method.Name)
+                {
+                    case nameof(IFileStorageService.UploadFileAsync):
+                        var key = $"synthetic/{Guid.NewGuid():N}";
+                        lock (storedObjects)
+                        {
+                            storedObjects.Add(key);
+                        }
+                        return Task.FromResult(key);
+                    case nameof(IFileStorageService.DeleteFileAsync):
+                        lock (storedObjects)
+                        {
+                            return Task.FromResult(storedObjects.Remove((string)args![0]!));
+                        }
+                    case nameof(IFileStorageService.GetFileUrl):
+                        lock (storedObjects)
+                        {
+                            Assert.That(storedObjects.Contains((string)args![0]!), Is.True);
+                        }
+                        return "https://example.test/synthetic-signed-download";
+                    default:
+                        throw new AssertionException($"Unexpected file-storage call: {method.Name}");
+                }
+            };
+            builder.Services.AddSingleton(fileStorage);
             var gatewayConfig = DispatchProxy.Create<IStudentPaymentGatewayConfigurationRepository, BulkImportPermissionTests.TestProxy>();
             ((BulkImportPermissionTests.TestProxy)(object)gatewayConfig).InvokeMethod = (method, _) =>
                 method.Name == nameof(IStudentPaymentGatewayConfigurationRepository.GetCredentialsAsync)
@@ -1297,11 +1603,34 @@ public sealed class StudentAdmissionApprovalDatabaseTests
             builder.Services.AddControllers().AddApplicationPart(typeof(StudentPortalAuthController).Assembly);
             await using var app = builder.Build();
             app.UseMiddleware<ErrorHandlerMiddleware>();
+            app.UseRouting();
+            app.UseCors(VerifiedPortalCorsPolicyProvider.FrontendPolicyName);
             app.UseAuthentication();
             app.UseAuthorization();
             app.MapControllers();
             await app.StartAsync();
             using var client = new HttpClient { BaseAddress = new Uri(app.Urls.Single()) };
+            client.DefaultRequestHeaders.Host = "api.example.test";
+            using (var preflight = new HttpRequestMessage(HttpMethod.Options, "/api/Student/portal-auth/login"))
+            {
+                preflight.Headers.TryAddWithoutValidation("Origin", $"https://{loginDomain}");
+                preflight.Headers.TryAddWithoutValidation("Access-Control-Request-Method", "POST");
+                using var preflightResponse = await client.SendAsync(preflight);
+                Assert.That(preflightResponse.StatusCode, Is.EqualTo(HttpStatusCode.NoContent));
+                Assert.That(preflightResponse.Headers.GetValues("Access-Control-Allow-Origin").Single(),
+                    Is.EqualTo($"https://{loginDomain}"));
+            }
+
+            using (var crossOriginLogin = await client.PostAsJsonAsync("/api/Student/portal-auth/login", new
+            {
+                portalHostname = loginDomain,
+                email = loginEmail,
+                password = syntheticPassword
+            }))
+            {
+                Assert.That(crossOriginLogin.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+            }
+
             client.DefaultRequestHeaders.Host = loginDomain;
 
             using var wrongLogin = await client.PostAsJsonAsync("/api/Student/portal-auth/login", new
@@ -1325,6 +1654,372 @@ public sealed class StudentAdmissionApprovalDatabaseTests
             client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
             using var profile = await client.GetAsync("/api/Student/portal-auth/me");
             Assert.That(profile.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+            await isolationVerification.StudentEnrollments.Where(item => item.StudentId == stored.StudentId && item.IsActive)
+                .ExecuteUpdateAsync(update => update.SetProperty(item => item.EffectiveFrom, today));
+            var documentRoot = $"/api/Student/portal/students/{stored.StudentId!.Value}/documents";
+            using var requirementsResponse = await client.GetAsync($"{documentRoot}/requirements?personScope=1");
+            Assert.That(requirementsResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+            using var requirementsPayload = JsonDocument.Parse(await requirementsResponse.Content.ReadAsStringAsync());
+            Assert.That(requirementsPayload.RootElement.GetProperty("data").EnumerateArray()
+                .Any(item => item.GetProperty("id").GetInt64() == requirement.Id), Is.True);
+            async Task<HttpResponseMessage> UploadDocumentAsync(string personScope = "1")
+            {
+                using var form = new MultipartFormDataContent();
+                form.Add(new StringContent(requirement.Id.ToString()), "requirementId");
+                form.Add(new StringContent(personScope), "personScope");
+                var file = new ByteArrayContent(Encoding.UTF8.GetBytes("%PDF-1.4 synthetic test data"));
+                file.Headers.ContentType = new MediaTypeHeaderValue("application/pdf");
+                form.Add(file, "file", "synthetic.pdf");
+                return await client.PostAsync(documentRoot, form);
+            }
+
+            using var uploaded = await UploadDocumentAsync();
+            Assert.That(uploaded.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+            using var uploadedPayload = JsonDocument.Parse(await uploaded.Content.ReadAsStringAsync());
+            var documentId = uploadedPayload.RootElement.GetProperty("data").GetProperty("id").GetInt64();
+            Assert.That(uploadedPayload.RootElement.GetProperty("data").GetProperty("versionNumber").GetInt32(), Is.EqualTo(1));
+            var storedSubmission = await isolationVerification.StudentRecordDocuments.AsNoTracking()
+                .Where(item => item.Id == documentId).Select(item => item.SubmittedDateTime).SingleAsync();
+            Assert.That(Math.Abs((DateTime.SpecifyKind(storedSubmission, DateTimeKind.Utc) - DateTime.UtcNow).TotalMinutes), Is.LessThan(2));
+            await using (var documentContext = new SkolenzaDbContext(options))
+            {
+                var documentAuth = new StudentPortalAuthRepository(
+                    documentContext, new EmailQueueRepository(documentContext), protector);
+                var documentRepository = new StudentPortalDocumentRepository(documentContext, documentAuth);
+                var documentPage = await documentRepository.GetPageAsync(
+                    scope.InstitutionId, account.Id, stored.StudentId.Value,
+                    new StudentPortalDocumentFilterDTO(), CancellationToken.None);
+                Assert.That(documentPage.Data.Any(item => item.Id == documentId), Is.True);
+            }
+            using var documentList = await client.GetAsync(documentRoot);
+            using var documentDownload = await client.GetAsync($"{documentRoot}/{documentId}/download");
+            Assert.That(documentList.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+            Assert.That(documentDownload.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+            using var duplicateUpload = await UploadDocumentAsync();
+            Assert.That(duplicateUpload.StatusCode, Is.EqualTo(HttpStatusCode.Conflict));
+            using var guardianWithoutId = await UploadDocumentAsync("2");
+            Assert.That(guardianWithoutId.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+            using var wrongStudentDownload = await client.GetAsync($"/api/Student/portal/students/{long.MaxValue}/documents/{documentId}/download");
+            Assert.That(wrongStudentDownload.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
+
+            await isolationVerification.StudentPortalAccounts.Where(item => item.Id == account.Id)
+                .ExecuteUpdateAsync(update => update.SetProperty(item => item.IsActive, false));
+            using var disabledRequirements = await client.GetAsync($"{documentRoot}/requirements?personScope=1");
+            using var disabledDownload = await client.GetAsync($"{documentRoot}/{documentId}/download");
+            Assert.That(disabledRequirements.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
+            Assert.That(disabledDownload.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
+            await isolationVerification.StudentPortalAccounts.Where(item => item.Id == account.Id)
+                .ExecuteUpdateAsync(update => update.SetProperty(item => item.IsActive, true));
+            await isolationVerification.StudentPortalAccounts.Where(item => item.Id == account.Id)
+                .ExecuteUpdateAsync(update => update.SetProperty(item => item.IsEmailVerified, false));
+            using var unverifiedDownload = await client.GetAsync($"{documentRoot}/{documentId}/download");
+            Assert.That(unverifiedDownload.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
+            await isolationVerification.StudentPortalAccounts.Where(item => item.Id == account.Id)
+                .ExecuteUpdateAsync(update => update.SetProperty(item => item.IsEmailVerified, true));
+            var reviewerId = await isolationVerification.StaffMembers.AsNoTracking()
+                .Where(item => item.InstitutionId == scope.InstitutionId)
+                .Select(item => item.Id).FirstAsync();
+            var reviewApplications = new[] { $"student-review-{Guid.NewGuid():N}", $"student-review-{Guid.NewGuid():N}" };
+            await using var reviewBlocker = new NpgsqlConnection(connection);
+            await reviewBlocker.OpenAsync();
+            await using var reviewBlockingTransaction = await reviewBlocker.BeginTransactionAsync();
+            await using (var lockDocument = new NpgsqlCommand(
+                "SELECT \"Id\" FROM skolenza.\"StudentRecordDocument\" WHERE \"Id\" = @id FOR UPDATE",
+                reviewBlocker, reviewBlockingTransaction))
+            {
+                lockDocument.Parameters.AddWithValue("id", documentId);
+                Assert.That(await lockDocument.ExecuteScalarAsync(), Is.Not.Null);
+            }
+
+            async Task<bool> ReviewConcurrentlyAsync(string applicationName)
+            {
+                var requestConnection = new NpgsqlConnectionStringBuilder(connection) { ApplicationName = applicationName };
+                var requestOptions = new DbContextOptionsBuilder<SkolenzaDbContext>().UseNpgsql(requestConnection.ConnectionString).Options;
+                await using var documentContext = new SkolenzaDbContext(requestOptions);
+                var documentAuth = new StudentPortalAuthRepository(documentContext, new EmailQueueRepository(documentContext), protector);
+                var documentRepository = new StudentPortalDocumentRepository(documentContext, documentAuth);
+                try
+                {
+                    await documentRepository.ReviewAsync(scope.InstitutionId, reviewerId, stored.StudentId.Value,
+                        documentId, new StudentAdmissionDocumentReviewDTO
+                        {
+                            Status = StudentDocumentReviewStatus.ReturnedForCorrection,
+                            Reason = "Synthetic review"
+                        }, CancellationToken.None);
+                    return true;
+                }
+                catch (ConflictException)
+                {
+                    return false;
+                }
+            }
+
+            var concurrentReviews = reviewApplications.Select(ReviewConcurrentlyAsync).ToArray();
+            var reviewsWaiting = false;
+            try
+            {
+                await using var monitor = new NpgsqlConnection(connection);
+                await monitor.OpenAsync();
+                var deadline = DateTime.UtcNow.AddSeconds(15);
+                while (DateTime.UtcNow < deadline)
+                {
+                    await using var waiting = new NpgsqlCommand(
+                        "SELECT count(*) FROM pg_stat_activity WHERE application_name = ANY(@names) AND wait_event_type = 'Lock'", monitor);
+                    waiting.Parameters.AddWithValue("names", reviewApplications);
+                    if (Convert.ToInt32(await waiting.ExecuteScalarAsync()) == 2)
+                    {
+                        reviewsWaiting = true;
+                        break;
+                    }
+
+                    await Task.Delay(50);
+                }
+            }
+            finally
+            {
+                await reviewBlockingTransaction.CommitAsync();
+            }
+
+            var reviewResults = await Task.WhenAll(concurrentReviews);
+            Assert.That(reviewsWaiting, Is.True, "Both document reviews must contend for the document row.");
+            Assert.That(reviewResults.Count(result => result), Is.EqualTo(1));
+            Assert.That(await isolationVerification.StudentRecordDocumentReviewHistories.AsNoTracking()
+                .CountAsync(item => item.StudentRecordDocumentId == documentId), Is.EqualTo(2));
+            using var revisedUpload = await UploadDocumentAsync();
+            Assert.That(revisedUpload.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+            using var revisedPayload = JsonDocument.Parse(await revisedUpload.Content.ReadAsStringAsync());
+            Assert.That(revisedPayload.RootElement.GetProperty("data").GetProperty("versionNumber").GetInt32(), Is.EqualTo(2));
+            Assert.That(revisedPayload.RootElement.GetProperty("data").GetProperty("supersedesDocumentId").GetInt64(), Is.EqualTo(documentId));
+            var revisedId = revisedPayload.RootElement.GetProperty("data").GetProperty("id").GetInt64();
+            async Task ReturnDocumentAsync(long id)
+            {
+                await using var documentContext = new SkolenzaDbContext(options);
+                var documentAuth = new StudentPortalAuthRepository(documentContext, new EmailQueueRepository(documentContext), protector);
+                var repository = new StudentPortalDocumentRepository(documentContext, documentAuth);
+                await repository.ReviewAsync(scope.InstitutionId, reviewerId, stored.StudentId.Value, id,
+                    new StudentAdmissionDocumentReviewDTO
+                    {
+                        Status = StudentDocumentReviewStatus.ReturnedForCorrection,
+                        Reason = "Synthetic follow-up"
+                    }, CancellationToken.None);
+            }
+
+            await ReturnDocumentAsync(revisedId);
+            var objectsBeforeRace = storedObjects.Count;
+            await using (var studentBlocker = new NpgsqlConnection(connection))
+            {
+                await studentBlocker.OpenAsync();
+                await using var studentLock = await studentBlocker.BeginTransactionAsync();
+                await using (var lockStudent = new NpgsqlCommand(
+                    "SELECT \"Id\" FROM skolenza.\"Student\" WHERE \"Id\" = @id FOR UPDATE", studentBlocker, studentLock))
+                {
+                    lockStudent.Parameters.AddWithValue("id", stored.StudentId.Value);
+                    await lockStudent.ExecuteScalarAsync();
+                }
+
+                var uploads = new[] { UploadDocumentAsync(), UploadDocumentAsync() };
+                var bothUploadsWaiting = false;
+                try
+                {
+                    await using var monitor = new NpgsqlConnection(connection);
+                    await monitor.OpenAsync();
+                    var deadline = DateTime.UtcNow.AddSeconds(15);
+                    while (DateTime.UtcNow < deadline)
+                    {
+                        await using var waiting = new NpgsqlCommand(
+                            "SELECT count(*) FROM pg_stat_activity WHERE datname = current_database() AND wait_event_type = 'Lock' AND query LIKE '%Student%FOR UPDATE%'", monitor);
+                        if (Convert.ToInt32(await waiting.ExecuteScalarAsync()) >= 2)
+                        {
+                            bothUploadsWaiting = true;
+                            break;
+                        }
+
+                        await Task.Delay(50);
+                    }
+                }
+                finally
+                {
+                    await studentLock.CommitAsync();
+                }
+
+                var uploadResults = await Task.WhenAll(uploads);
+                Assert.That(bothUploadsWaiting, Is.True, "Both uploads must contend for the Student row.");
+                Assert.That(uploadResults.Select(result => result.StatusCode),
+                    Is.EquivalentTo(new[] { HttpStatusCode.OK, HttpStatusCode.Conflict }));
+                foreach (var response in uploadResults)
+                {
+                    response.Dispose();
+                }
+            }
+            Assert.That(storedObjects.Count, Is.EqualTo(objectsBeforeRace + 1));
+            var latestDocumentId = await isolationVerification.StudentRecordDocuments.AsNoTracking()
+                .Where(item => item.StudentId == stored.StudentId && item.RequirementId == requirement.Id)
+                .OrderByDescending(item => item.VersionNumber).Select(item => item.Id).FirstAsync();
+            await ReturnDocumentAsync(latestDocumentId);
+            var objectsBeforeRevocation = storedObjects.Count;
+            await using (var accountBlocker = new NpgsqlConnection(connection))
+            {
+                await accountBlocker.OpenAsync();
+                await using var accountLock = await accountBlocker.BeginTransactionAsync();
+                await using (var disableAccount = new NpgsqlCommand(
+                    "UPDATE skolenza.\"StudentPortalAccount\" SET \"IsActive\" = false WHERE \"Id\" = @id", accountBlocker, accountLock))
+                {
+                    disableAccount.Parameters.AddWithValue("id", account.Id);
+                    await disableAccount.ExecuteNonQueryAsync();
+                }
+
+                var upload = UploadDocumentAsync();
+                var uploadWaiting = false;
+                try
+                {
+                    await using var monitor = new NpgsqlConnection(connection);
+                    await monitor.OpenAsync();
+                    var deadline = DateTime.UtcNow.AddSeconds(15);
+                    while (DateTime.UtcNow < deadline)
+                    {
+                        await using var waiting = new NpgsqlCommand(
+                            "SELECT count(*) FROM pg_stat_activity WHERE datname = current_database() AND wait_event_type = 'Lock' AND query LIKE '%StudentPortalAccount%FOR SHARE%'", monitor);
+                        if (Convert.ToInt32(await waiting.ExecuteScalarAsync()) > 0)
+                        {
+                            uploadWaiting = true;
+                            break;
+                        }
+
+                        await Task.Delay(50);
+                    }
+                }
+                finally
+                {
+                    await accountLock.CommitAsync();
+                }
+
+                using var revokedUpload = await upload;
+                Assert.That(uploadWaiting, Is.True, "Upload must wait for account revocation.");
+                Assert.That(revokedUpload.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
+            }
+            Assert.That(storedObjects.Count, Is.EqualTo(objectsBeforeRevocation));
+            await isolationVerification.StudentPortalAccounts.Where(item => item.Id == account.Id)
+                .ExecuteUpdateAsync(update => update.SetProperty(item => item.IsActive, true));
+            var guardianLinkId = await isolationVerification.StudentGuardians.AsNoTracking()
+                .Where(item => item.StudentId == stored.StudentId && item.GuardianId == guardian.Id)
+                .Select(item => item.Id)
+                .SingleAsync();
+            await using (var linkBlocker = new NpgsqlConnection(connection))
+            {
+                await linkBlocker.OpenAsync();
+                await using var linkLock = await linkBlocker.BeginTransactionAsync();
+                await using (var revokeLink = new NpgsqlCommand(
+                    "UPDATE skolenza.\"StudentGuardian\" SET \"HasPortalAccess\" = false WHERE \"Id\" = @id", linkBlocker, linkLock))
+                {
+                    revokeLink.Parameters.AddWithValue("id", guardianLinkId);
+                    await revokeLink.ExecuteNonQueryAsync();
+                }
+
+                var upload = UploadDocumentAsync();
+                var uploadWaiting = false;
+                try
+                {
+                    await using var monitor = new NpgsqlConnection(connection);
+                    await monitor.OpenAsync();
+                    var deadline = DateTime.UtcNow.AddSeconds(15);
+                    while (DateTime.UtcNow < deadline)
+                    {
+                        await using var waiting = new NpgsqlCommand(
+                            "SELECT count(*) FROM pg_stat_activity WHERE datname = current_database() AND wait_event_type = 'Lock' AND query LIKE '%StudentGuardian%FOR SHARE%'", monitor);
+                        if (Convert.ToInt32(await waiting.ExecuteScalarAsync()) > 0)
+                        {
+                            uploadWaiting = true;
+                            break;
+                        }
+
+                        await Task.Delay(50);
+                    }
+                }
+                finally
+                {
+                    await linkLock.CommitAsync();
+                }
+
+                using var revokedUpload = await upload;
+                Assert.That(uploadWaiting, Is.True, "Upload must wait for Guardian-link revocation.");
+                Assert.That(revokedUpload.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
+            }
+            Assert.That(storedObjects.Count, Is.EqualTo(objectsBeforeRevocation));
+            await isolationVerification.StudentGuardians.Where(item => item.Id == guardianLinkId)
+                .ExecuteUpdateAsync(update => update.SetProperty(item => item.HasPortalAccess, true));
+            await using (var advisoryBlocker = new NpgsqlConnection(connection))
+            await using (var competingLinkConnection = new NpgsqlConnection(connection))
+            {
+                await advisoryBlocker.OpenAsync();
+                await competingLinkConnection.OpenAsync();
+                await using var advisoryLock = await advisoryBlocker.BeginTransactionAsync();
+                await using (var holdVersionLock = new NpgsqlCommand(
+                    "SELECT pg_advisory_xact_lock(hashtextextended(@key, 0))", advisoryBlocker, advisoryLock))
+                {
+                    holdVersionLock.Parameters.AddWithValue("key", $"student-document:{scope.InstitutionId}:{stored.StudentId.Value}:{requirement.Id}:1:");
+                    await holdVersionLock.ExecuteNonQueryAsync();
+                }
+
+                var upload = UploadDocumentAsync();
+                var uploadWaiting = false;
+                var revocationWaiting = false;
+                var advisoryCommitted = false;
+                Task<int>? revokeTask = null;
+                try
+                {
+                    await using var monitor = new NpgsqlConnection(connection);
+                    await monitor.OpenAsync();
+                    var deadline = DateTime.UtcNow.AddSeconds(15);
+                    while (DateTime.UtcNow < deadline)
+                    {
+                        await using var waiting = new NpgsqlCommand(
+                            "SELECT count(*) FROM pg_stat_activity WHERE datname = current_database() AND wait_event_type = 'Lock' AND query LIKE '%pg_advisory_xact_lock%'", monitor);
+                        if (Convert.ToInt32(await waiting.ExecuteScalarAsync()) > 0)
+                        {
+                            uploadWaiting = true;
+                            break;
+                        }
+                        await Task.Delay(50);
+                    }
+
+                    await using var revokeLink = new NpgsqlCommand(
+                        "UPDATE skolenza.\"StudentGuardian\" SET \"HasPortalAccess\" = false WHERE \"Id\" = @id", competingLinkConnection);
+                    revokeLink.Parameters.AddWithValue("id", guardianLinkId);
+                    revokeTask = revokeLink.ExecuteNonQueryAsync();
+                    deadline = DateTime.UtcNow.AddSeconds(15);
+                    while (DateTime.UtcNow < deadline)
+                    {
+                        await using var waiting = new NpgsqlCommand(
+                            "SELECT count(*) FROM pg_stat_activity WHERE datname = current_database() AND wait_event_type = 'Lock' AND query LIKE 'UPDATE skolenza.%StudentGuardian%'", monitor);
+                        if (Convert.ToInt32(await waiting.ExecuteScalarAsync()) > 0)
+                        {
+                            revocationWaiting = true;
+                            break;
+                        }
+                        await Task.Delay(50);
+                    }
+                    await advisoryLock.CommitAsync();
+                    advisoryCommitted = true;
+                    using var acceptedUpload = await upload;
+                    await revokeTask;
+                    Assert.That(uploadWaiting, Is.True, "Upload must hold access locks before waiting for the version lock.");
+                    Assert.That(revocationWaiting, Is.True, "Link revocation must wait for the authorized upload.");
+                    Assert.That(acceptedUpload.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+                }
+                finally
+                {
+                    if (!advisoryCommitted)
+                    {
+                        await advisoryLock.RollbackAsync();
+                    }
+                }
+            }
+            using (var deniedAfterLinkRevocation = await UploadDocumentAsync())
+            {
+                Assert.That(deniedAfterLinkRevocation.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
+            }
+            await isolationVerification.StudentGuardians.Where(item => item.Id == guardianLinkId)
+                .ExecuteUpdateAsync(update => update.SetProperty(item => item.HasPortalAccess, true));
             var feeRoot = $"/api/Student/portal/students/{stored.StudentId!.Value}/fees/admissions";
             using var portalAdmissions = await client.GetAsync(feeRoot);
             Assert.That(portalAdmissions.StatusCode, Is.EqualTo(HttpStatusCode.OK));
@@ -1358,10 +2053,6 @@ public sealed class StudentAdmissionApprovalDatabaseTests
                 $"{feeRoot}/{admission.Id}/installments/{long.MaxValue}/cashfree-checkout", checkoutRequest);
             Assert.That(foreignInstallment.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
             Assert.That(providerCalls, Is.EqualTo(1));
-            var guardianLinkId = await isolationVerification.StudentGuardians.AsNoTracking()
-                .Where(item => item.StudentId == stored.StudentId && item.GuardianId == guardian.Id)
-                .Select(item => item.Id)
-                .SingleAsync();
             await using (var revocationConnection = new NpgsqlConnection(connection))
             {
                 await revocationConnection.OpenAsync();

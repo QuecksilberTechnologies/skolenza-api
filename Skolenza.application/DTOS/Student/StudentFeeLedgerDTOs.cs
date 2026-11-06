@@ -70,6 +70,7 @@ public sealed class StudentFeeStructureFilterDTO : PermissionPagedRequestDTO
 
 public sealed class StudentFeeStructureRequestDTO : PermissionRequestDTO
 {
+    public StudentFeeArrearsPolicy? ArrearsPolicy { get; set; }
     [Range(1, long.MaxValue)]
     public long CampusId { get; set; }
 
@@ -104,6 +105,7 @@ public sealed class StudentFeeStructureItemRequestDTO
 
     [Range(typeof(decimal), "0", "9999999999999999")]
     public decimal Amount { get; set; }
+    public bool? IsDiscountEligible { get; set; }
 }
 
 public sealed class StudentFeeStructureFrequencyRequestDTO
@@ -125,6 +127,7 @@ public sealed class StudentFeeStructureDueDateRequestDTO
 
 public sealed class StudentFeeStructureResponseDTO
 {
+    public short ArrearsPolicy { get; set; }
     public long Id { get; set; }
     public long CampusId { get; set; }
     public string CampusName { get; set; } = string.Empty;
@@ -149,6 +152,7 @@ public sealed class StudentFeeStructureItemResponseDTO
     public string ComponentName { get; set; } = string.Empty;
     public short ChargeNature { get; set; }
     public decimal Amount { get; set; }
+    public bool IsDiscountEligible { get; set; } = true;
 }
 
 public sealed class StudentFeeStructureFrequencyResponseDTO
@@ -207,6 +211,7 @@ public sealed class StudentAdmissionFeeQuoteLineResponseDTO
     public decimal AnnualAmount { get; set; }
     public decimal DiscountAmount { get; set; }
     public decimal NetAmount { get; set; }
+    public bool IsDiscountEligible { get; set; } = true;
 }
 
 public sealed class StudentFeeInstallmentResponseDTO
@@ -221,6 +226,29 @@ public sealed class StudentFeeInstallmentResponseDTO
     public decimal PaidAmount { get; set; }
     public decimal OutstandingAmount { get; set; }
     public short Status { get; set; }
+    public bool HeadAllocationComplete { get; set; }
+    public List<StudentFeeHeadBalanceDTO> Heads { get; set; } = [];
+    public decimal? LateFeePaidAmount { get; set; }
+}
+
+public sealed class StudentFeeHeadBalanceDTO
+{
+    public long HeadId { get; set; }
+    public string ComponentCode { get; set; } = string.Empty;
+    public string ComponentName { get; set; } = string.Empty;
+    public short? AllocationPriority { get; set; }
+    public decimal ScheduledAmount { get; set; }
+    public decimal? PaidAmount { get; set; }
+    public decimal? OutstandingAmount { get; set; }
+}
+
+public sealed class StudentFeeReceiptAllocationDTO
+{
+    public long? HeadId { get; set; }
+    public string? ComponentCode { get; set; }
+    public string? ComponentName { get; set; }
+    public bool IsLateFee { get; set; }
+    public decimal Amount { get; set; }
 }
 
 public sealed class StudentOfflinePaymentRequestDTO : PermissionRequestDTO
@@ -382,6 +410,8 @@ public sealed class StudentFeeReceiptResponseDTO
     public DateTimeOffset IssuedAt { get; set; }
     public short PaymentMethod { get; set; }
     public string? RecordedReference { get; set; }
+    public bool HeadAllocationComplete { get; set; }
+    public List<StudentFeeReceiptAllocationDTO> Allocations { get; set; } = [];
 }
 
 public sealed class StudentAdmissionFeeBalanceRequestDTO : PermissionRequestDTO

@@ -1,7 +1,9 @@
 using System.Text.Json;
 using System.Data;
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 using skolenza.application.Common.Enums;
+using skolenza.application.Constants;
 using skolenza.application.DTOS.Pagination;
 using skolenza.application.DTOS.Student;
 using skolenza.application.Exceptions;
@@ -11,7 +13,9 @@ using skolenza.persistance.Data.Context;
 
 namespace skolenza.persistance.Repositories;
 
-public sealed class StudentPortalDocumentRepository(SkolenzaDbContext context)
+public sealed class StudentPortalDocumentRepository(
+    SkolenzaDbContext context,
+    IStudentPortalAuthRepository portalAuth)
     : IStudentPortalDocumentRepository
 {
     public async Task<IReadOnlyList<StudentPortalDocumentRequirementResponseDTO>> GetRequirementsAsync(
@@ -55,6 +59,7 @@ public sealed class StudentPortalDocumentRepository(SkolenzaDbContext context)
         StudentPortalDocumentUploadDTO request,
         CancellationToken cancellationToken)
     {
+        ValidateUploadPerson(request);
         var enrollment = await GetAuthorizedEnrollmentAsync(
             institutionId, accountId, studentId, request.PersonScope, request.GuardianId, cancellationToken);
         var requirement = await context.StudentDocumentRequirementMasters.AsNoTracking()
@@ -76,8 +81,38 @@ public sealed class StudentPortalDocumentRepository(SkolenzaDbContext context)
         string checksumSha256,
         CancellationToken cancellationToken)
     {
+        for (var attempt = 1; ; attempt++)
+        {
+            try
+            {
+                return await CreateVersionCoreAsync(institutionId, accountId, studentId, request,
+                    objectKey, contentType, checksumSha256, cancellationToken);
+            }
+            catch (Exception exception) when (IsSerializationFailure(exception))
+            {
+                context.ChangeTracker.Clear();
+                if (attempt >= StudentConstants.PortalDocumentTransactionMaximumAttempts)
+                {
+                    throw new ConflictException(StudentConstants.PortalDocumentConcurrencyMessage);
+                }
+            }
+        }
+    }
+
+    private async Task<StudentRecordDocumentResponseDTO> CreateVersionCoreAsync(
+        long institutionId,
+        long accountId,
+        long studentId,
+        StudentPortalDocumentUploadDTO request,
+        string objectKey,
+        string contentType,
+        string checksumSha256,
+        CancellationToken cancellationToken)
+    {
+        ValidateUploadPerson(request);
         await using var transaction = await context.Database.BeginTransactionAsync(
             IsolationLevel.Serializable, cancellationToken);
+        await LockUploadAccessAsync(institutionId, accountId, studentId, request.RequirementId, cancellationToken);
         var enrollment = await GetAuthorizedEnrollmentAsync(
             institutionId, accountId, studentId, request.PersonScope, request.GuardianId, cancellationToken);
         var requirement = await context.StudentDocumentRequirementMasters.AsNoTracking()
@@ -85,6 +120,10 @@ public sealed class StudentPortalDocumentRepository(SkolenzaDbContext context)
                 item.InstitutionId == institutionId && item.IsActive && !item.IsSoftDeleted,
                 cancellationToken) ?? throw new ValidationErrorException("The selected document requirement is unavailable.");
         ValidateRequirement(requirement, enrollment, request.PersonScope, request.ExpiryDate);
+
+        var versionKey = $"student-document:{institutionId}:{studentId}:{request.RequirementId}:{(short)request.PersonScope}:{request.GuardianId}";
+        await context.Database.SqlQuery<bool>($"SELECT pg_advisory_xact_lock(hashtextextended({versionKey}, 0)) IS NULL AS \"Value\"")
+            .SingleAsync(cancellationToken);
 
         var latest = await LatestDocumentQuery(institutionId, studentId, request)
             .OrderByDescending(item => item.VersionNumber).ThenByDescending(item => item.Id)
@@ -95,7 +134,7 @@ public sealed class StudentPortalDocumentRepository(SkolenzaDbContext context)
             throw new ConflictException("A new document version is allowed only after rejection or return for correction.");
         }
 
-        var now = DateTime.UtcNow;
+        var now = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified);
         var document = new StudentRecordDocument
         {
             InstitutionId = institutionId,
@@ -131,6 +170,41 @@ public sealed class StudentPortalDocumentRepository(SkolenzaDbContext context)
         await context.SaveChangesAsync(cancellationToken);
         await transaction.CommitAsync(cancellationToken);
         return Map(document, requirement);
+    }
+
+    private async Task LockUploadAccessAsync(
+        long institutionId,
+        long accountId,
+        long studentId,
+        long requirementId,
+        CancellationToken cancellationToken)
+    {
+        // Match the Student-first ordering used by exit and Guardian-link changes.
+        await context.Database.SqlQuery<long>($"SELECT \"Id\" AS \"Value\" FROM skolenza.\"Student\" WHERE \"InstitutionId\" = {institutionId} AND \"Id\" = {studentId} FOR UPDATE")
+            .ToListAsync(cancellationToken);
+        await context.Database.SqlQuery<long>($"SELECT \"Id\" AS \"Value\" FROM skolenza.\"StudentPortalAccount\" WHERE \"InstitutionId\" = {institutionId} AND \"Id\" = {accountId} FOR SHARE")
+            .ToListAsync(cancellationToken);
+        await context.Database.SqlQuery<long>($"SELECT sg.\"Id\" AS \"Value\" FROM skolenza.\"StudentGuardian\" sg JOIN skolenza.\"StudentPortalAccountGuardian\" ag ON ag.\"GuardianId\" = sg.\"GuardianId\" AND ag.\"InstitutionId\" = sg.\"InstitutionId\" JOIN skolenza.\"Guardian\" g ON g.\"Id\" = sg.\"GuardianId\" AND g.\"InstitutionId\" = sg.\"InstitutionId\" WHERE sg.\"InstitutionId\" = {institutionId} AND sg.\"StudentId\" = {studentId} AND ag.\"StudentPortalAccountId\" = {accountId} ORDER BY sg.\"Id\" FOR SHARE OF sg, ag, g")
+            .ToListAsync(cancellationToken);
+        await context.Database.SqlQuery<long>($"SELECT \"Id\" AS \"Value\" FROM skolenza.\"StudentPortalAccountStudent\" WHERE \"InstitutionId\" = {institutionId} AND \"StudentPortalAccountId\" = {accountId} AND \"StudentId\" = {studentId} FOR SHARE")
+            .ToListAsync(cancellationToken);
+        await context.Database.SqlQuery<long>($"SELECT \"Id\" AS \"Value\" FROM skolenza.\"StudentEnrollment\" WHERE \"InstitutionId\" = {institutionId} AND \"StudentId\" = {studentId} ORDER BY \"Id\" FOR SHARE")
+            .ToListAsync(cancellationToken);
+        await context.Database.SqlQuery<long>($"SELECT \"Id\" AS \"Value\" FROM skolenza.\"StudentDocumentRequirementMaster\" WHERE \"InstitutionId\" = {institutionId} AND \"Id\" = {requirementId} FOR SHARE")
+            .ToListAsync(cancellationToken);
+    }
+
+    private static bool IsSerializationFailure(Exception exception)
+    {
+        for (Exception? current = exception; current is not null; current = current.InnerException)
+        {
+            if (current is PostgresException { SqlState: PostgresErrorCodes.SerializationFailure })
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     public async Task<PagedResponseDTO<StudentRecordDocumentResponseDTO>> GetPageAsync(
@@ -169,6 +243,8 @@ public sealed class StudentPortalDocumentRepository(SkolenzaDbContext context)
         long documentId,
         CancellationToken cancellationToken)
     {
+        await GetAuthorizedEnrollmentAsync(
+            institutionId, accountId, studentId, StudentDocumentPersonScope.Student, null, cancellationToken);
         var row = await DocumentQuery(institutionId, studentId, accountId)
             .Where(item => item.Document.Id == documentId)
             .Select(item => item.Document.ObjectKey)
@@ -195,9 +271,11 @@ public sealed class StudentPortalDocumentRepository(SkolenzaDbContext context)
             throw new ValidationErrorException("A reason is required when rejecting or returning a document.");
         }
 
-        var document = await context.StudentRecordDocuments.SingleOrDefaultAsync(item =>
-            item.Id == documentId && item.InstitutionId == institutionId && item.StudentId == studentId,
-            cancellationToken) ?? throw new KeyNotFoundException("Student document was not found.");
+        await using var transaction = await context.Database.BeginTransactionAsync(cancellationToken);
+        var document = await context.StudentRecordDocuments
+            .FromSqlInterpolated($"SELECT * FROM skolenza.\"StudentRecordDocument\" WHERE \"Id\" = {documentId} AND \"InstitutionId\" = {institutionId} AND \"StudentId\" = {studentId} FOR UPDATE")
+            .SingleOrDefaultAsync(cancellationToken)
+            ?? throw new KeyNotFoundException("Student document was not found.");
         if (document.Status != (short)StudentDocumentReviewStatus.AwaitingReview)
         {
             throw new ConflictException("Only documents awaiting review can be reviewed.");
@@ -208,7 +286,7 @@ public sealed class StudentPortalDocumentRepository(SkolenzaDbContext context)
             throw new ConflictException("An expired document cannot be approved. Request a current document version.");
         }
 
-        var now = DateTime.UtcNow;
+        var now = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified);
         var oldStatus = document.Status;
         document.Status = (short)request.Status;
         document.ReviewedByStaffMemberId = staffMemberId;
@@ -227,6 +305,7 @@ public sealed class StudentPortalDocumentRepository(SkolenzaDbContext context)
         await context.SaveChangesAsync(cancellationToken);
         var requirement = await context.StudentDocumentRequirementMasters.AsNoTracking()
             .SingleAsync(item => item.Id == document.RequirementId && item.InstitutionId == institutionId, cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
         return Map(document, requirement);
     }
 
@@ -244,23 +323,13 @@ public sealed class StudentPortalDocumentRepository(SkolenzaDbContext context)
         }
 
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
-        var studentPersona = context.StudentPortalAccountStudents.AsNoTracking().Where(item =>
-            item.InstitutionId == institutionId && item.StudentPortalAccountId == accountId &&
-            item.StudentId == studentId && item.IsActive);
-        var guardianPersona =
-            from accountGuardian in context.StudentPortalAccountGuardians.AsNoTracking()
-            join link in context.StudentGuardians.AsNoTracking() on accountGuardian.GuardianId equals link.GuardianId
-            join guardian in context.Guardians.AsNoTracking() on accountGuardian.GuardianId equals guardian.Id
-            where accountGuardian.InstitutionId == institutionId && accountGuardian.StudentPortalAccountId == accountId &&
-                accountGuardian.IsActive && link.InstitutionId == institutionId && link.StudentId == studentId &&
-                link.IsActive && link.HasPortalAccess && link.EffectiveFrom <= today &&
-                guardian.InstitutionId == institutionId && guardian.IsActive && !guardian.IsSoftDeleted &&
-                (!link.EffectiveTo.HasValue || link.EffectiveTo.Value >= today) &&
-                (!guardianId.HasValue || link.GuardianId == guardianId.Value)
-            select link.Id;
-        var allowed = personScope == StudentDocumentPersonScope.Student
-            ? await studentPersona.AnyAsync(cancellationToken) || await guardianPersona.AnyAsync(cancellationToken)
-            : await guardianPersona.AnyAsync(cancellationToken);
+        var profile = await portalAuth.GetProfileAsync(institutionId, accountId, cancellationToken);
+        var allowed = profile?.Personas.Any(persona =>
+            (personScope == StudentDocumentPersonScope.Student &&
+                persona.Type == StudentPortalPersonaType.Student && persona.Id == studentId) ||
+            (persona.Type == StudentPortalPersonaType.Guardian &&
+                (!guardianId.HasValue || persona.Id == guardianId.Value) &&
+                persona.LinkedStudents.Any(student => student.StudentId == studentId))) == true;
         if (!allowed)
         {
             throw new KeyNotFoundException("Student was not found for this portal account.");
@@ -288,15 +357,16 @@ public sealed class StudentPortalDocumentRepository(SkolenzaDbContext context)
         long studentId,
         long accountId)
     {
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
         var accountGuardians = context.StudentPortalAccountGuardians.AsNoTracking()
             .Where(item => item.InstitutionId == institutionId && item.StudentPortalAccountId == accountId && item.IsActive)
             .Select(item => item.GuardianId);
         var activeStudentGuardian = context.StudentGuardians.AsNoTracking()
             .Where(item => item.InstitutionId == institutionId && item.StudentId == studentId && item.IsActive &&
-                item.HasPortalAccess && item.EffectiveFrom <= DateOnly.FromDateTime(DateTime.UtcNow) &&
+                item.HasPortalAccess && item.EffectiveFrom <= today &&
                 context.Guardians.Any(guardian => guardian.Id == item.GuardianId &&
                     guardian.InstitutionId == institutionId && guardian.IsActive && !guardian.IsSoftDeleted) &&
-                (!item.EffectiveTo.HasValue || item.EffectiveTo.Value >= DateOnly.FromDateTime(DateTime.UtcNow)) &&
+                (!item.EffectiveTo.HasValue || item.EffectiveTo.Value >= today) &&
                 accountGuardians.Contains(item.GuardianId))
             .Select(item => item.GuardianId);
         var studentPersona = context.StudentPortalAccountStudents.AsNoTracking()
@@ -310,7 +380,7 @@ public sealed class StudentPortalDocumentRepository(SkolenzaDbContext context)
                    (document.PersonScope == (short)StudentDocumentPersonScope.Student
                        ? studentPersona.Contains(studentId) || activeStudentGuardian.Any()
                        : document.GuardianId.HasValue && activeStudentGuardian.Contains(document.GuardianId.Value))
-               select new DocumentProjection(document, requirement);
+               select new DocumentProjection { Document = document, Requirement = requirement };
     }
 
     private IQueryable<StudentRecordDocument> LatestDocumentQuery(
@@ -338,6 +408,14 @@ public sealed class StudentPortalDocumentRepository(SkolenzaDbContext context)
             latest.Status != (short)StudentDocumentReviewStatus.ReturnedForCorrection)
         {
             throw new ConflictException("A new document version is allowed only after rejection or return for correction.");
+        }
+    }
+
+    private static void ValidateUploadPerson(StudentPortalDocumentUploadDTO request)
+    {
+        if (request.PersonScope == StudentDocumentPersonScope.Guardian && !request.GuardianId.HasValue)
+        {
+            throw new ValidationErrorException("GuardianId is required for a Guardian document.");
         }
     }
 
@@ -399,7 +477,9 @@ public sealed class StudentPortalDocumentRepository(SkolenzaDbContext context)
         ReviewReason = document.ReviewReason
     };
 
-    private sealed record DocumentProjection(
-        StudentRecordDocument Document,
-        StudentDocumentRequirementMaster Requirement);
+    private sealed class DocumentProjection
+    {
+        public StudentRecordDocument Document { get; init; } = null!;
+        public StudentDocumentRequirementMaster Requirement { get; init; } = null!;
+    }
 }

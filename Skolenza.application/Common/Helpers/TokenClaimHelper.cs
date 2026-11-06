@@ -1,4 +1,5 @@
 using skolenza.application.DTOS.Token;
+using skolenza.application.Constants;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims; using skolenza.domain.Entity; using MediatR;
@@ -61,6 +62,7 @@ public static class TokenClaimHelper
                 // 🔹 Role info
                 RoleId = principal.Claims.FirstOrDefault(c => c.Type == "RoleId")?.Value ?? "0",
                 RoleTypeId = principal.Claims.FirstOrDefault(c => c.Type == "RoleTypeId")?.Value ?? "0",
+                UserType = principal.Claims.FirstOrDefault(c => c.Type == AppConstants.UserTypeClaim)?.Value,
                 StaffEmploymentTypeId = principal.Claims.FirstOrDefault(c => c.Type == "StaffEmploymentTypeId")?.Value ?? "0",
 
                 // 🔹 Institution info

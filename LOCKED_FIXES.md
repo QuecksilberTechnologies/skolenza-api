@@ -1219,3 +1219,52 @@ Status: **WIP — authenticated HTTP and deployed acceptance pending**. Local Po
 ## WIP-STUDENT-GUARDIAN-CHECKOUT-036: Guardian authorization and fee checkout
 
 Status: **WIP — real provider, running-product and deployed acceptance pending.** Guardian checkout rechecks the active linked account, Student, approved admission and installment while database rows are locked in the same transaction as payment-attempt preparation. A revoke committed first prevents a new attempt and replay; an attempt committed first may finish its provider call and later requests are denied. Both forced interleavings passed with a fake provider and disposable PostgreSQL; Student 114/114, affected Staff/Curriculum 41/41 and Bank/Profile/Role plus portal fee 87/87 passed. Run the same Student disposable-database suite and protected gates before and after related changes; exact commands and scope are in [scenario evidence](docs/testing/student/guardian-fee-portal/2026-10-30.md). This entry does not claim provider or Render acceptance.
+
+## WIP-STUDENT-DOCUMENT-RUNTIME-037: Portal document authorization and review
+
+Status: **WIP — real storage and deployed acceptance pending.** Student document list uses a SQL-translatable query; portal access requires the existing active/verified account and current enrollment checks; Guardian upload requires Guardian ID; review locks and rechecks the pending document before recording exactly one decision. Upload rechecks access and version in a serializable transaction. Synthetic authenticated HTTP and PostgreSQL tests with fake storage cover forced review and competing-upload races, account deactivation and both Guardian-link race orderings; Student suite 118/118 and protected gates 41/41 and 91/91 pass. Before and after related changes, run the same disposable Student suite and protected gates recorded in [scenario](docs/testing/student/portal-document-runtime/2026-10-30.md). No real S3 or Render acceptance is claimed.
+
+## WIP-STUDENT-PRINCIPAL-038: Signed portal and staff principal separation
+
+Status: **WIP — complete isolated-database, live-session and deployed acceptance pending.** The user approved correcting the shared claim reference. Signed `UserType` is preserved through existing claim mapping so the existing institution validator rejects explicit Host and StudentPortal types before staff lookup; Institution and legacy type-less behavior is preserved. Nine synthetic signed-token cases, protected Staff/Curriculum 41/41, Bank/profile/role 91/91 and auth/refresh-V2/registration 80/80 passed. Before and after related changes, run the focused signed-token cases and these same affected gates; see [scenario](docs/testing/student/portal-principal-boundary/2026-10-31.md). Both refresh API contracts remain unchanged; no live or Render acceptance is claimed.
+
+## WIP-STUDENT-PORTAL-ORIGIN-039: Verified portal hostname and scoped CORS
+
+Status: **WIP — isolated-database, real DNS/provider, UI and deployed acceptance pending.** The approved optional portal hostname selects an active verified institution, never authenticates a user, and omission retains the request Host fallback. Verified HTTPS origins are added only to the existing frontend policy for Student portal-auth and self-service routes. Focused synthetic tests passed 30/30, the protected gates passed 41/41, 91/91 and 117/117, and Release build succeeded. Student-filtered tests passed 152 with 13 skipped because the designated disposable DB was unavailable. Rerun the focused tests and applicable protected gates before and after related changes; exact selectors and evidence are in [scenario](docs/testing/student/portal-cross-origin-hostname/2026-11-01.md).
+
+## WIP-STUDENT-FEE-ALLOCATION-040: Fee-head calculation foundation
+
+Status: **WIP — API, ledger, migration, policy, reversals and provider acceptance pending.** The standalone calculator handles oldest-first and selected-installment-first on supplied head balances; it does not authorize, lock, persist or post a payment. The user approved preventing negative final installments due to repeated rounding. Focused fee tests passed 16/16, Local scratch Student suite 169/169 and protected gates 41/41 and 91/91. Follow the test selectors and limitations in [scenario](docs/testing/student/fee-head-allocation/2026-11-01.md). No DB schema change or deployment is claimed.
+
+Follow-up: a standalone minor-unit head schedule calculation reconciles head and installment totals; focused fee tests 21/21, scratch Student tests 174/174 and protected gates 91/91 and 41/41 passed. It remains unconnected to API and persistence.
+
+Snapshot follow-up: new quote creation persists installment-head snapshots under composite tenant/quote foreign keys. Local additive migration was applied after backup and separate restore verification; Render migration remains pending. Scratch Student 175/175, protected 91/91 and 41/41 passed. Payment allocations, history backfill, policies and API/receipt integration remain WIP. See [scenario](docs/testing/student/fee-head-snapshot/2026-11-01.md).
+
+Render parity follow-up: the snapshot DDL was subsequently applied to Render after a fresh full backup, separate Local restore and two successful rehearsal runs; Local/Render table fingerprints matched, with zero quotes and payments at check time. Updated API deployment and any intervening old-API quotes still require verification. Full fee allocation remains WIP.
+
+Single-installment follow-up: offline and confirmed gateway payments allocate to head snapshots and late fee in the same transaction; balance/receipt expose complete/incomplete breakdowns. Local and Render allocation schema was applied after backups and restore rehearsals. Scratch Student tests 176/176 and protected 91/91, 41/41 passed; see [scenario](docs/testing/student/fee-head-payment-allocation/2026-11-01.md). Cross-month batches, configurable policies, reversals and real provider acceptance remain pending.
+
+Multi-installment calculator follow-up: the existing central helper can order a
+late-fee balance after ordinary heads within each installment. Before changes,
+Student 178/178 and protected 91/91 and 41/41 passed; afterward Student 179/179
+and the same protected gates passed. This remains calculation-only for batches,
+not an API or persisted posting. See [scenario](docs/testing/student/fee-head-allocation/2026-11-01.md).
+
+Reversal calculation follow-up: the central helper calculates partial reversals
+against unreversed allocations in reverse charge order. The corrected test and
+scratch Student suite passed 180/180; protected gates passed 91/91 and 41/41.
+No reversal API, persistence or real refund is claimed. See
+[scenario](docs/testing/student/fee-reversal-calculation/2026-11-01.md).
+
+Arrears policy configuration follow-up (2026-11-03): Student options and fee
+structure source expose a central policy enum. Local and Render schema were applied after
+separate backups and restore rehearsals. Student 180/180 and protected
+91/91 and 41/41 passed. The batch API does not consume the field, so this is
+WIP and does not establish policy execution. See
+[scenario](docs/testing/student/fee-arrears-policy/2026-11-03.md).
+
+Batch schema WIP (2026-11-03): batch and item SQL was applied twice only on a
+disposable Local DB; rolled-back probes reject duplicate links and cross-quote
+selection. Post-change Student 180/180, protected 91/91 and 41/41 passed.
+No batch API, EF mapping or application-database migration is claimed. See
+[scenario](docs/testing/student/fee-payment-batch-schema/2026-11-03.md).

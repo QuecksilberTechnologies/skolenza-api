@@ -1,5 +1,17 @@
 # Student admissions API handoff for UI developer
 
+Principal boundary fix on 2026-10-31: signed Host and StudentPortal `UserType` values are now preserved by the shared claim mapping so the existing staff validator can reject them; Institution and legacy type-less staff sessions retain existing behavior. Synthetic signed-token tests pass; real authenticated staff/portal and deployed verification remain pending. No refresh API contract changed. [Scenario](../testing/student/portal-principal-boundary/2026-10-31.md).
+
+Student record document review requires the dynamically discovered Student Admissions Update operation. An isolated synthetic-bearer HTTP host with the real shared request validator returned 401 without a token, 200 for allowed Update, 403 for View-only or denied role, 401 for a StudentPortal principal and 200 for a legacy type-less staff principal. Identity/permission data and review repository were test doubles. Actual staff login, real grants and database-backed HTTP remain pending. [Scenario](../testing/student/document-review-permission/2026-10-31.md).
+
+Local prerequisite check on 2026-10-31: the invitation and reset templates are active, but no verified institution portal domain is configured, so real invitation and portal acceptance remain blocked. [Scenario](../testing/student/local-portal-prerequisites/2026-10-31.md).
+
+Development storage smoke, 2026-10-31: the existing shared storage service uploaded synthetic bytes under the central namespace, returned matching bytes through a signed URL and deleted the object. This was a direct provider test, not an authenticated Student endpoint or Render acceptance. See [scenario](../testing/student/portal-document-storage/2026-10-31.md).
+
+Student portal document fix, continued 2026-10-31: list/query, active and verified account checks, current-enrollment download check, missing Guardian ID validation, UTC timestamps and concurrent review handling are corrected in uncommitted API source. Synthetic authenticated HTTP and PostgreSQL tests pass with fake storage, including competing uploads, account revocation and both Guardian-link revocation race orderings. Disabled/unverified accounts or non-linked Students receive 404; Guardian uploads without GuardianId receive 400; a competing review or duplicate pending version receives 409. An upload authorized first may finish before revocation; subsequent requests are denied. Previously issued signed URLs can remain valid until expiry. The real Student endpoint and Render storage integration remain unverified. This fix is not yet deployed. See [runtime scenario](../testing/student/portal-document-runtime/2026-10-30.md).
+
+Render route smoke on 2026-10-30: five Guardian fee routes appear in live Swagger and anonymous admissions/checkout requests returned 401. Authenticated and provider acceptance remains pending. See [publish scenario](../testing/student/render-guardian-fee-publish/2026-10-30.md); older source-only deployment notes below are historical.
+
 Shared-key rotation is **not implemented**. Do not replace an institution key as a prerequisite for testing these routes; historical portal emails, gateway credentials and other institution data require a coordinated migration. Synthetic compatibility evidence is in the [rotation scenario](../testing/student/portal-email-key-rotation/2026-10-30.md).
 
 ## Guardian fee self service - source update 30 October 2026
@@ -790,6 +802,24 @@ fee structure and quote responses expose `currencyDecimalPlaces`, which is
 snapshotted so later currency-master edits do not alter an existing quote.
 Once a quote exists, the structure is immutable and cannot be deactivated.
 
+**WIP — arrears policy:** Source adds optional `arrearsPolicy` to structure
+create/update and includes it in structure responses. The authenticated Student
+options response supplies `feeArrearsPolicies` from the central enum: oldest due
+first (1) and selected installment first (2). An omitted value preserves the
+existing setting on update; new structures default to oldest due first. This
+configuration is **not yet connected to batch payments**. Its schema is applied
+to Local and Render; the source has not been deployed.
+
+Fee headers are configured through the fee-component master and included in a
+structure by adding them to its `items`. For recurring items, the optional
+`isDiscountEligible` controls whether an approved scheme's percentage applies
+to that header. Omission preserves the previous behavior (`true`). One-time
+items are excluded from discounts; omit the property or send `false` (sending
+`true` is rejected). Structure and quote-line responses expose the effective
+`isDiscountEligible` value. This source change is not yet deployed; check the
+deployed API version before using the new field.
+Local test evidence and remaining checks: [fee-head discount eligibility](../testing/student/fee-head-discount/2026-11-01.md).
+
 Example Host currency mapping request (permission IDs must be resolved from
 the authenticated menu/permission response; country and precision are not
 client-supplied on Student fee requests):
@@ -831,8 +861,8 @@ be dynamically resolved):
   "gracePeriodDays": 5,
   "lateFeeCap": 100,
   "items": [
-    { "feeComponentMasterId": 2, "amount": 36000 },
-    { "feeComponentMasterId": 9, "amount": 2500 }
+    { "feeComponentMasterId": 2, "amount": 36000, "isDiscountEligible": true },
+    { "feeComponentMasterId": 9, "amount": 2500, "isDiscountEligible": false }
   ],
   "frequencies": [
     {
@@ -863,7 +893,8 @@ Example quote POST body:
 ```
 
 Only one active benefit scheme may apply. The staff-selected percentage must
-fall within that scheme's bounds and applies to recurring annual amounts only.
+fall within that scheme's bounds and applies only to eligible recurring annual
+headers. One-time headers remain outside the discount base.
 Without a scheme the discount is 0%. Amounts use the precision snapshotted from
 the active campus-country currency (`currencyDecimalPlaces`: 0, 2, or 3),
 midpoint away from zero. Recurring annual charges are divided across the
@@ -1306,11 +1337,13 @@ Focused contract tests on 2026-10-28: **6 passed, 0 failed, 0 skipped**. Combine
 
 ## Student/Guardian portal authentication (source WIP; UI contract preview)
 
-Staff authentication is unchanged. Portal accounts and refresh tokens use separate `StudentPortalAccount`, `StudentPortalAccountGuardian`, `StudentPortalAccountStudent`, `StudentPortalRefreshToken` and `StudentPortalOneTimeToken` tables. `InstitutionPortalDomainMaster` must be active and DNS-verified; the request `Host` selects the institution. Email is normalized to uppercase for institution-scoped lookup. Login responses intentionally use the same Unauthorized result for unknown email, bad password, inactive account, unverified email or no active persona. The configured lockout counts failed attempts even when an account has never been locked; the current configured limit is five failures for fifteen minutes. A disposable PostgreSQL test verified persistence, while real-host HTTP and deployed acceptance are still pending. [Scenario](../testing/student/portal-login-lockout/2026-10-30.md).
+Staff authentication is unchanged. Portal accounts and refresh tokens use separate `StudentPortalAccount`, `StudentPortalAccountGuardian`, `StudentPortalAccountStudent`, `StudentPortalRefreshToken` and `StudentPortalOneTimeToken` tables. `InstitutionPortalDomainMaster` must be active and DNS-verified; optional `portalHostname` selects the institution, or request `Host` is used when it is omitted. See the cross-origin examples below. Email is normalized to uppercase for institution-scoped lookup. Login responses intentionally use the same Unauthorized result for unknown email, bad password, inactive account, unverified email or no active persona. The configured lockout counts failed attempts even when an account has never been locked; the current configured limit is five failures for fifteen minutes. A disposable PostgreSQL test verified persistence, while real-host HTTP and deployed acceptance are still pending. [Scenario](../testing/student/portal-login-lockout/2026-10-30.md).
 
 An isolated Local HTTP harness verified synthetic Guardian login, authenticated profile, refresh rotation/replay rejection, logout/revocation, anonymous-profile denial and unverified-host denial using the real controller, handlers, JWT signer and bearer policy. The harness used a synthetic domain and does not establish live school DNS, email or deployed acceptance. [HTTP test evidence](../testing/student/portal-auth-http/2026-10-30.md). On 30 October, the invitation and password-reset templates were seeded on Render after verified backup and disposable restore; both templates match Local. No live verified domain or delivery was confirmed. [Database evidence](../testing/student/render-template-schema-sync/2026-10-30.md).
 
 ### Current source routes
+
+Examples in this table omit the optional hostname for the Host-fallback case; cross-origin clients must use the updated examples in the portal tenant-selection section below.
 
 | Method and route | Authentication | Request | State |
 | --- | --- | --- | --- |
@@ -1449,6 +1482,43 @@ Persistence uses `StudentRecordDocument` and append-only `StudentRecordDocumentR
 
 Latest combined Student source checks (2026-10-28): portal document focused tests **4/4**; admission detail/history tests **5/5**; all Student-filtered tests **75/75**; protected Staff/Curriculum gate **41 passed, 0 failed, 0 skipped / 41 total** (Local rollback probes enabled); Release solution build **0 errors, 22 warnings**. No authenticated HTTP, object-storage round trip, invitation/reset email or deployment is claimed. Local/Render schemas are applied and matched. See [portal document scenario report](../testing/student/portal-document-upload/2026-10-28.md), [admission detail/history scenario report](../testing/student/admission-detail-status-history/2026-10-28.md), [portal-auth scenario report](../testing/student/portal-authentication/2026-10-28.md) and [continuation handoff](../STUDENT_CONTINUATION.md).
 
+
+## Fee head allocation request — work in progress
+
+### Single-installment allocation in current working tree
+
+For newly created quote snapshots, the existing offline-payment endpoint and provider-confirmed Cashfree posting allocate each payment to installment heads by ascending component-master `displayOrder` captured when the quote was created; equal priorities use head ID. Fee heads are settled before late fees. This does not add cross-month payments or a selectable policy. The existing admission balance response now adds, to each installment, `headAllocationComplete`, `heads` and `lateFeePaidAmount`. Each head carries `headId`, `componentCode`, `componentName`, `allocationPriority`, `scheduledAmount`, `paidAmount` and `outstandingAmount`.
+
+```json
+{"headAllocationComplete":true,"heads":[{"headId":101,"componentCode":"TUITION","componentName":"Tuition","allocationPriority":1,"scheduledAmount":1500,"paidAmount":1500,"outstandingAmount":0}],"lateFeePaidAmount":0}
+```
+
+The existing receipt list adds `headAllocationComplete` and `allocations`; each allocation has `headId`, component code/name, `isLateFee` and `amount`. A null `headId` with `isLateFee=true` identifies a late-fee allocation. An incomplete legacy breakdown returns `headAllocationComplete=false` and must not be rendered as a zero head balance. Historical rows are not assigned invented allocations. Snapshot-enabled installments with unreconciled prior payment history reject further head-level posting with 409.
+
+The additive allocation schema is applied to Local and Render after backups and restore rehearsals; source is uncommitted and undeployed. The old deployed API does not write these rows, so do not treat the live feature as accepted. Local synthetic/database evidence: [single-installment scenario](../testing/student/fee-head-payment-allocation/2026-11-01.md). Full multi-month, policy, reversal/refund and real gateway scenarios remain open.
+
+New quotes now persist an installment-head snapshot in the Local working tree. The additive snapshot schema was applied to Local and Render after backups, Local restore verification and migration rehearsals; the table fingerprints matched at verification time. The current API source is uncommitted and undeployed, so the older deployed API may create a quote without snapshots until release; check for intervening quotes. This is a foundation only: no header-level payment/balance/receipt API is available. [Verification](../testing/student/fee-head-snapshot/2026-11-01.md).
+
+The Local working tree contains a standalone tested calculator for oldest-due-first and selected-installment-first allocation, and a quote rounding correction preventing negative installments for small totals. **No fee-head allocation request, payment posting, receipt, per-head balance or configurable policy API has been added yet.** Existing installment payment contracts remain unchanged. No associated schema migration has been applied to Local or Render. Do not integrate against the calculator as an API or present it as completed behavior. See [current verification and remaining work](../testing/student/fee-head-allocation/2026-11-01.md).
+
+## Portal tenant selection for cross-origin clients
+
+**Latest Local verification, 1 November:** The complete Student-filtered suite passed **165/165, zero skipped** on two consecutive runs using a separately restored disposable Local database. Its synthetic HTTP harness checked verified-origin CORS preflight and cross-origin login against the real portal repository and database. This does not verify real provider integrations, a running authenticated portal, or a deployed build. [Test evidence](../testing/student/disposable-database-regression/2026-11-01.md).
+
+The backend working tree now accepts optional `portalHostname` on the six requests below. Send the school's active, DNS-verified portal hostname as a bare hostname, without protocol, port or path, when the browser calls a different API host. The synthetic example `school.example.test` is illustrative only. If omitted or whitespace, the API keeps the existing request Host fallback for same-origin or correctly configured reverse-proxy use. Hostname selects a tenant; password, invitation/reset token or signed portal account and all existing authorization checks still apply. Logout does not use this property.
+
+| Method and route | Example JSON body |
+| --- | --- |
+| `POST /api/Student/portal-auth/login` | `{"portalHostname":"school.example.test","email":"guardian@example.test","password":"<password>"}` |
+| `POST /api/Student/portal-auth/refresh` | `{"portalHostname":"school.example.test","refreshToken":"<refresh-token>"}` |
+| `POST /api/Student/portal-auth/invitations/accept` | `{"portalHostname":"school.example.test","token":"<invitation-token>","password":"<new-password>"}` |
+| `POST /api/Student/portal-auth/invitations/claim` | `{"portalHostname":"school.example.test","token":"<invitation-token>"}` |
+| `POST /api/Student/portal-auth/password-reset/request` | `{"portalHostname":"school.example.test","email":"guardian@example.test"}` |
+| `POST /api/Student/portal-auth/password-reset/complete` | `{"portalHostname":"school.example.test","token":"<reset-token>","newPassword":"<new-password>"}` |
+
+Claim additionally requires the existing StudentPortal bearer. Send only a previously verified school hostname, not the Render API host. The institution administrator must add the domain and prove ownership via the existing DNS TXT challenge; DNS routing, a valid TLS certificate and the portal UI must also exist. The API permits exact active verified HTTPS school origins on `/api/Student/portal-auth` and `/api/Student/portal` routes; other routes retain the existing configured CORS policy. No verified domain is created by this change. Invalid hostnames are rejected; unknown tenant, incorrect credentials or wrong-tenant tokens cannot authenticate. Password-reset requests retain their generic response for unknown accounts. Response contracts and refresh rotation behavior are unchanged.
+
+**Integration and acceptance:** API code is local and uncommitted; the Angular developer must supply the field in the six payloads and use a real verified school domain. This change has not been deployed or verified against real DNS/TLS, a real Guardian email, or the Render application. Follow the current [continuation status](../STUDENT_CONTINUATION.md) and [cross-origin scenario evidence](../testing/student/portal-cross-origin-hostname/2026-11-01.md).
 
 ## Current acceptance status (2026-10-28)
 

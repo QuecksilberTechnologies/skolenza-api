@@ -278,6 +278,7 @@ public sealed class GetStudentOptionsQueryHandler
             DocumentReviewStatuses = Values<StudentDocumentReviewStatus>(),
             FeeChargeNatures = Values<StudentFeeComponentChargeNature>(),
             FeeInstallmentStatuses = Values<StudentFeeInstallmentStatus>(),
+            FeeArrearsPolicies = Values<StudentFeeArrearsPolicy>(),
             FeePaymentMethods = Values<StudentFeePaymentMethod>(),
             FeePaymentStatuses = Values<StudentFeePaymentStatus>(),
             FeePaymentAttemptStatuses = Values<StudentFeePaymentAttemptStatus>(),

@@ -239,9 +239,13 @@ namespace skolenza.persistance.Data.Context
         public virtual DbSet<StudentAdmissionFeeQuote> StudentAdmissionFeeQuotes { get; set; }
         public virtual DbSet<StudentAdmissionFeeQuoteLine> StudentAdmissionFeeQuoteLines { get; set; }
         public virtual DbSet<StudentFeeInstallment> StudentFeeInstallments { get; set; }
+        public virtual DbSet<StudentFeeInstallmentHead> StudentFeeInstallmentHeads { get; set; }
+        public virtual DbSet<StudentFeePaymentAllocation> StudentFeePaymentAllocations { get; set; }
         public virtual DbSet<StudentFeePaymentAttempt> StudentFeePaymentAttempts { get; set; }
         public virtual DbSet<StudentPaymentGatewayConfiguration> StudentPaymentGatewayConfigurations { get; set; }
         public virtual DbSet<StudentFeePaymentTransaction> StudentFeePaymentTransactions { get; set; }
+        public virtual DbSet<StudentFeePaymentBatch> StudentFeePaymentBatches { get; set; }
+        public virtual DbSet<StudentFeePaymentBatchItem> StudentFeePaymentBatchItems { get; set; }
         public virtual DbSet<StudentFeePaymentWebhookEvent> StudentFeePaymentWebhookEvents { get; set; }
         public virtual DbSet<StudentFeeReceipt> StudentFeeReceipts { get; set; }
         public virtual DbSet<CurriculumFrameworkMaster> CurriculumFrameworks { get; set; }
@@ -3295,6 +3299,8 @@ namespace skolenza.persistance.Data.Context
                 entity.Property(item => item.ContentType).HasMaxLength(150).IsRequired();
                 entity.Property(item => item.ChecksumSha256).HasMaxLength(64).IsRequired();
                 entity.Property(item => item.ReviewReason).HasMaxLength(1000);
+                entity.Property(item => item.SubmittedDateTime).HasColumnType("timestamp without time zone");
+                entity.Property(item => item.ReviewedDateTime).HasColumnType("timestamp without time zone");
                 entity.HasIndex(item => new { item.InstitutionId, item.StudentId, item.RequirementId, item.PersonScope, item.VersionNumber })
                     .IsUnique().HasFilter("\"GuardianId\" IS NULL")
                     .HasDatabaseName("UX_StudentRecordDocument_Student_Version");
@@ -3324,6 +3330,7 @@ namespace skolenza.persistance.Data.Context
                         "(CASE WHEN \"ChangedByPortalAccountId\" IS NULL THEN 0 ELSE 1 END) = 1"));
                 entity.HasKey(item => item.Id);
                 entity.Property(item => item.Reason).HasMaxLength(1000);
+                entity.Property(item => item.ChangedDateTime).HasColumnType("timestamp without time zone");
                 entity.HasIndex(item => new { item.InstitutionId, item.StudentRecordDocumentId, item.ChangedDateTime })
                     .HasDatabaseName("IX_StudentRecordDocumentReviewHistory_Document");
                 entity.HasOne<StudentRecordDocument>().WithMany().HasForeignKey(item => item.StudentRecordDocumentId)
@@ -3361,6 +3368,7 @@ namespace skolenza.persistance.Data.Context
                 {
                     table.HasCheckConstraint("CK_StudentFeeStructure_LateFee", "\"LateFeePerInstallment\" >= 0 AND \"GracePeriodDays\" >= 0 AND (\"LateFeeCap\" IS NULL OR \"LateFeeCap\" >= 0)");
                     table.HasCheckConstraint("CK_StudentFeeStructure_CurrencyDecimalPlaces", "\"CurrencyDecimalPlaces\" IN (0, 2, 3)");
+                    table.HasCheckConstraint("CK_StudentFeeStructure_ArrearsPolicy", "\"ArrearsPolicy\" IN (1, 2)");
                 });
                 entity.HasKey(item => item.Id);
                 entity.Property(item => item.CurrencyCode).HasMaxLength(3).IsRequired();
@@ -3428,6 +3436,8 @@ namespace skolenza.persistance.Data.Context
                     table.HasCheckConstraint("CK_StudentAdmissionFeeQuote_CurrencyDecimalPlaces", "\"CurrencyDecimalPlaces\" IN (0, 2, 3)");
                 });
                 entity.HasKey(item => item.Id);
+                entity.HasAlternateKey(item => new { item.Id, item.InstitutionId })
+                    .HasName("AK_StudentAdmissionFeeQuote_Tenant");
                 entity.Property(item => item.CurrencyCode).HasMaxLength(3).IsRequired();
                 entity.Property(item => item.DiscountPercent).HasPrecision(5, 2);
                 entity.Property(item => item.GrossRecurringAmount).HasPrecision(18, 3);
@@ -3450,6 +3460,8 @@ namespace skolenza.persistance.Data.Context
             {
                 entity.ToTable("StudentAdmissionFeeQuoteLine", "skolenza");
                 entity.HasKey(item => item.Id);
+                entity.HasAlternateKey(item => new { item.Id, item.InstitutionId, item.StudentAdmissionFeeQuoteId })
+                    .HasName("AK_StudentAdmissionFeeQuoteLine_TenantQuote");
                 entity.Property(item => item.ComponentCode).HasMaxLength(60).IsRequired();
                 entity.Property(item => item.ComponentName).HasMaxLength(150).IsRequired();
                 entity.Property(item => item.AnnualAmount).HasPrecision(18, 3);
@@ -3464,6 +3476,8 @@ namespace skolenza.persistance.Data.Context
                 entity.ToTable("StudentFeeInstallment", "skolenza", table =>
                     table.HasCheckConstraint("CK_StudentFeeInstallment_Amounts", "\"RecurringAmount\" >= 0 AND \"OneTimeAmount\" >= 0 AND \"LateFeeAmount\" >= 0 AND \"PaidAmount\" >= 0"));
                 entity.HasKey(item => item.Id);
+                entity.HasAlternateKey(item => new { item.Id, item.InstitutionId, item.StudentAdmissionFeeQuoteId })
+                    .HasName("AK_StudentFeeInstallment_TenantQuote");
                 entity.Property(item => item.RecurringAmount).HasPrecision(18, 3);
                 entity.Property(item => item.OneTimeAmount).HasPrecision(18, 3);
                 entity.Property(item => item.LateFeeAmount).HasPrecision(18, 3);
@@ -3472,6 +3486,26 @@ namespace skolenza.persistance.Data.Context
                     .IsUnique().HasDatabaseName("UX_StudentFeeInstallment_Quote_Number");
                 entity.HasOne<StudentAdmissionFeeQuote>().WithMany().HasForeignKey(item => item.StudentAdmissionFeeQuoteId)
                     .OnDelete(DeleteBehavior.Restrict).HasConstraintName("FK_StudentFeeInstallment_Quote");
+            });
+
+            modelBuilder.Entity<StudentFeeInstallmentHead>(entity =>
+            {
+                entity.ToTable("StudentFeeInstallmentHead", "skolenza", table =>
+                    table.HasCheckConstraint("CK_StudentFeeInstallmentHead_Amount", "\"ScheduledAmount\" > 0"));
+                entity.HasKey(item => item.Id);
+                entity.HasAlternateKey(item => new { item.Id, item.InstitutionId, item.StudentFeeInstallmentId })
+                    .HasName("AK_StudentFeeInstallmentHead_TenantInstallment");
+                entity.Property(item => item.ScheduledAmount).HasPrecision(18, 3);
+                entity.HasIndex(item => new { item.InstitutionId, item.StudentFeeInstallmentId, item.StudentAdmissionFeeQuoteLineId })
+                    .IsUnique().HasDatabaseName("UX_StudentFeeInstallmentHead_Installment_QuoteLine");
+                entity.HasOne<StudentFeeInstallment>().WithMany()
+                    .HasForeignKey(item => new { item.StudentFeeInstallmentId, item.InstitutionId, item.StudentAdmissionFeeQuoteId })
+                    .HasPrincipalKey(item => new { item.Id, item.InstitutionId, item.StudentAdmissionFeeQuoteId })
+                    .OnDelete(DeleteBehavior.Restrict).HasConstraintName("FK_StudentFeeInstallmentHead_Installment");
+                entity.HasOne<StudentAdmissionFeeQuoteLine>().WithMany()
+                    .HasForeignKey(item => new { item.StudentAdmissionFeeQuoteLineId, item.InstitutionId, item.StudentAdmissionFeeQuoteId })
+                    .HasPrincipalKey(item => new { item.Id, item.InstitutionId, item.StudentAdmissionFeeQuoteId })
+                    .OnDelete(DeleteBehavior.Restrict).HasConstraintName("FK_StudentFeeInstallmentHead_QuoteLine");
             });
 
             modelBuilder.Entity<StudentFeePaymentAttempt>(entity =>
@@ -3511,11 +3545,62 @@ namespace skolenza.persistance.Data.Context
                     .OnDelete(DeleteBehavior.Restrict).HasConstraintName("FK_StudentPaymentGatewayConfiguration_Institution");
             });
 
+            modelBuilder.Entity<StudentFeePaymentBatch>(entity =>
+            {
+                entity.ToTable("StudentFeePaymentBatch", "skolenza", table =>
+                {
+                    table.HasCheckConstraint("CK_StudentFeePaymentBatch_Amount", "\"Amount\" > 0");
+                    table.HasCheckConstraint("CK_StudentFeePaymentBatch_Policy", "(\"ArrearsPolicy\" = 1 AND \"SelectedInstallmentId\" IS NULL) OR (\"ArrearsPolicy\" = 2 AND \"SelectedInstallmentId\" IS NOT NULL)");
+                });
+                entity.HasKey(item => item.Id);
+                entity.HasAlternateKey(item => new { item.Id, item.InstitutionId, item.StudentAdmissionFeeQuoteId })
+                    .HasName("AK_StudentFeePaymentBatch_TenantQuote");
+                entity.Property(item => item.IdempotencyKey).HasMaxLength(100).IsRequired();
+                entity.Property(item => item.CurrencyCode).HasMaxLength(3).IsRequired();
+                entity.Property(item => item.RecordedReference).HasMaxLength(150);
+                entity.Property(item => item.Amount).HasPrecision(18, 3);
+                entity.Property(item => item.PaidDateTime).HasColumnType("timestamp without time zone");
+                entity.HasIndex(item => new { item.InstitutionId, item.IdempotencyKey }).IsUnique()
+                    .HasDatabaseName("UX_StudentFeePaymentBatch_Idempotency");
+                entity.HasOne<StudentAdmissionFeeQuote>().WithMany()
+                    .HasForeignKey(item => new { item.StudentAdmissionFeeQuoteId, item.InstitutionId })
+                    .HasPrincipalKey(item => new { item.Id, item.InstitutionId })
+                    .OnDelete(DeleteBehavior.Restrict).HasConstraintName("FK_StudentFeePaymentBatch_Quote");
+                entity.HasOne<StudentFeeInstallment>().WithMany()
+                    .HasForeignKey(item => new { item.SelectedInstallmentId, item.InstitutionId, item.StudentAdmissionFeeQuoteId })
+                    .HasPrincipalKey(item => new { item.Id, item.InstitutionId, item.StudentAdmissionFeeQuoteId })
+                    .OnDelete(DeleteBehavior.Restrict).HasConstraintName("FK_StudentFeePaymentBatch_SelectedInstallment");
+            });
+
+            modelBuilder.Entity<StudentFeePaymentBatchItem>(entity =>
+            {
+                entity.ToTable("StudentFeePaymentBatchItem", "skolenza");
+                entity.HasKey(item => item.Id);
+                entity.HasIndex(item => item.StudentFeePaymentTransactionId).IsUnique()
+                    .HasDatabaseName("UX_StudentFeePaymentBatchItem_Payment");
+                entity.HasIndex(item => new { item.StudentFeePaymentBatchId, item.StudentFeeInstallmentId }).IsUnique()
+                    .HasDatabaseName("UX_StudentFeePaymentBatchItem_Installment");
+                entity.HasOne<StudentFeePaymentBatch>().WithMany()
+                    .HasForeignKey(item => new { item.StudentFeePaymentBatchId, item.InstitutionId, item.StudentAdmissionFeeQuoteId })
+                    .HasPrincipalKey(item => new { item.Id, item.InstitutionId, item.StudentAdmissionFeeQuoteId })
+                    .OnDelete(DeleteBehavior.Restrict).HasConstraintName("FK_StudentFeePaymentBatchItem_Batch");
+                entity.HasOne<StudentFeeInstallment>().WithMany()
+                    .HasForeignKey(item => new { item.StudentFeeInstallmentId, item.InstitutionId, item.StudentAdmissionFeeQuoteId })
+                    .HasPrincipalKey(item => new { item.Id, item.InstitutionId, item.StudentAdmissionFeeQuoteId })
+                    .OnDelete(DeleteBehavior.Restrict).HasConstraintName("FK_StudentFeePaymentBatchItem_Installment");
+                entity.HasOne<StudentFeePaymentTransaction>().WithMany()
+                    .HasForeignKey(item => new { item.StudentFeePaymentTransactionId, item.InstitutionId, item.StudentFeeInstallmentId })
+                    .HasPrincipalKey(item => new { item.Id, item.InstitutionId, item.StudentFeeInstallmentId })
+                    .OnDelete(DeleteBehavior.Restrict).HasConstraintName("FK_StudentFeePaymentBatchItem_Payment");
+            });
+
             modelBuilder.Entity<StudentFeePaymentTransaction>(entity =>
             {
                 entity.ToTable("StudentFeePaymentTransaction", "skolenza", table =>
                     table.HasCheckConstraint("CK_StudentFeePaymentTransaction_Amount", "\"Amount\" > 0"));
                 entity.HasKey(item => item.Id);
+                entity.HasAlternateKey(item => new { item.Id, item.InstitutionId, item.StudentFeeInstallmentId })
+                    .HasName("AK_StudentFeePaymentTransaction_TenantInstallment");
                 entity.Property(item => item.PaidDateTime).HasColumnType("timestamp without time zone");
                 entity.Property(item => item.GatewayPaymentId).HasMaxLength(100);
                 entity.Property(item => item.IdempotencyKey).HasMaxLength(100);
@@ -3533,6 +3618,28 @@ namespace skolenza.persistance.Data.Context
                     .OnDelete(DeleteBehavior.Restrict).HasConstraintName("FK_StudentFeePaymentTransaction_Installment");
                 entity.HasOne<StudentFeePaymentAttempt>().WithMany().HasForeignKey(item => item.StudentFeePaymentAttemptId)
                     .OnDelete(DeleteBehavior.Restrict).HasConstraintName("FK_StudentFeePaymentTransaction_Attempt");
+            });
+
+            modelBuilder.Entity<StudentFeePaymentAllocation>(entity =>
+            {
+                entity.ToTable("StudentFeePaymentAllocation", "skolenza", table =>
+                    table.HasCheckConstraint("CK_StudentFeePaymentAllocation_Amount", "\"Amount\" > 0"));
+                entity.HasKey(item => item.Id);
+                entity.Property(item => item.Amount).HasPrecision(18, 3);
+                entity.HasIndex(item => new { item.StudentFeePaymentTransactionId, item.StudentFeeInstallmentHeadId })
+                    .IsUnique().HasFilter("\"StudentFeeInstallmentHeadId\" IS NOT NULL")
+                    .HasDatabaseName("UX_StudentFeePaymentAllocation_Head");
+                entity.HasIndex(item => item.StudentFeePaymentTransactionId).IsUnique()
+                    .HasFilter("\"StudentFeeInstallmentHeadId\" IS NULL")
+                    .HasDatabaseName("UX_StudentFeePaymentAllocation_LateFee");
+                entity.HasOne<StudentFeePaymentTransaction>().WithMany()
+                    .HasForeignKey(item => new { item.StudentFeePaymentTransactionId, item.InstitutionId, item.StudentFeeInstallmentId })
+                    .HasPrincipalKey(item => new { item.Id, item.InstitutionId, item.StudentFeeInstallmentId })
+                    .OnDelete(DeleteBehavior.Restrict).HasConstraintName("FK_StudentFeePaymentAllocation_Payment");
+                entity.HasOne<StudentFeeInstallmentHead>().WithMany()
+                    .HasForeignKey(item => new { item.StudentFeeInstallmentHeadId, item.InstitutionId, item.StudentFeeInstallmentId })
+                    .HasPrincipalKey(item => new { item.Id, item.InstitutionId, item.StudentFeeInstallmentId })
+                    .OnDelete(DeleteBehavior.Restrict).HasConstraintName("FK_StudentFeePaymentAllocation_Head");
             });
 
             modelBuilder.Entity<StudentFeePaymentWebhookEvent>(entity =>

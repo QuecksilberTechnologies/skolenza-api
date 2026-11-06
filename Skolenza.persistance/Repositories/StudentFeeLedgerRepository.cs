@@ -127,7 +127,9 @@ public sealed class StudentFeeLedgerRepository(
                                ComponentCode = item.ComponentCode,
                                ComponentName = item.ComponentName,
                                ChargeNature = item.ChargeNature,
-                               Amount = item.Amount
+                               Amount = item.Amount,
+                               IsDiscountEligible = item.ChargeNature == (short)StudentFeeComponentChargeNature.RecurringAnnual &&
+                                   item.IsDiscountEligible
                            } }).ToListAsync(cancellationToken);
         var frequencyRows = await (from item in context.StudentFeeStructureFrequencies.AsNoTracking()
                                    join master in context.StudentFeeFrequencyMasters.AsNoTracking()
@@ -175,6 +177,10 @@ public sealed class StudentFeeLedgerRepository(
         StudentFeeStructureRequestDTO request,
         CancellationToken cancellationToken)
     {
+        if (request.ArrearsPolicy.HasValue && !Enum.IsDefined(request.ArrearsPolicy.Value))
+        {
+            throw new ValidationErrorException("The selected arrears policy is not supported.");
+        }
         var campus = await context.Campuss.AsNoTracking().SingleOrDefaultAsync(item =>
             item.Id == request.CampusId && item.InstitutionId == institutionId && item.IsActive && !item.IsSoftDeleted,
             cancellationToken) ?? throw new ValidationErrorException("The selected campus is not active in this institution.");
@@ -207,6 +213,11 @@ public sealed class StudentFeeLedgerRepository(
                 item.ChargeNature != (short)StudentFeeComponentChargeNature.OneTime))
         {
             throw new ValidationErrorException("Every fee component must be active, institution-accessible and have a supported charge nature.");
+        }
+        if (request.Items.Any(item => item.IsDiscountEligible == true &&
+                components[item.FeeComponentMasterId].ChargeNature == (short)StudentFeeComponentChargeNature.OneTime))
+        {
+            throw new ValidationErrorException("One-time fee components cannot be included in the recurring discount.");
         }
 
         var frequencyIds = request.Frequencies.Select(item => item.FeeFrequencyMasterId).ToArray();
@@ -276,6 +287,7 @@ public sealed class StudentFeeLedgerRepository(
         entity.CountryCurrencyMasterId = currency.Id;
         entity.CurrencyCode = currency.CurrencyCode;
         entity.CurrencyDecimalPlaces = currency.DecimalPlaces;
+        entity.ArrearsPolicy = (short)(request.ArrearsPolicy ?? (StudentFeeArrearsPolicy)entity.ArrearsPolicy);
         entity.LateFeePerInstallment = StudentFeeQuoteCalculator.RoundCurrency(request.LateFeePerInstallment, currency.DecimalPlaces);
         entity.GracePeriodDays = request.GracePeriodDays;
         entity.LateFeeCap = request.LateFeeCap.HasValue ? StudentFeeQuoteCalculator.RoundCurrency(request.LateFeeCap.Value, currency.DecimalPlaces) : null;
@@ -293,7 +305,9 @@ public sealed class StudentFeeLedgerRepository(
                 ComponentCode = master.Code,
                 ComponentName = master.Name,
                 ChargeNature = master.ChargeNature,
-                Amount = StudentFeeQuoteCalculator.RoundCurrency(item.Amount, currency.DecimalPlaces)
+                Amount = StudentFeeQuoteCalculator.RoundCurrency(item.Amount, currency.DecimalPlaces),
+                IsDiscountEligible = master.ChargeNature == (short)StudentFeeComponentChargeNature.RecurringAnnual &&
+                    (item.IsDiscountEligible ?? true)
             };
         }));
 
@@ -391,7 +405,9 @@ public sealed class StudentFeeLedgerRepository(
                 ComponentCode = item.ComponentCode,
                 ComponentName = item.ComponentName,
                 ChargeNature = item.ChargeNature,
-                Amount = item.Amount
+                Amount = item.Amount,
+                IsDiscountEligible = item.ChargeNature == (short)StudentFeeComponentChargeNature.RecurringAnnual &&
+                    item.IsDiscountEligible
             }).ToListAsync(cancellationToken);
         var dueDates = await context.StudentFeeStructureInstallmentDueDates.AsNoTracking()
             .Where(item => item.InstitutionId == institutionId && item.StudentFeeStructureFrequencyId == frequency.Allowed.Id)
@@ -460,7 +476,7 @@ public sealed class StudentFeeLedgerRepository(
         };
         context.StudentAdmissionFeeQuotes.Add(quote);
         await context.SaveChangesAsync(cancellationToken);
-        context.StudentAdmissionFeeQuoteLines.AddRange(calculation.Lines.Select(item => new StudentAdmissionFeeQuoteLine
+        var quoteLines = calculation.Lines.Select(item => new StudentAdmissionFeeQuoteLine
         {
             InstitutionId = institutionId,
             StudentAdmissionFeeQuoteId = quote.Id,
@@ -469,9 +485,10 @@ public sealed class StudentFeeLedgerRepository(
             ChargeNature = item.ChargeNature,
             AnnualAmount = item.AnnualAmount,
             DiscountAmount = item.DiscountAmount,
-            NetAmount = item.NetAmount
-        }));
-        context.StudentFeeInstallments.AddRange(calculation.Installments.Select(item => new StudentFeeInstallment
+            NetAmount = item.NetAmount,
+            IsDiscountEligible = item.IsDiscountEligible
+        }).ToList();
+        var quoteInstallments = calculation.Installments.Select(item => new StudentFeeInstallment
         {
             InstitutionId = institutionId,
             StudentAdmissionFeeQuoteId = quote.Id,
@@ -480,7 +497,50 @@ public sealed class StudentFeeLedgerRepository(
             RecurringAmount = item.RecurringAmount,
             OneTimeAmount = item.OneTimeAmount,
             Status = item.Status
-        }));
+        }).ToList();
+        context.StudentAdmissionFeeQuoteLines.AddRange(quoteLines);
+        context.StudentFeeInstallments.AddRange(quoteInstallments);
+        await context.SaveChangesAsync(cancellationToken);
+
+        var componentIds = components.Select(item => item.FeeComponentMasterId).ToArray();
+        var priorities = await context.StudentFeeComponentMasters.AsNoTracking()
+            .Where(item => componentIds.Contains(item.Id))
+            .ToDictionaryAsync(item => item.Id, item => item.DisplayOrder, cancellationToken);
+        if (priorities.Count != componentIds.Distinct().Count())
+        {
+            throw new ConflictException("Fee component priorities are unavailable; the quote was not created.");
+        }
+        var linePriorities = quoteLines.Zip(components,
+            (line, component) => new { line.Id, Priority = priorities[component.FeeComponentMasterId] })
+            .ToDictionary(item => item.Id, item => item.Priority);
+        var recurringSchedule = StudentFeeHeadScheduleCalculator.Distribute(
+            quoteLines.Where(item => item.ChargeNature == (short)StudentFeeComponentChargeNature.RecurringAnnual)
+                .Select(item => new StudentFeeHeadScheduleCalculator.Head(item.Id, item.NetAmount)).ToArray(),
+            quoteInstallments.Select(item => new StudentFeeHeadScheduleCalculator.Installment(
+                item.InstallmentNumber, item.RecurringAmount)).ToArray(),
+            calculation.CurrencyDecimalPlaces);
+        var installmentIds = quoteInstallments.ToDictionary(item => item.InstallmentNumber, item => item.Id);
+        var scheduledHeads = recurringSchedule.Select(item => new StudentFeeInstallmentHead
+        {
+            InstitutionId = institutionId,
+            StudentAdmissionFeeQuoteId = quote.Id,
+            StudentFeeInstallmentId = installmentIds[item.InstallmentNumber],
+            StudentAdmissionFeeQuoteLineId = item.HeadId,
+            ScheduledAmount = item.Amount,
+            AllocationPriority = linePriorities[item.HeadId]
+        }).ToList();
+        scheduledHeads.AddRange(quoteLines
+            .Where(item => item.ChargeNature == (short)StudentFeeComponentChargeNature.OneTime && item.NetAmount > 0)
+            .Select(item => new StudentFeeInstallmentHead
+            {
+                InstitutionId = institutionId,
+                StudentAdmissionFeeQuoteId = quote.Id,
+                StudentFeeInstallmentId = installmentIds[1],
+                StudentAdmissionFeeQuoteLineId = item.Id,
+                ScheduledAmount = item.NetAmount,
+                AllocationPriority = linePriorities[item.Id]
+            }));
+        context.StudentFeeInstallmentHeads.AddRange(scheduledHeads);
         await context.SaveChangesAsync(cancellationToken);
         await transaction.CommitAsync(cancellationToken);
         return await GetQuoteAsync(quote.Id, institutionId, cancellationToken);
@@ -544,6 +604,18 @@ public sealed class StudentFeeLedgerRepository(
             .Where(item => item.StudentAdmissionFeeQuoteId == quote.Id && item.InstitutionId == institutionId)
             .OrderBy(item => item.InstallmentNumber)
             .ToListAsync(cancellationToken);
+        var installmentIds = rows.Select(item => item.Id).ToArray();
+        var heads = await (from head in context.StudentFeeInstallmentHeads.AsNoTracking()
+                           join line in context.StudentAdmissionFeeQuoteLines.AsNoTracking()
+                               on head.StudentAdmissionFeeQuoteLineId equals line.Id
+                           where head.InstitutionId == institutionId &&
+                               head.StudentAdmissionFeeQuoteId == quote.Id &&
+                               line.InstitutionId == institutionId && line.StudentAdmissionFeeQuoteId == quote.Id
+                           select new { Head = head, line.ComponentCode, line.ComponentName })
+            .ToListAsync(cancellationToken);
+        var payments = await context.StudentFeePaymentAllocations.AsNoTracking()
+            .Where(item => item.InstitutionId == institutionId && installmentIds.Contains(item.StudentFeeInstallmentId))
+            .ToListAsync(cancellationToken);
         var installments = rows.Select(item =>
         {
             var lateFee = item.LateFeeAmount;
@@ -554,6 +626,35 @@ public sealed class StudentFeeLedgerRepository(
                     : structure.LateFeePerInstallment;
             }
 
+            var installmentHeads = heads.Where(head => head.Head.StudentFeeInstallmentId == item.Id).ToList();
+            var installmentAllocations = payments.Where(payment => payment.StudentFeeInstallmentId == item.Id).ToList();
+            var latePaid = installmentAllocations.Where(payment => !payment.StudentFeeInstallmentHeadId.HasValue)
+                .Sum(payment => payment.Amount);
+            var complete = installmentHeads.Count > 0 &&
+                installmentHeads.All(head => head.Head.AllocationPriority.HasValue) &&
+                installmentHeads.Sum(head => head.Head.ScheduledAmount) == item.RecurringAmount + item.OneTimeAmount &&
+                installmentAllocations.Sum(payment => payment.Amount) == item.PaidAmount &&
+                latePaid <= lateFee &&
+                installmentAllocations.Where(payment => payment.StudentFeeInstallmentHeadId.HasValue)
+                    .All(payment => installmentHeads.Any(head => head.Head.Id == payment.StudentFeeInstallmentHeadId)) &&
+                installmentHeads.All(head => installmentAllocations.Where(payment => payment.StudentFeeInstallmentHeadId == head.Head.Id)
+                    .Sum(payment => payment.Amount) <= head.Head.ScheduledAmount);
+            var headBalances = installmentHeads.OrderBy(head => head.Head.AllocationPriority).ThenBy(head => head.Head.Id)
+                .Select(head =>
+                {
+                    var paid = installmentAllocations.Where(payment => payment.StudentFeeInstallmentHeadId == head.Head.Id)
+                        .Sum(payment => payment.Amount);
+                    return new StudentFeeHeadBalanceDTO
+                    {
+                        HeadId = head.Head.Id,
+                        ComponentCode = head.ComponentCode,
+                        ComponentName = head.ComponentName,
+                        AllocationPriority = head.Head.AllocationPriority,
+                        ScheduledAmount = head.Head.ScheduledAmount,
+                        PaidAmount = complete ? paid : null,
+                        OutstandingAmount = complete ? head.Head.ScheduledAmount - paid : null
+                    };
+                }).ToList();
             return new StudentFeeInstallmentResponseDTO
             {
                 Id = item.Id,
@@ -567,6 +668,9 @@ public sealed class StudentFeeLedgerRepository(
                 OutstandingAmount = StudentFeeQuoteCalculator.RoundCurrency(
                     item.RecurringAmount + item.OneTimeAmount + lateFee - item.PaidAmount,
                     quote.CurrencyDecimalPlaces),
+                HeadAllocationComplete = complete,
+                Heads = headBalances,
+                LateFeePaidAmount = complete ? latePaid : null,
                 Status = today > item.DueDate.AddDays(structure.GracePeriodDays) && item.Status != (short)StudentFeeInstallmentStatus.Paid
                     ? (short)StudentFeeInstallmentStatus.Overdue
                     : item.Status
@@ -646,6 +750,40 @@ public sealed class StudentFeeLedgerRepository(
             PaymentMethod = item.PaymentMethod,
             RecordedReference = item.RecordedReference
         }).ToList();
+        var paymentIds = receipts.Select(item => item.PaymentTransactionId).ToArray();
+        var receiptAllocations = await context.StudentFeePaymentAllocations.AsNoTracking()
+            .Where(item => item.InstitutionId == institutionId && paymentIds.Contains(item.StudentFeePaymentTransactionId))
+            .ToListAsync(cancellationToken);
+        var headIds = receiptAllocations.Where(item => item.StudentFeeInstallmentHeadId.HasValue)
+            .Select(item => item.StudentFeeInstallmentHeadId!.Value).Distinct().ToArray();
+        var receiptHeads = await (from head in context.StudentFeeInstallmentHeads.AsNoTracking()
+                                  join line in context.StudentAdmissionFeeQuoteLines.AsNoTracking()
+                                      on head.StudentAdmissionFeeQuoteLineId equals line.Id
+                                  where head.InstitutionId == institutionId && line.InstitutionId == institutionId &&
+                                      headIds.Contains(head.Id)
+                                  select new { head.Id, line.ComponentCode, line.ComponentName })
+            .ToDictionaryAsync(item => item.Id, cancellationToken);
+        foreach (var receipt in receipts)
+        {
+            var allocated = receiptAllocations.Where(item => item.StudentFeePaymentTransactionId == receipt.PaymentTransactionId).ToList();
+            receipt.HeadAllocationComplete = allocated.Sum(item => item.Amount) == receipt.Amount &&
+                allocated.All(item => !item.StudentFeeInstallmentHeadId.HasValue || receiptHeads.ContainsKey(item.StudentFeeInstallmentHeadId.Value));
+            if (receipt.HeadAllocationComplete)
+            {
+                receipt.Allocations = allocated.Select(item =>
+                {
+                    var head = item.StudentFeeInstallmentHeadId.HasValue ? receiptHeads[item.StudentFeeInstallmentHeadId.Value] : null;
+                    return new StudentFeeReceiptAllocationDTO
+                    {
+                        HeadId = item.StudentFeeInstallmentHeadId,
+                        ComponentCode = head?.ComponentCode,
+                        ComponentName = head?.ComponentName,
+                        IsLateFee = !item.StudentFeeInstallmentHeadId.HasValue,
+                        Amount = item.Amount
+                    };
+                }).ToList();
+            }
+        }
         return new PagedResponseDTO<StudentFeeReceiptResponseDTO>(receipts, page.TotalCount, page.PageNumber, page.PageSize)
         {
             TotalPages = page.TotalPages
@@ -752,11 +890,13 @@ public sealed class StudentFeeLedgerRepository(
             AddedDateTime = DateTime.UtcNow
         };
         context.StudentFeePaymentTransactions.Add(payment);
+        var paidBefore = installment.PaidAmount;
         installment.PaidAmount = StudentFeeQuoteCalculator.RoundCurrency(installment.PaidAmount + amount, quote.CurrencyDecimalPlaces);
         installment.Status = installment.PaidAmount >= installment.RecurringAmount + installment.OneTimeAmount + installment.LateFeeAmount
             ? (short)StudentFeeInstallmentStatus.Paid
             : (short)StudentFeeInstallmentStatus.PartiallyPaid;
         await context.SaveChangesAsync(cancellationToken);
+        await AllocatePaymentToHeadsAsync(installment, quote, payment, paidBefore, cancellationToken);
         var receipt = new StudentFeeReceipt
         {
             InstitutionId = institutionId,
@@ -1113,6 +1253,7 @@ public sealed class StudentFeeLedgerRepository(
                 AddedDateTime = DateTime.UtcNow
             };
             context.StudentFeePaymentTransactions.Add(paymentTransaction);
+            var paidBefore = installment.PaidAmount;
             installment.PaidAmount = StudentFeeQuoteCalculator.RoundCurrency(
                 installment.PaidAmount + payment.Amount, quote.CurrencyDecimalPlaces);
             installment.Status = installment.PaidAmount >= installment.RecurringAmount + installment.OneTimeAmount + installment.LateFeeAmount
@@ -1120,6 +1261,7 @@ public sealed class StudentFeeLedgerRepository(
                 : (short)StudentFeeInstallmentStatus.PartiallyPaid;
             currentAttempt.Status = (short)StudentFeePaymentAttemptStatus.Succeeded;
             await context.SaveChangesAsync(cancellationToken);
+            await AllocatePaymentToHeadsAsync(installment, quote, paymentTransaction, paidBefore, cancellationToken);
             context.StudentFeeReceipts.Add(new StudentFeeReceipt
             {
                 InstitutionId = currentAttempt.InstitutionId,
@@ -1269,7 +1411,9 @@ public sealed class StudentFeeLedgerRepository(
                 ChargeNature = item.ChargeNature,
                 AnnualAmount = item.AnnualAmount,
                 DiscountAmount = item.DiscountAmount,
-                NetAmount = item.NetAmount
+                NetAmount = item.NetAmount,
+                IsDiscountEligible = item.ChargeNature == (short)StudentFeeComponentChargeNature.RecurringAnnual &&
+                    item.IsDiscountEligible
             }).ToListAsync(cancellationToken);
         var installments = await context.StudentFeeInstallments.AsNoTracking()
             .Where(item => item.InstitutionId == institutionId && item.StudentAdmissionFeeQuoteId == id)
@@ -1334,6 +1478,7 @@ public sealed class StudentFeeLedgerRepository(
         AcademicGroupName = groupName,
         CurrencyCode = entity.CurrencyCode,
         CurrencyDecimalPlaces = entity.CurrencyDecimalPlaces,
+        ArrearsPolicy = entity.ArrearsPolicy,
         LateFeePerInstallment = entity.LateFeePerInstallment,
         GracePeriodDays = entity.GracePeriodDays,
         LateFeeCap = entity.LateFeeCap,
@@ -1341,6 +1486,90 @@ public sealed class StudentFeeLedgerRepository(
         Items = items,
         Frequencies = frequencies
     };
+
+    private async Task AllocatePaymentToHeadsAsync(
+        StudentFeeInstallment installment,
+        StudentAdmissionFeeQuote quote,
+        StudentFeePaymentTransaction payment,
+        decimal paidBefore,
+        CancellationToken cancellationToken)
+    {
+        var heads = await context.StudentFeeInstallmentHeads.AsNoTracking()
+            .Where(item => item.InstitutionId == installment.InstitutionId &&
+                item.StudentFeeInstallmentId == installment.Id &&
+                item.StudentAdmissionFeeQuoteId == quote.Id)
+            .ToListAsync(cancellationToken);
+        if (heads.Count == 0)
+        {
+            // Legacy installments have no head snapshot. Their payment history is not guessed.
+            return;
+        }
+
+        if (heads.Any(item => !item.AllocationPriority.HasValue) ||
+            heads.Sum(item => item.ScheduledAmount) != installment.RecurringAmount + installment.OneTimeAmount)
+        {
+            throw new ConflictException("The installment fee-head snapshot requires reconciliation before payment.");
+        }
+
+        var previous = await context.StudentFeePaymentAllocations.AsNoTracking()
+            .Where(item => item.InstitutionId == installment.InstitutionId &&
+                item.StudentFeeInstallmentId == installment.Id)
+            .GroupBy(item => item.StudentFeeInstallmentHeadId)
+            .Select(group => new { HeadId = group.Key, Amount = group.Sum(item => item.Amount) })
+            .ToListAsync(cancellationToken);
+        if (previous.Sum(item => item.Amount) != paidBefore)
+        {
+            throw new ConflictException("Existing payment history requires reconciliation before head-level allocation.");
+        }
+
+        var previousByHead = previous.Where(item => item.HeadId.HasValue)
+            .ToDictionary(item => item.HeadId!.Value, item => item.Amount);
+        if (previousByHead.Keys.Any(id => heads.All(head => head.Id != id)))
+        {
+            throw new ConflictException("Existing payment allocations do not match the installment fee heads.");
+        }
+
+        var remainingHeads = heads.Select(head => new StudentFeeAllocationCalculator.OutstandingHead(
+            installment.Id, installment.DueDate, head.Id, head.AllocationPriority!.Value,
+            head.ScheduledAmount - previousByHead.GetValueOrDefault(head.Id))).ToArray();
+        var latePaid = previous.Where(item => !item.HeadId.HasValue).Sum(item => item.Amount);
+        var lateRemaining = installment.LateFeeAmount - latePaid;
+        if (remainingHeads.Any(item => item.OutstandingAmount < 0) || lateRemaining < 0)
+        {
+            throw new ConflictException("Existing fee-head or late-fee allocations exceed the recorded charge.");
+        }
+
+        var headAmount = Math.Min(payment.Amount, remainingHeads.Sum(item => item.OutstandingAmount));
+        if (headAmount > 0)
+        {
+            var allocations = StudentFeeAllocationCalculator.AllocateOldestFirst(
+                headAmount, quote.CurrencyDecimalPlaces, remainingHeads);
+            context.StudentFeePaymentAllocations.AddRange(allocations.Select(item => new StudentFeePaymentAllocation
+            {
+                InstitutionId = installment.InstitutionId,
+                StudentFeeInstallmentId = installment.Id,
+                StudentFeePaymentTransactionId = payment.Id,
+                StudentFeeInstallmentHeadId = item.HeadId,
+                Amount = item.Amount
+            }));
+        }
+
+        var lateAmount = payment.Amount - headAmount;
+        if (lateAmount > lateRemaining)
+        {
+            throw new ConflictException("Payment cannot be reconciled to fee heads and late fees.");
+        }
+        if (lateAmount > 0)
+        {
+            context.StudentFeePaymentAllocations.Add(new StudentFeePaymentAllocation
+            {
+                InstitutionId = installment.InstitutionId,
+                StudentFeeInstallmentId = installment.Id,
+                StudentFeePaymentTransactionId = payment.Id,
+                Amount = lateAmount
+            });
+        }
+    }
 
     private static StudentFeePaymentResponseDTO MapPayment(StudentFeePaymentTransaction payment, string? receiptNumber) => new()
     {

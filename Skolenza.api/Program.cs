@@ -13,6 +13,7 @@ using skolenza.application.Constants;
 using skolenza.infrastructure;
 using skolenza.persistance;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Cors.Infrastructure;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
 using System.Net;
@@ -174,7 +175,7 @@ try
     // ============================
     builder.Services.AddCors(options =>
     {
-        options.AddPolicy("AllowFrontend", policy =>
+        options.AddPolicy(VerifiedPortalCorsPolicyProvider.FrontendPolicyName, policy =>
         {
             policy.WithOrigins(
                 "http://localhost:4200",
@@ -189,6 +190,7 @@ try
             .AllowCredentials();
         });
     });
+    builder.Services.AddSingleton<ICorsPolicyProvider, VerifiedPortalCorsPolicyProvider>();
 
     // ============================
     // Swagger
@@ -253,7 +255,7 @@ try
     app.UseSwagger();
     app.UseSwaggerUI(options => options.EnablePersistAuthorization());
 
-    app.UseCors("AllowFrontend");
+    app.UseCors(VerifiedPortalCorsPolicyProvider.FrontendPolicyName);
 
     // Global error handler
     app.UseMiddleware<ErrorHandlerMiddleware>();
