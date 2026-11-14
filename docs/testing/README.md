@@ -1,3 +1,5 @@
+- [Local fee batch and monitoring migration baseline — 2026-11-14](student/fee-payment-batch-schema/2026-11-14.md): blocked by protected Staff capacity test; no application migration applied.
+
 - [Bulk canonical template fields and module permissions — 2026-10-11](bulk/canonical-template-fields/2026-10-11.md)
 - [Bulk import worker graceful host shutdown — 2026-10-14](bulk/worker-graceful-shutdown/2026-10-14.md)
 # Skolenza scenario test reports
@@ -158,3 +160,8 @@ test run.
 
 - [Optional verified portal hostname and scoped CORS — 2026-11-01](student/portal-cross-origin-hostname/2026-11-01.md): local focused and protected checks passed; 13 Student DB tests, real provider checks and deployment acceptance remain pending.
 
+
+- [Render API database cutover — 2026-11-14](deployment/render-database-cutover/2026-11-14.md): Git main live; public subscription-plan smoke passed; authenticated acceptance pending.
+
+
+- [Institution Host update: optional email configuration (2026-11-14)](institution/host-update-optional-email/2026-11-14.md) — WIP; authenticated and deployed acceptance pending.
