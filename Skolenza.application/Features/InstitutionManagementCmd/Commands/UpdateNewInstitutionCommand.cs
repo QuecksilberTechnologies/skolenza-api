@@ -107,9 +107,6 @@ public sealed class UpdateNewInstitutionCommandHandler
             var staffMemberCodePattern = await _unitOfWork.InstitutionStaffCodePatternRepository
                 .GetActivePatternForUpdateAsync(institutionId, cancellationToken)
                 ?? throw new NotFoundException(AppConstants.ErrorMessages.ResourceNotFound);
-            var emailConfiguration = await _unitOfWork.InstitutionEmailConfigRepository
-                .GetActiveEmailConfigAsync(institutionId)
-                ?? throw new NotFoundException(AppConstants.ErrorMessages.ResourceNotFound);
 
             var submittedEmail = dto.InstitutionEmail?.Trim();
             var submittedCode = dto.InstitutionCode?.Trim();
@@ -138,7 +135,6 @@ public sealed class UpdateNewInstitutionCommandHandler
                 institution.CountryId,
                 cancellationToken);
             var staffMemberCodePatternChanged = ApplyStaffMemberCodePattern(dto.StaffMemberCodePattern!, staffMemberCodePattern);
-            var emailConfigurationChanged = ApplyEmailConfiguration(dto.EmailConfiguration!, emailConfiguration, out var emailConfigurationUpdate);
 
             if (institutionChanged)
             {
@@ -161,10 +157,16 @@ public sealed class UpdateNewInstitutionCommandHandler
                 await _unitOfWork.InstitutionStaffCodePatternRepository.UpdatePatternAsync(staffMemberCodePattern);
             }
 
-            if (emailConfigurationChanged)
+            if (dto.EmailConfiguration is not null)
             {
-                // The repository preserves SecrateKey; it is never accepted or assigned by this update flow.
-                await _unitOfWork.InstitutionEmailConfigRepository.UpdateEmailConfigAsync(emailConfigurationUpdate);
+                var emailConfiguration = await _unitOfWork.InstitutionEmailConfigRepository
+                    .GetActiveEmailConfigAsync(institutionId)
+                    ?? throw new NotFoundException(AppConstants.ErrorMessages.ResourceNotFound);
+                if (ApplyEmailConfiguration(dto.EmailConfiguration, emailConfiguration, out var emailConfigurationUpdate))
+                {
+                    // The repository preserves SecrateKey; it is never accepted or assigned by this update flow.
+                    await _unitOfWork.InstitutionEmailConfigRepository.UpdateEmailConfigAsync(emailConfigurationUpdate);
+                }
             }
 
             // Profile and selected-location lookups are tracked. EF persists only their detected changes.
@@ -184,13 +186,26 @@ public sealed class UpdateNewInstitutionCommandHandler
 
     private static void ValidateNestedRequest(NewInstitutionUpdateRequestDTO dto)
     {
-        if (dto.Profile is null ||
-            dto.SelectedLocation is null ||
-            dto.SelectedLocation.CampusId <= 0 ||
-            dto.StaffMemberCodePattern is null ||
-            dto.EmailConfiguration is null)
+        var errors = new List<string>();
+        if (dto.Profile is null)
         {
-            throw new ValidationErrorException(AppConstants.ErrorMessages.InvalidRequest);
+            errors.Add("Profile is required.");
+        }
+        if (dto.SelectedLocation is null)
+        {
+            errors.Add("Selected location is required.");
+        }
+        else if (dto.SelectedLocation.CampusId <= 0)
+        {
+            errors.Add("Selected location campusId must be greater than zero.");
+        }
+        if (dto.StaffMemberCodePattern is null)
+        {
+            errors.Add("Staff member code pattern is required.");
+        }
+        if (errors.Count > 0)
+        {
+            throw new ValidationErrorException(string.Join(" ", errors), errors);
         }
     }
 

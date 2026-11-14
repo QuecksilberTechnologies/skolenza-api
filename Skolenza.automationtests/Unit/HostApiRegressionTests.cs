@@ -64,6 +64,37 @@ namespace skolenza.automationtests.Unit;
 public sealed class HostApiRegressionTests
 {
     [Test]
+    public void Institution_update_accepts_an_omitted_email_configuration()
+    {
+        var dto = new NewInstitutionUpdateRequestDTO
+        {
+            Profile = new NewInstitutionProfileUpdateRequestDTO(),
+            SelectedLocation = new NewInstitutionSelectedLocationUpdateRequestDTO { CampusId = 1 },
+            StaffMemberCodePattern = new NewInstitutionStaffMemberCodePatternUpdateRequestDTO()
+        };
+        var validate = typeof(UpdateNewInstitutionCommandHandler)
+            .GetMethod("ValidateNestedRequest", BindingFlags.NonPublic | BindingFlags.Static)!;
+
+        Assert.DoesNotThrow(() => validate.Invoke(null, new object[] { dto }));
+    }
+
+    [Test]
+    public void Institution_update_reports_which_required_sections_are_missing()
+    {
+        var validate = typeof(UpdateNewInstitutionCommandHandler)
+            .GetMethod("ValidateNestedRequest", BindingFlags.NonPublic | BindingFlags.Static)!;
+        var exception = Assert.Throws<TargetInvocationException>(() =>
+            validate.Invoke(null, new object[] { new NewInstitutionUpdateRequestDTO() }));
+        var validation = exception!.InnerException as ValidationErrorException;
+
+        Assert.That(validation, Is.Not.Null);
+        Assert.That(validation!.ErrorCode, Is.EqualTo(AppConstants.ErrorCodes.Validation));
+        Assert.That(validation.Errors, Does.Contain("Profile is required."));
+        Assert.That(validation.Errors, Does.Contain("Selected location is required."));
+        Assert.That(validation.Errors, Does.Contain("Staff member code pattern is required."));
+    }
+
+    [Test]
     public void Institution_device_create_payload_without_operation_is_rejected_before_database_write()
     {
         var dto = System.Text.Json.JsonSerializer.Deserialize<CreateInstitutionDeviceRequestDTO>(

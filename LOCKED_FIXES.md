@@ -100,6 +100,14 @@ Every entry must include:
 
 ## Lock registry
 
+### WIP-INSTITUTION-HOST-UPDATE-041: Optional email configuration (2026-11-14)
+
+Status: **WIP — authenticated update and deployed acceptance pending**. Host
+update accepts an omitted email configuration and leaves it untouched. Missing
+required request sections return the existing validation error code with field
+details. Local focused and protected tests passed 43/43 and the database
+rollback gate 2/2. See [scenario evidence](docs/testing/institution/host-update-optional-email/2026-11-14.md).
+
 ### Skolenza regression selector correction — 2026-10-29
 
 The inherited Employee/Tenant test selectors below are retained as historical
